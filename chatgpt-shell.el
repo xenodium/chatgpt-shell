@@ -120,7 +120,14 @@ Uses the interface provided by `comint-mode'"
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
       (setq chatgpt-shell--busy nil))
      ((not chatgpt-shell-openai-key)
-      (chatgpt-shell--write-reply "`chatgpt-openai-key' needs to be set to your key")
+      (chatgpt-shell--write-reply
+       "Variable `chatgpt-shell-openai-key' needs to be set to your key.
+
+Try M-x set-variable chatgpt-shell-openai-key
+
+or
+
+(setq chatgpt-shell-openai-key \"my-key\")")
       (setq chatgpt-shell--busy nil))
      ((string-empty-p (string-trim input-string))
       (comint-output-filter (chatgpt-shell--process)
