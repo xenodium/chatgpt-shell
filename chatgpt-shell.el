@@ -30,11 +30,18 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+(require 'map)
+
 (defcustom chatgpt-shell-openai-key nil
-  "OpenAI key." :type  'string)
+  "OpenAI key."
+  :type 'string
+  :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt "ChatGPT> "
-  "Prompt text." :type 'string)
+  "Prompt text."
+  :type 'string
+  :group 'chatgpt-shell)
 
 (defvar chatgpt-shell--input)
 
@@ -104,40 +111,39 @@ Uses the interface provided by `comint-mode'"
 
 (defun chatgpt-shell--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
-  (let ((pmark (chatgpt-shell--pm)))
-    (unless chatgpt-shell--busy
-      (setq chatgpt-shell--busy t)
-      (cond
-       ((string-equal "clear" (string-trim input-string))
-        (call-interactively 'comint-clear-buffer)
-        (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
-        (setq chatgpt-shell--busy nil))
-       ((not chatgpt-shell-openai-key)
-        (chatgpt-shell--write-reply "`chatgpt-openai-key' needs to be set to your key")
-        (setq chatgpt-shell--busy nil))
-       ((string-empty-p (string-trim input-string))
-        (comint-output-filter (chatgpt-shell--process)
-                              (concat "\n" chatgpt-shell--prompt-internal))
-        (setq chatgpt-shell--busy nil))
-       (t
-        ;; For viewing prompt delimiter (used to handle multiline prompts).
-        ;; (comint-output-filter (chatgpt-shell--process) "<gpt-end-of-prompt>")
-        (comint-output-filter (chatgpt-shell--process)
-                              (propertize "<gpt-end-of-prompt>" 'invisible t))
-        (chatgpt-shell--async-shell-command (chatgpt-shell--make-request-command-list
-                                       (vconcat (chatgpt-shell--extract-commands-and-responses))
-                                       ;; For no-context queries (ie. no history).
-                                       ;; (vector (list (cons 'role "user")
-                                       ;;             (cons 'content input-string)))
-                                       )
-                                      (lambda (response)
-                                        (if-let ((content (chatgpt-shell--extract-content response)))
-                                            (chatgpt-shell--write-reply content)
-                                          (chatgpt-shell--write-reply "Error: that's all I know"))
-                                        (setq chatgpt-shell--busy nil))
-                                      (lambda (error)
-                                        (chatgpt-shell--write-reply error)
-                                        (setq chatgpt-shell--busy nil))))))))
+  (unless chatgpt-shell--busy
+    (setq chatgpt-shell--busy t)
+    (cond
+     ((string-equal "clear" (string-trim input-string))
+      (call-interactively 'comint-clear-buffer)
+      (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
+      (setq chatgpt-shell--busy nil))
+     ((not chatgpt-shell-openai-key)
+      (chatgpt-shell--write-reply "`chatgpt-openai-key' needs to be set to your key")
+      (setq chatgpt-shell--busy nil))
+     ((string-empty-p (string-trim input-string))
+      (comint-output-filter (chatgpt-shell--process)
+                            (concat "\n" chatgpt-shell--prompt-internal))
+      (setq chatgpt-shell--busy nil))
+     (t
+      ;; For viewing prompt delimiter (used to handle multiline prompts).
+      ;; (comint-output-filter (chatgpt-shell--process) "<gpt-end-of-prompt>")
+      (comint-output-filter (chatgpt-shell--process)
+                            (propertize "<gpt-end-of-prompt>" 'invisible t))
+      (chatgpt-shell--async-shell-command (chatgpt-shell--make-request-command-list
+                                           (vconcat (chatgpt-shell--extract-commands-and-responses))
+                                           ;; For no-context queries (ie. no history).
+                                           ;; (vector (list (cons 'role "user")
+                                           ;;             (cons 'content input-string)))
+                                           )
+                                          (lambda (response)
+                                            (if-let ((content (chatgpt-shell--extract-content response)))
+                                                (chatgpt-shell--write-reply content)
+                                              (chatgpt-shell--write-reply "Error: that's all I know"))
+                                            (setq chatgpt-shell--busy nil))
+                                          (lambda (error)
+                                            (chatgpt-shell--write-reply error)
+                                            (setq chatgpt-shell--busy nil)))))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
@@ -164,7 +170,8 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
   (process-mark (get-buffer-process (chatgpt-shell--buffer))))
 
 (defun chatgpt-shell--input-sender (_proc input)
-  "Set the variable chatgpt-shell--input to INPUT for `chatgpt-shell--send-input's call."
+  "Set the variable chatgpt-shell--input to INPUT.
+Used by `chatgpt-shell--send-input's call."
   (setq chatgpt-shell--input input))
 
 (defun chatgpt-shell--send-input ()
