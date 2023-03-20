@@ -30,8 +30,9 @@
 
 ;;; Code:
 
-(require 'cl-lib)
 (require 'map)
+(require 'cl-lib)
+(require 'comint)
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key."
