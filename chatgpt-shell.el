@@ -21,7 +21,7 @@
 
 ;;; Commentary:
 
-;; Note: This is very much a proof of concept (and very rough!). Much
+;; Note: This is very much a proof of concept (and very rough!).  Much
 ;; of the code is based on `ielm'.
 ;;
 ;; You must set `chatgpt-openai-key' to your key before using.
@@ -30,9 +30,11 @@
 
 ;;; Code:
 
-(defcustom chatgpt-shell-openai-key nil "Default major mode" :type  'boolean)
+(defcustom chatgpt-shell-openai-key nil
+  "OpenAI key." :type  'string)
 
-(defcustom chatgpt-shell-prompt "ChatGPT> " nil :type 'string)
+(defcustom chatgpt-shell-prompt "ChatGPT> "
+  "Prompt text." :type 'string)
 
 (defvar chatgpt-shell--input)
 
@@ -95,12 +97,12 @@ Uses the interface provided by `comint-mode'"
     (set-marker comint-last-input-start (chatgpt-shell--pm))
     (set-process-filter (get-buffer-process (current-buffer)) 'comint-output-filter)))
 
-(defun chatgpt-shell-return (&optional for-effect)
+(defun chatgpt-shell-return ()
   "RET binding."
   (interactive)
-  (chatgpt-shell--send-input for-effect))
+  (chatgpt-shell--send-input))
 
-(defun chatgpt-shell--eval-input (input-string &optional for-effect)
+(defun chatgpt-shell--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
   (let ((pmark (chatgpt-shell--pm)))
     (unless chatgpt-shell--busy
@@ -138,7 +140,8 @@ Uses the interface provided by `comint-mode'"
                                         (setq chatgpt-shell--busy nil))))))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
-  "Run shell COMMAND asynchronously and call CALLBACK with its output when finished."
+  "Run shell COMMAND asynchronously.
+Calls CALLBACK and ERROR-CALLBACK with its output when finished."
   (let ((output-buffer (generate-new-buffer " *temp*"))
         (process-connection-type nil))
     (set-process-sentinel
@@ -161,22 +164,23 @@ Uses the interface provided by `comint-mode'"
   (process-mark (get-buffer-process (chatgpt-shell--buffer))))
 
 (defun chatgpt-shell--input-sender (_proc input)
-  "Set the variable chatgpt-shell--input for `chatgpt-shell--send-input's call."
+  "Set the variable chatgpt-shell--input to INPUT for `chatgpt-shell--send-input's call."
   (setq chatgpt-shell--input input))
 
-(defun chatgpt-shell--send-input (&optional for-effect)
+(defun chatgpt-shell--send-input ()
   "Send text after the prompt."
   (interactive)
   (let (chatgpt-shell--input)
     (comint-send-input)
-    (chatgpt-shell--eval-input chatgpt-shell--input for-effect)))
+    (chatgpt-shell--eval-input chatgpt-shell--input)))
 
 (defun chatgpt-shell--write-reply (reply)
+  "Write REPLY to prompt."
   (comint-output-filter (chatgpt-shell--process)
                         (concat "\n" reply "\n\n" chatgpt-shell--prompt-internal)))
 
 (defun chatgpt-shell--get-old-input nil
-  "Return the previous input surrounding point"
+  "Return the previous input surrounding point."
   (save-excursion
     (beginning-of-line)
     (unless (looking-at-p comint-prompt-regexp)
@@ -211,6 +215,7 @@ Uses the interface provided by `comint-mode'"
               'content))))
 
 (defun chatgpt-shell--extract-commands-and-responses ()
+  "Extract all command and responses in buffer."
   (let ((result))
     (with-current-buffer (chatgpt-shell--buffer)
       (mapc (lambda (item)
@@ -233,9 +238,11 @@ Uses the interface provided by `comint-mode'"
     (nreverse result)))
 
 (defun chatgpt-shell--buffer ()
+  "Get *chatgpt* buffer."
   (get-buffer-create "*chatgpt*"))
 
 (defun chatgpt-shell--process nil
+  "Get *chatgpt* process."
   (get-buffer-process (chatgpt-shell--buffer)))
 
 (provide 'chatgpt-shell)
