@@ -4,7 +4,7 @@
 
 A minimal ChapGPT Emacs shell.
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="50%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
 
 ** Note
 
