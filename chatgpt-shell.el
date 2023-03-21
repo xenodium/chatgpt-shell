@@ -35,8 +35,9 @@
 (require 'comint)
 
 (defcustom chatgpt-shell-openai-key nil
-  "OpenAI key."
-  :type 'string
+  "OpenAI key as a string or a function that loads and returns it."
+  :type '(choice (function :tag "Function")
+                 (string :tag "String"))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt "ChatGPT> "
@@ -148,20 +149,29 @@ or
       ;; (comint-output-filter (chatgpt-shell--process) "<gpt-end-of-prompt>")
       (comint-output-filter (chatgpt-shell--process)
                             (propertize "<gpt-end-of-prompt>" 'invisible t))
-      (chatgpt-shell--async-shell-command (chatgpt-shell--make-request-command-list
-                                           (vconcat (chatgpt-shell--extract-commands-and-responses))
-                                           ;; For no-context queries (ie. no history).
-                                           ;; (vector (list (cons 'role "user")
-                                           ;;             (cons 'content input-string)))
-                                           )
-                                          (lambda (response)
-                                            (if-let ((content (chatgpt-shell--extract-content response)))
-                                                (chatgpt-shell--write-reply content)
-                                              (chatgpt-shell--write-reply "Error: that's all I know"))
-                                            (setq chatgpt-shell--busy nil))
-                                          (lambda (error)
-                                            (chatgpt-shell--write-reply error)
-                                            (setq chatgpt-shell--busy nil)))))))
+      (when-let ((key (cond ((stringp chatgpt-shell-openai-key)
+                             chatgpt-shell-openai-key)
+                            ((functionp chatgpt-shell-openai-key)
+                             (condition-case err
+                                 (funcall chatgpt-shell-openai-key)
+                               (error
+                                (chatgpt-shell--write-reply (error-message-string err))
+                                (setq chatgpt-shell--busy nil)
+                                nil))))))
+        (chatgpt-shell--async-shell-command (chatgpt-shell--make-request-command-list
+                                             ;; For no-context queries (ie. no history).
+                                             ;; (vector (list (cons 'role "user")
+                                             ;;             (cons 'content input-string)))
+                                             (vconcat (chatgpt-shell--extract-commands-and-responses))
+                                             key)
+                                            (lambda (response)
+                                              (if-let ((content (chatgpt-shell--extract-content response)))
+                                                  (chatgpt-shell--write-reply content)
+                                                (chatgpt-shell--write-reply "Error: that's all I know"))
+                                              (setq chatgpt-shell--busy nil))
+                                            (lambda (error)
+                                              (chatgpt-shell--write-reply error)
+                                              (setq chatgpt-shell--busy nil)))) ))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
@@ -213,14 +223,14 @@ Used by `chatgpt-shell--send-input's call."
     (comint-skip-prompt)
     (buffer-substring (point) (progn (forward-sexp 1) (point)))))
 
-(defun chatgpt-shell--make-request-command-list (messages)
-  "Build ChatGPT curl command list using MESSAGES."
+(defun chatgpt-shell--make-request-command-list (messages key)
+  "Build ChatGPT curl command list using MESSAGES and KEY."
   (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
   (list "curl"
         "https://api.openai.com/v1/chat/completions"
         "--fail" "--no-progress-meter" "-m" "30"
         "-H" "Content-Type: application/json"
-        "-H" (format "Authorization: Bearer %s" chatgpt-shell-openai-key)
+        "-H" (format "Authorization: Bearer %s" key)
         "-d" (json-serialize `((model . "gpt-3.5-turbo")
                                (messages . ,messages)
                                (temperature . 0.7)))))
