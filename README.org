@@ -12,7 +12,24 @@ This is very much an experimental proof of concept, possibly incomplete, or mayb
 
 * Install
 
-1. Load =(require 'chatgpt-shell)=
-2. Set your OpenAI key via =M-x set-variable chatgpt-shell-openai-key=
-3. Launch =M-x chatgpt-shell=
+Load =(require 'chatgpt-shell)=
 
+* Set key
+** As function
+#+begin_src emacs-lisp
+  (setq chatgpt-shell-openai-key
+        (lambda ()
+          (nth 0 (process-lines "pass" "show" "openai-key"))))
+#+end_src
+
+** Manually
+=M-x set-variable chatgpt-shell-openai-key=
+
+** As variable
+#+begin_src emacs-lisp
+  (setq chatgpt-shell-openai-key "my key")
+#+end_src
+
+* Launch
+
+Execute with =M-x chatgpt-shell=.
