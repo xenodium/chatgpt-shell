@@ -1,6 +1,10 @@
+👉 [[https://github.com/sponsors/xenodium][Support my work via GitHub Sponsors]]
+
 * chatgpt-shell
 
 A minimal ChapGPT Emacs shell.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="50%" />
 
 ** Note
 
