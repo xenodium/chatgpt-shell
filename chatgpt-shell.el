@@ -52,6 +52,14 @@
 
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
 
+(defconst chatgpt-shell-font-lock-keywords
+  '(;; Markdown triple backticks
+    ("\\(^\\(```\\)[^`\n]*\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
+     (3 'markdown-pre-face))
+    ;; Markdown single backticks
+    ("`\\([^`\n]+\\)`"
+     (1 'markdown-inline-code-face))))
+
 (defvar chatgpt-shell-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-m" 'chatgpt-shell-return)
@@ -103,7 +111,9 @@ Uses the interface provided by `comint-mode'"
          '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
     (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
     (set-marker comint-last-input-start (chatgpt-shell--pm))
-    (set-process-filter (get-buffer-process (current-buffer)) 'comint-output-filter)))
+    (set-process-filter (get-buffer-process (current-buffer)) 'comint-output-filter))
+
+  (font-lock-add-keywords nil chatgpt-shell-font-lock-keywords))
 
 (defun chatgpt-shell-return ()
   "RET binding."
