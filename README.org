@@ -1,0 +1,14 @@
+* chatgpt-shell
+
+A minimal ChapGPT Emacs shell.
+
+** Note
+
+This is very much an experimental proof of concept, possibly incomplete, or maybe with some rough edges. Pull requests with improvements or fixes totally welcome.
+
+* Install
+
+1. Load =(require 'chatgpt-shell)=
+2. Set your OpenAI key via =M-x set-variable chatgpt-shell-openai-key=
+3. Launch =M-x chatgpt-shell=
+
