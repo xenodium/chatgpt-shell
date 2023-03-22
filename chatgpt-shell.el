@@ -1,10 +1,11 @@
-;;; chatgpt-shell.el --- interaction mode for ChatGPT  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- Interaction mode for ChatGPT  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 0.1
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
