@@ -212,13 +212,18 @@ or
 Calls CALLBACK and ERROR-CALLBACK with its output when finished."
   (let ((output-buffer (generate-new-buffer " *temp*"))
         (process-connection-type nil))
+    (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
+    (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
+    (chatgpt-shell--write-output-to-log-buffer "\n\n")
     (set-process-sentinel
      (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
                                     command))
      (lambda (process _event)
        (let ((output (with-current-buffer (process-buffer process)
                        (buffer-string))))
+         (chatgpt-shell--write-output-to-log-buffer "// Response\n\n")
          (chatgpt-shell--write-output-to-log-buffer output)
+         (chatgpt-shell--write-output-to-log-buffer "\n\n")
          (if (= (process-exit-status process) 0)
              (funcall callback output)
            (funcall error-callback output))
@@ -326,7 +331,8 @@ if `json' is available."
     (with-current-buffer buffer
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
-        (when (require 'json nil t)
+        (when (and (require 'json nil t)
+                   (ignore-errors (json-parse-string output)))
           (json-pretty-print beginning-of-input (point)))))))
 
 (defun chatgpt-shell--buffer ()
