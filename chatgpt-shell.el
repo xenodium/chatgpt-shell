@@ -45,6 +45,31 @@
   :type 'string
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
+  "The used OpenAI model.
+
+The list of models supported by /v1/chat/completions endpoint is
+documented at
+https://platform.openai.com/docs/models/model-endpoint-compatibility."
+  :type 'string
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-model-temperature nil
+  "What sampling temperature to use, between 0 and 2, or nil.
+
+Higher values like 0.8 will make the output more random, while
+lower values like 0.2 will make it more focused and
+deterministic.  Value of nil will not pass this configuration to
+the model.
+
+See
+https://platform.openai.com/docs/api-reference/completions\
+/create#completions/create-temperature
+for details."
+  :type '(choice integer
+                 (const nil))
+  :group 'chatgpt-shell)
+
 (defvar chatgpt-shell--input)
 
 (defvar chatgpt-shell--busy)
@@ -226,14 +251,17 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--make-request-command-list (messages key)
   "Build ChatGPT curl command list using MESSAGES and KEY."
   (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
-  (list "curl"
-        "https://api.openai.com/v1/chat/completions"
-        "--fail" "--no-progress-meter" "-m" "30"
-        "-H" "Content-Type: application/json"
-        "-H" (format "Authorization: Bearer %s" key)
-        "-d" (json-serialize `((model . "gpt-3.5-turbo")
-                               (messages . ,messages)
-                               (temperature . 0.7)))))
+  (let ((request-data `((model . ,chatgpt-shell-model-version)
+                        (messages . ,messages)))
+        (chatgpt-shell-model-temperature nil))
+    (when chatgpt-shell-model-temperature
+      (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+    (list "curl"
+          "https://api.openai.com/v1/chat/completions"
+          "--fail" "--no-progress-meter" "-m" "30"
+          "-H" "Content-Type: application/json"
+          "-H" (format "Authorization: Bearer %s" key)
+          "-d" (json-serialize request-data))))
 
 (defun chatgpt-shell--json-parse-string (json)
   "Parse JSON and return the parsed data structure, nil otherwise."
