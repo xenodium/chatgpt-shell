@@ -262,8 +262,7 @@ Used by `chatgpt-shell--send-input's call."
   "Build ChatGPT curl command list using MESSAGES and KEY."
   (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
   (let ((request-data `((model . ,chatgpt-shell-model-version)
-                        (messages . ,messages)))
-        (chatgpt-shell-model-temperature nil))
+                        (messages . ,messages))))
     (when chatgpt-shell-model-temperature
       (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
     (list "curl"
