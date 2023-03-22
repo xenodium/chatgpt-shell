@@ -32,4 +32,14 @@ Load =(require 'chatgpt-shell)=
 
 * Launch
 
-Execute with =M-x chatgpt-shell=.
+Launch with =M-x chatgpt-shell=.
+
+* Clear buffer
+
+Type =clear= as a prompt.
+
+#+begin_src sh
+  ChatGPT> clear
+#+end_src
+
+Alternatively, use either =chatgpt-shell-clear-buffer= or =comint-clear-buffer=.
