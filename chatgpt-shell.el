@@ -67,6 +67,7 @@
     map)
   "Keymap for ChatGPT mode.")
 
+;;;###autoload
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
   (interactive)
