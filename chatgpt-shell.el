@@ -1,6 +1,6 @@
 ;;; chatgpt-shell.el --- Interaction mode for ChatGPT  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Alvaro Ramirez
+;; Copyright (C) 2023 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
@@ -25,7 +25,7 @@
 ;; Note: This is very much a proof of concept (and very rough!).  Much
 ;; of the code is based on `ielm'.
 ;;
-;; You must set `chatgpt-openai-key' to your key before using.
+;; You must set `chatgpt-shell-openai-key' to your key before using.
 ;;
 ;; Run `chatgpt-shell' to get a ChatGPT shell.
 
