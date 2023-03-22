@@ -2,7 +2,7 @@
 
 * chatgpt-shell
 
-A minimal ChapGPT Emacs shell.
+A minimal ChatGPT Emacs shell.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
 
