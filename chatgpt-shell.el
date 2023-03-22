@@ -219,11 +219,11 @@ or
          (chatgpt-shell--make-request-command-list
           (vconcat
            (last (chatgpt-shell--extract-commands-and-responses)
-                 ;; Send in pairs of prompt and completion by
-                 ;; multiplying by 2
                  (if (null chatgpt-shell-transmitted-context-length)
                      ;; If variable above is nil, send "full" context
                      2048
+                   ;; Send in pairs of prompt and completion by
+                   ;; multiplying by 2
                    (1+ (* 2 chatgpt-shell-transmitted-context-length)))))
           key)
          (lambda (response)
