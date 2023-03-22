@@ -320,9 +320,9 @@ if `json' is available."
       (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name))
       (with-current-buffer buffer
         ;; Use `js-json-mode' if available, fall back to `js-mode'.
-        (funcall (if (fboundp #'js-json-mode)
-                     #'js-json-mode
-                   #'js-mode))))
+        (if (fboundp #'js-json-mode)
+            (js-json-mode)
+          (js-mode))))
     (with-current-buffer buffer
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
