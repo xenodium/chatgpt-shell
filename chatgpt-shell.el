@@ -33,9 +33,12 @@
 ;;; Code:
 
 (require 'map)
-(require 'cl-lib)
 (require 'comint)
 (require 'markdown-mode)
+
+(eval-when-compile
+  (require 'cl-lib)
+  (declare-function json-pretty-print "ext:json" (begin end &optional minimize)))
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
@@ -47,6 +50,8 @@
   "Prompt text."
   :type 'string
   :group 'chatgpt-shell)
+
+(defvar chatgpt-shell--log-buffer-name "*chatgpt-shell-log*")
 
 (defvar chatgpt-shell--input)
 
@@ -175,7 +180,7 @@ or
                                               (setq chatgpt-shell--busy nil))
                                             (lambda (error)
                                               (chatgpt-shell--write-reply error)
-                                              (setq chatgpt-shell--busy nil)))) ))))
+                                              (setq chatgpt-shell--busy nil))))))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
@@ -188,6 +193,7 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
      (lambda (process _event)
        (let ((output (with-current-buffer (process-buffer process)
                        (buffer-string))))
+         (chatgpt-shell--write-output-to-log-buffer output)
          (if (= (process-exit-status process) 0)
              (funcall callback output)
            (funcall error-callback output))
@@ -275,6 +281,26 @@ Used by `chatgpt-shell--send-input's call."
             (split-string (substring-no-properties (buffer-string))
                           chatgpt-shell--prompt-internal)))
     (nreverse result)))
+
+(defun chatgpt-shell--write-output-to-log-buffer (output)
+  "Write curl process OUTPUT to log buffer.
+
+Create the log buffer if it does not exist.  Pretty print output
+if `json' is available."
+  (let ((buffer (get-buffer chatgpt-shell--log-buffer-name)))
+    (unless buffer
+      ;; Create buffer
+      (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name))
+      (with-current-buffer buffer
+        ;; Use `js-json-mode' if available, fall back to `js-mode'.
+        (funcall (if (fboundp #'js-json-mode)
+                     #'js-json-mode
+                   #'js-mode))))
+    (with-current-buffer buffer
+      (let ((beginning-of-input (goto-char (point-max))))
+        (insert output)
+        (when (require 'json nil t)
+          (json-pretty-print beginning-of-input (point)))))))
 
 (defun chatgpt-shell--buffer ()
   "Get *chatgpt* buffer."
