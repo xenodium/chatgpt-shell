@@ -42,4 +42,4 @@ Type =clear= as a prompt.
   ChatGPT> clear
 #+end_src
 
-Alternatively, use either =chatgpt-shell-clear-buffer= or =comint-clear-buffer=.
+Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-buffer=.
