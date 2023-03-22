@@ -76,6 +76,29 @@ for details."
                  (const nil))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-transmitted-context-length nil
+  "Controls the amount of context provided to chatGPT.
+
+This context needs to be transmitted to the API on every request.
+ChatGPT reads the provided context on every request, which will
+consume more and more prompt tokens as your conversation grows.
+Models do have a maximum token limit, however.
+
+A value of nil will send full chat history (the full contents of
+the comint buffer), to ChatGPT.
+
+A value of 0 will not provide any context.  This is the cheapest
+option, but ChatGPT can't look back on your conversation.
+
+A value of 1 will send only the latest prompt-completion pair as
+context.
+
+A Value >1 will send that amount of prompt-completion pairs to
+ChatGPT."
+  :type '(choice integer
+                 (const nil))
+  :group 'chatgpt-shell)
+
 (defvar chatgpt-shell--log-buffer-name "*chatgpt-shell-log*")
 
 (defvar chatgpt-shell--input)
@@ -192,20 +215,25 @@ or
                                 (chatgpt-shell--write-reply (error-message-string err))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
-        (chatgpt-shell--async-shell-command (chatgpt-shell--make-request-command-list
-                                             ;; For no-context queries (ie. no history).
-                                             ;; (vector (list (cons 'role "user")
-                                             ;;             (cons 'content input-string)))
-                                             (vconcat (chatgpt-shell--extract-commands-and-responses))
-                                             key)
-                                            (lambda (response)
-                                              (if-let ((content (chatgpt-shell--extract-content response)))
-                                                  (chatgpt-shell--write-reply content)
-                                                (chatgpt-shell--write-reply "Error: that's all I know"))
-                                              (setq chatgpt-shell--busy nil))
-                                            (lambda (error)
-                                              (chatgpt-shell--write-reply error)
-                                              (setq chatgpt-shell--busy nil))))))))
+        (chatgpt-shell--async-shell-command
+         (chatgpt-shell--make-request-command-list
+          (vconcat
+           (last (chatgpt-shell--extract-commands-and-responses)
+                 ;; Send in pairs of prompt and completion by
+                 ;; multiplying by 2
+                 (if (null chatgpt-shell-transmitted-context-length)
+                     ;; If variable above is nil, send "full" context
+                     2048
+                   (1+ (* 2 chatgpt-shell-transmitted-context-length)))))
+          key)
+         (lambda (response)
+           (if-let ((content (chatgpt-shell--extract-content response)))
+               (chatgpt-shell--write-reply content)
+             (chatgpt-shell--write-reply "Error: that's all I know"))
+           (setq chatgpt-shell--busy nil))
+         (lambda (error)
+           (chatgpt-shell--write-reply error)
+           (setq chatgpt-shell--busy nil))))))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
