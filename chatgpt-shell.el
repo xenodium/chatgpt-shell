@@ -123,6 +123,8 @@ ChatGPT."
     map)
   "Keymap for ChatGPT mode.")
 
+(defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
+
 ;;;###autoload
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
