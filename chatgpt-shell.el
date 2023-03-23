@@ -109,6 +109,8 @@ ChatGPT."
 
 (defvar chatgpt-shell--current-request-id 0)
 
+(defvar chatgpt-shell--show-invisible-markers nil)
+
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
 
 (defconst chatgpt-shell-font-lock-keywords
@@ -192,7 +194,10 @@ Uses the interface provided by `comint-mode'"
     (comint-send-input)
     (goto-char (point-max))
     (comint-output-filter (chatgpt-shell--process)
-                          (concat "\n" chatgpt-shell--prompt-internal))
+                          (concat (propertize "<gpt-end-of-prompt>\n<gpt-ignored-response>"
+                                              'invisible (not chatgpt-shell--show-invisible-markers))
+                                  "\n"
+                                  chatgpt-shell--prompt-internal))
     (setq chatgpt-shell--busy nil)
     (message "interrupted!")))
 
@@ -213,7 +218,7 @@ Try M-x set-variable chatgpt-shell-openai-key
 
 or
 
-(setq chatgpt-shell-openai-key \"my-key\")")
+(setq chatgpt-shell-openai-key \"my-key\")" t)
       (setq chatgpt-shell--busy nil))
      ((string-empty-p (string-trim input-string))
       (comint-output-filter (chatgpt-shell--process)
@@ -223,14 +228,18 @@ or
       ;; For viewing prompt delimiter (used to handle multiline prompts).
       ;; (comint-output-filter (chatgpt-shell--process) "<gpt-end-of-prompt>")
       (comint-output-filter (chatgpt-shell--process)
-                            (propertize "<gpt-end-of-prompt>" 'invisible t))
+                            (propertize "<gpt-end-of-prompt>"
+                                        'invisible (not chatgpt-shell--show-invisible-markers)))
       (when-let ((key (cond ((stringp chatgpt-shell-openai-key)
                              chatgpt-shell-openai-key)
                             ((functionp chatgpt-shell-openai-key)
                              (condition-case err
                                  (funcall chatgpt-shell-openai-key)
                                (error
-                                (chatgpt-shell--write-reply (error-message-string err))
+                                (chatgpt-shell--write-reply (error-message-string err) t)
+                                (comint-output-filter (chatgpt-shell--process)
+                                                      (propertize "\n<gpt-ignored-response>"
+                                                                  'invisible (not chatgpt-shell--show-invisible-markers)))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
         (chatgpt-shell--async-shell-command
@@ -247,10 +256,10 @@ or
          (lambda (response)
            (if-let ((content (chatgpt-shell--extract-content response)))
                (chatgpt-shell--write-reply content)
-             (chatgpt-shell--write-reply "Error: that's all I know"))
+             (chatgpt-shell--write-reply "Error: that's all I know" t))
            (setq chatgpt-shell--busy nil))
          (lambda (error)
-           (chatgpt-shell--write-reply error)
+           (chatgpt-shell--write-reply error t)
            (setq chatgpt-shell--busy nil))))))))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
@@ -263,8 +272,12 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
     (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
     (chatgpt-shell--write-output-to-log-buffer "\n\n")
     (set-process-sentinel
-     (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
-                                    command))
+     (condition-case err
+         (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
+                                        command))
+       (error
+        (funcall error-callback (error-message-string err))
+        nil))
      (lambda (process _event)
        (let ((active (eq request-id chatgpt-shell--current-request-id))
              (output (with-current-buffer (process-buffer process)
@@ -294,7 +307,7 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
   (process-mark (get-buffer-process (chatgpt-shell--buffer))))
 
 (defun chatgpt-shell--input-sender (_proc input)
-  "Set the variable chatgpt-shell--input to INPUT.
+  "Set the variable `chatgpt-shell--input' to INPUT.
 Used by `chatgpt-shell--send-input's call."
   (setq chatgpt-shell--input input))
 
@@ -305,10 +318,17 @@ Used by `chatgpt-shell--send-input's call."
     (comint-send-input)
     (chatgpt-shell--eval-input chatgpt-shell--input)))
 
-(defun chatgpt-shell--write-reply (reply)
-  "Write REPLY to prompt."
+(defun chatgpt-shell--write-reply (reply &optional failed)
+  "Write REPLY to prompt.  Set FAILED to record failure."
   (comint-output-filter (chatgpt-shell--process)
-                        (concat "\n" reply "\n\n" chatgpt-shell--prompt-internal)))
+                        (concat "\n"
+                                (string-trim reply)
+                                (if failed
+                                    (propertize "\n<gpt-ignored-response>"
+                                                'invisible (not chatgpt-shell--show-invisible-markers))
+                                  "")
+                                "\n\n"
+                                chatgpt-shell--prompt-internal)))
 
 (defun chatgpt-shell--get-old-input nil
   "Return the previous input surrounding point."
@@ -360,12 +380,13 @@ Used by `chatgpt-shell--send-input's call."
                                                   (nth 1 values)
                                                 (string-join
                                                  (cdr lines) "\n"))))))
-                (when (not (string-empty-p prompt))
-                  (push (list (cons 'role "user")
-                              (cons 'content prompt)) result))
-                (when (not (string-empty-p response))
-                  (push (list (cons 'role "system")
-                              (cons 'content response)) result))))
+                (unless (string-match "<gpt-ignored-response>" response)
+                  (when (not (string-empty-p prompt))
+                    (push (list (cons 'role "user")
+                                (cons 'content prompt)) result))
+                  (when (not (string-empty-p response))
+                    (push (list (cons 'role "system")
+                                (cons 'content response)) result)))))
             (split-string (substring-no-properties (buffer-string))
                           chatgpt-shell--prompt-internal)))
     (nreverse result)))
