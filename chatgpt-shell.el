@@ -280,7 +280,7 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
          (kill-buffer output-buffer))))))
 
 (defun chatgpt-shell--increment-request-id ()
-  "Increment `chatgpt-shell--current-request-id'"
+  "Increment `chatgpt-shell--current-request-id'."
   (if (= chatgpt-shell--current-request-id most-positive-fixnum)
       (setq chatgpt-shell--current-request-id 0)
     (setq chatgpt-shell--current-request-id (1+ chatgpt-shell--current-request-id))))
