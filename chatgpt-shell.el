@@ -107,6 +107,8 @@ ChatGPT."
 
 (defvar chatgpt-shell--prompt-internal "ChatGPT> ")
 
+(defvar chatgpt-shell--current-request-id 0)
+
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
 
 (defconst chatgpt-shell-font-lock-keywords
@@ -118,8 +120,9 @@ ChatGPT."
      (1 'markdown-inline-code-face))))
 
 (defvar chatgpt-shell-map
-  (let ((map (make-sparse-keymap)))
+  (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\C-m" 'chatgpt-shell-return)
+    (define-key map "\C-c\C-c" 'chatgpt-shell-interrupt)
     map)
   "Keymap for ChatGPT mode.")
 
@@ -179,6 +182,19 @@ Uses the interface provided by `comint-mode'"
   "RET binding."
   (interactive)
   (chatgpt-shell--send-input))
+
+(defun chatgpt-shell-interrupt ()
+  "Interrupt current request."
+  (interactive)
+  (with-current-buffer (chatgpt-shell--buffer)
+    ;; Increment id, so in-flight request is ignored.
+    (chatgpt-shell--increment-request-id)
+    (comint-send-input)
+    (goto-char (point-max))
+    (comint-output-filter (chatgpt-shell--process)
+                          (concat "\n" chatgpt-shell--prompt-internal))
+    (setq chatgpt-shell--busy nil)
+    (message "interrupted!")))
 
 (defun chatgpt-shell--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
@@ -240,7 +256,8 @@ or
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
 Calls CALLBACK and ERROR-CALLBACK with its output when finished."
-  (let ((output-buffer (generate-new-buffer " *temp*"))
+  (let ((request-id (chatgpt-shell--increment-request-id))
+        (output-buffer (generate-new-buffer " *temp*"))
         (process-connection-type nil))
     (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
     (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
@@ -249,15 +266,24 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
      (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
                                     command))
      (lambda (process _event)
-       (let ((output (with-current-buffer (process-buffer process)
+       (let ((active (eq request-id chatgpt-shell--current-request-id))
+             (output (with-current-buffer (process-buffer process)
                        (buffer-string))))
-         (chatgpt-shell--write-output-to-log-buffer "// Response\n\n")
+         (chatgpt-shell--write-output-to-log-buffer
+          (format "// Response (%s)\n\n" (if active "active" "inactive")))
          (chatgpt-shell--write-output-to-log-buffer output)
          (chatgpt-shell--write-output-to-log-buffer "\n\n")
-         (if (= (process-exit-status process) 0)
-             (funcall callback output)
-           (funcall error-callback output))
+         (when active
+           (if (= (process-exit-status process) 0)
+               (funcall callback output)
+             (funcall error-callback output)))
          (kill-buffer output-buffer))))))
+
+(defun chatgpt-shell--increment-request-id ()
+  "Increment `chatgpt-shell--current-request-id'"
+  (if (= chatgpt-shell--current-request-id most-positive-fixnum)
+      (setq chatgpt-shell--current-request-id 0)
+    (setq chatgpt-shell--current-request-id (1+ chatgpt-shell--current-request-id))))
 
 (defun chatgpt-shell--set-pm (pos)
   "Set the process mark in the current buffer to POS."
