@@ -32,9 +32,10 @@
 
 ;;; Code:
 
-(require 'map)
 (require 'comint)
+(require 'map)
 (require 'markdown-mode)
+(require 'seq)
 
 (eval-when-compile
   (require 'cl-lib)
