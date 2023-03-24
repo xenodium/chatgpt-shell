@@ -203,6 +203,7 @@ Uses the interface provided by `comint-mode'"
 (defun chatgpt-shell-send-to-buffer (text &optional submit)
   "Send TEXT to *chatgpt* buffer.
 Set SUBMIT to automatically submit to ChatGPT."
+  (chatgpt-shell)
   (switch-to-buffer (chatgpt-shell--buffer))
   (with-current-buffer (chatgpt-shell--buffer)
     (when chatgpt-shell--busy
