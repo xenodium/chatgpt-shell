@@ -200,16 +200,26 @@ Uses the interface provided by `comint-mode'"
            (buffer-substring (region-beginning) (region-end))))
   (chatgpt-shell--send-input))
 
-(defun chatgpt-shell-send-to-buffer (text &optional submit)
+(defun chatgpt-shell-send-region ()
+  "Send region to ChatGPT."
+  (interactive)
+  (chatgpt-shell-send-to-buffer
+   (buffer-substring (region-beginning) (region-end)) nil t))
+
+(defun chatgpt-shell-send-to-buffer (text &optional submit save-excursion)
   "Send TEXT to *chatgpt* buffer.
-Set SUBMIT to automatically submit to ChatGPT."
+Set SUBMIT to automatically submit to ChatGPT.
+Set SAVE-EXCURSION to prevent point from moving."
   (chatgpt-shell)
   (switch-to-buffer (chatgpt-shell--buffer))
   (with-current-buffer (chatgpt-shell--buffer)
     (when chatgpt-shell--busy
       (chatgpt-shell-interrupt))
     (goto-char (point-max))
-    (insert text)
+    (if save-excursion
+        (save-excursion
+          (insert text))
+      (insert text))
     (when submit
       (chatgpt-shell--send-input))))
 
