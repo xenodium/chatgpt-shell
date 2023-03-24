@@ -240,16 +240,12 @@ Set SAVE-EXCURSION to prevent point from moving."
     (message "interrupted!")))
 
 (defun chatgpt-shell--eval-input (input-string)
-  "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
   (unless chatgpt-shell--busy
     (setq chatgpt-shell--busy t)
     (cond
      ((string-equal "clear" (string-trim input-string))
-      (call-interactively 'comint-clear-buffer)
+      (call-interactively #'comint-clear-buffer)
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
-      (setq chatgpt-shell--busy nil))
-     ((not (chatgpt-shell--curl-version-supported))
-      (chatgpt-shell--write-reply "You need curl version 7.67 or newer.")
       (setq chatgpt-shell--busy nil))
      ((not chatgpt-shell-openai-key)
       (chatgpt-shell--write-reply
@@ -283,55 +279,70 @@ or
                                                                   'invisible (not chatgpt-shell--show-invisible-markers)))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
-        (chatgpt-shell--async-shell-command
-         (chatgpt-shell--make-request-command-list
+        (chatgpt-shell--request-completion
+         key
+         (lambda (response)
+           (chatgpt-shell--write-reply
+            (string-trim
+             (map-elt
+              (map-elt
+               (seq-first (map-elt response 'choices)) 'message) 'content)))))
+        (setq chatgpt-shell--busy nil))))))
+
+;; Maybe I should be a macro (get rid of callback), maybe not
+(defun chatgpt-shell--request-completion (key callback)
+  "Request a completion.
+
+KEY is API key.  CALLBACK is called with a parsed response body,
+where objects are converted into alists."
+  (let* ((url-request-method "POST")
+         (url-request-extra-headers
+          `(("Authorization" . ,(concat "Bearer " key))
+            ("Content-Type" . "application/json")))
+         (messages
           (vconcat
            (last (chatgpt-shell--extract-commands-and-responses)
                  (if (null chatgpt-shell-transmitted-context-length)
-                     ;; If variable above is nil, send "full" context
+                     ;; If variable above is nil, send "full" context.
+                     ;; Arbitrarily chosen big number here to signify
+                     ;; it
                      2048
                    ;; Send in pairs of prompt and completion by
                    ;; multiplying by 2
-                   (1+ (* 2 chatgpt-shell-transmitted-context-length)))))
-          key)
-         (lambda (response)
-           (if-let ((content (chatgpt-shell--extract-content response)))
-               (chatgpt-shell--write-reply content)
-             (chatgpt-shell--write-reply "Error: that's all I know" t))
-           (setq chatgpt-shell--busy nil))
-         (lambda (error)
-           (chatgpt-shell--write-reply error t)
-           (setq chatgpt-shell--busy nil))))))))
+                   (1+ (* 2 chatgpt-shell-transmitted-context-length))))))
+         (url-request-data `((model . ,chatgpt-shell-model-version)
+                             (messages . ,messages)))
+         ;; Add temperature parameter if it is not nil
+         (url-request-data (if chatgpt-shell-model-temperature
+                               (append url-request-data
+                                       `((temperature . chatgpt-shell-model-temperature)))
+                             url-request-data))
+                                        ; newline not strictly
+                                        ; necessary here, but it makes
+                                        ; for easier logging for
+                                        ; now
+         (url-request-data (concat (json-encode url-request-data) "\n"))
+         (response-handler
+          (lambda (status &optional cbargs)
+            (chatgpt-shell--write-output-to-log-buffer (buffer-string))
+            ;; straight to the body, who cares about errors,
+            ;; content-types or content-lengths
+            (search-forward "\n\n")
+            ;; callback handles making the response into something
+            ;; representable
+            (funcall callback (json-parse-buffer :object-type 'alist)))))
+    ;; Advice around `url-http-create-request' to get the raw request
+    ;; message
+    (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
+    ;; Is this the right way to make sure the advice is cleaned up?
+    (unwind-protect
+        (url-retrieve "https://api.openai.com/v1/chat/completions"
+                      response-handler)
+      (advice-remove #'url-http-create-request #'chatgpt-shell--log-request))))
 
-(defun chatgpt-shell--async-shell-command (command callback error-callback)
-  "Run shell COMMAND asynchronously.
-Calls CALLBACK and ERROR-CALLBACK with its output when finished."
-  (let ((request-id (chatgpt-shell--increment-request-id))
-        (output-buffer (generate-new-buffer " *temp*"))
-        (process-connection-type nil))
-    (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
-    (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
-    (chatgpt-shell--write-output-to-log-buffer "\n\n")
-    (set-process-sentinel
-     (condition-case err
-         (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
-                                        command))
-       (error
-        (funcall error-callback (error-message-string err))
-        nil))
-     (lambda (process _event)
-       (let ((active (eq request-id chatgpt-shell--current-request-id))
-             (output (with-current-buffer (process-buffer process)
-                       (buffer-string))))
-         (chatgpt-shell--write-output-to-log-buffer
-          (format "// Response (%s)\n\n" (if active "active" "inactive")))
-         (chatgpt-shell--write-output-to-log-buffer output)
-         (chatgpt-shell--write-output-to-log-buffer "\n\n")
-         (when active
-           (if (= (process-exit-status process) 0)
-               (funcall callback output)
-             (funcall error-callback output)))
-         (kill-buffer output-buffer))))))
+(defun chatgpt-shell--log-request (request)
+  (chatgpt-shell--write-output-to-log-buffer request)
+  request)
 
 (defun chatgpt-shell--increment-request-id ()
   "Increment `chatgpt-shell--current-request-id'."
@@ -380,41 +391,6 @@ Used by `chatgpt-shell--send-input's call."
     (comint-skip-prompt)
     (buffer-substring (point) (progn (forward-sexp 1) (point)))))
 
-(defun chatgpt-shell--make-request-command-list (messages key)
-  "Build ChatGPT curl command list using MESSAGES and KEY."
-  (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
-  (let ((request-data `((model . ,chatgpt-shell-model-version)
-                        (messages . ,messages))))
-    (when chatgpt-shell-model-temperature
-      (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
-    (list "curl"
-          "https://api.openai.com/v1/chat/completions"
-          "--fail" "--no-progress-meter" "-m" "30"
-          "-H" "Content-Type: application/json"
-          "-H" (format "Authorization: Bearer %s" key)
-          "-d" (json-serialize request-data))))
-
-(defun chatgpt-shell--curl-version-supported ()
-  "Return t if curl version is 7.67 or newer, nil otherwise."
-  (let ((curl-version-string (shell-command-to-string "curl --version 2>/dev/null")))
-    (when (string-match "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)" curl-version-string)
-      (let ((version (match-string 1 curl-version-string)))
-        (version<= "7.67" version)))))
-
-(defun chatgpt-shell--json-parse-string (json)
-  "Parse JSON and return the parsed data structure, nil otherwise."
-  (condition-case nil
-      (json-parse-string json :object-type 'alist)
-    (json-parse-error nil)))
-
-(defun chatgpt-shell--extract-content (json)
-  "Extract ChatGPT response from JSON."
-  (when-let (parsed (chatgpt-shell--json-parse-string json))
-    (string-trim
-     (map-elt (map-elt (seq-first (map-elt parsed 'choices))
-                       'message)
-              'content))))
-
 (defun chatgpt-shell--extract-commands-and-responses ()
   "Extract all command and responses in buffer."
   (let ((result))
@@ -440,25 +416,12 @@ Used by `chatgpt-shell--send-input's call."
     (nreverse result)))
 
 (defun chatgpt-shell--write-output-to-log-buffer (output)
-  "Write curl process OUTPUT to log buffer.
+  "Write OUTPUT to log buffer.
 
-Create the log buffer if it does not exist.  Pretty print output
-if `json' is available."
-  (let ((buffer (get-buffer chatgpt-shell--log-buffer-name)))
-    (unless buffer
-      ;; Create buffer
-      (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name))
-      (with-current-buffer buffer
-        ;; Use `js-json-mode' if available, fall back to `js-mode'.
-        (if (fboundp #'js-json-mode)
-            (js-json-mode)
-          (js-mode))))
-    (with-current-buffer buffer
-      (let ((beginning-of-input (goto-char (point-max))))
-        (insert output)
-        (when (and (require 'json nil t)
-                   (ignore-errors (json-parse-string output)))
-          (json-pretty-print beginning-of-input (point)))))))
+Create the log buffer if it does not exist."
+  (with-current-buffer (get-buffer-create chatgpt-shell--log-buffer-name)
+    (let ((beginning-of-input (goto-char (point-max))))
+      (insert output))))
 
 (defun chatgpt-shell--buffer ()
   "Get *chatgpt* buffer."
