@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1")
 ;;                    (markdown-mode "2.5"))
 
@@ -237,6 +237,9 @@ Set SUBMIT to automatically submit to ChatGPT."
       (call-interactively 'comint-clear-buffer)
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
       (setq chatgpt-shell--busy nil))
+     ((not (chatgpt-shell--curl-version-supported))
+      (chatgpt-shell--write-reply "You need curl version 7.67 or newer.")
+      (setq chatgpt-shell--busy nil))
      ((not chatgpt-shell-openai-key)
       (chatgpt-shell--write-reply
        "Variable `chatgpt-shell-openai-key' needs to be set to your key.
@@ -379,6 +382,13 @@ Used by `chatgpt-shell--send-input's call."
           "-H" "Content-Type: application/json"
           "-H" (format "Authorization: Bearer %s" key)
           "-d" (json-serialize request-data))))
+
+(defun chatgpt-shell--curl-version-supported ()
+  "Return t if curl version is 7.67 or newer, nil otherwise."
+  (let ((curl-version-string (shell-command-to-string "curl --version 2>/dev/null")))
+    (when (string-match "\\([0-9]+\\.[0-9]+\\.[0-9]+\\)" curl-version-string)
+      (let ((version (match-string 1 curl-version-string)))
+        (version<= "7.67" version)))))
 
 (defun chatgpt-shell--json-parse-string (json)
   "Parse JSON and return the parsed data structure, nil otherwise."
