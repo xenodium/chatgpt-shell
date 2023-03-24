@@ -324,6 +324,7 @@ where objects are converted into alists."
          (url-request-data (concat (json-encode url-request-data) "\n"))
          (response-handler
           (lambda (status &optional cbargs)
+            (advice-remove #'url-http-create-request #'chatgpt-shell--log-request)
             (chatgpt-shell--write-output-to-log-buffer (buffer-string))
             ;; straight to the body, who cares about errors,
             ;; content-types or content-lengths
@@ -334,11 +335,9 @@ where objects are converted into alists."
     ;; Advice around `url-http-create-request' to get the raw request
     ;; message
     (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
-    ;; Is this the right way to make sure the advice is cleaned up?
-    (unwind-protect
-        (url-retrieve "https://api.openai.com/v1/chat/completions"
-                      response-handler)
-      (advice-remove #'url-http-create-request #'chatgpt-shell--log-request))))
+    (url-retrieve "https://api.openai.com/v1/chat/completions"
+                  response-handler)
+    ))
 
 (defun chatgpt-shell--log-request (request)
   (chatgpt-shell--write-output-to-log-buffer request)
