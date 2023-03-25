@@ -53,7 +53,8 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
-                                            ("objective-c" . "objc"))
+                                            ("objective-c" . "objc")
+                                            ("cpp" . "c++"))
   "Maps external language names to Emacs names.
 
 Use only lower-case names.
@@ -132,9 +133,15 @@ ChatGPT."
     ("\\(^\\(```\\)\\([^`\n]*\\)\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
      ;; (2) ``` (3) language (4) body (6) ```
      (0 (progn
-          ;; Hide ```language
+          ;; Hide ```
           (overlay-put (make-overlay (match-beginning 2)
-                                     (1+ (match-end 3))) 'invisible t)
+                                     (match-end 2)) 'invisible t)
+          ;; Language box.
+          (overlay-put (make-overlay (match-beginning 3)
+                                     (match-end 3)) 'face '(:box t))
+          ;; Additional newline after language box.
+          (overlay-put (make-overlay (match-end 3)
+                                     (1+ (match-end 3))) 'display "\n\n")
           ;; Hide ```
           (overlay-put (make-overlay (match-beginning 6)
                                      (match-end 6)) 'invisible t)
