@@ -359,6 +359,7 @@ or
                  (chatgpt-shell--unpaired-length
                   chatgpt-shell-transmitted-context-length)))
           key)
+         #'chatgpt-shell--extract-chatgpt-response
          (lambda (response)
            (if response
                (chatgpt-shell--write-reply response)
@@ -380,9 +381,10 @@ If no LENGTH set, use 2048."
       (1+ (* 2 length))
     2048))
 
-(defun chatgpt-shell--async-shell-command (command callback error-callback)
+(defun chatgpt-shell--async-shell-command (command response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
-Calls CALLBACK and ERROR-CALLBACK with its output when finished."
+Calls RESPONSE-EXTRACTOR to extract the response and feeds it to
+CALLBACK or ERROR-CALLBACK accordingly."
   (let ((request-id (chatgpt-shell--increment-request-id))
         (output-buffer (generate-new-buffer " *temp*"))
         (process-connection-type nil))
@@ -406,7 +408,8 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
          (chatgpt-shell--write-output-to-log-buffer "\n\n")
          (when active
            (if (= (process-exit-status process) 0)
-               (funcall callback (chatgpt-shell--extract-content output))
+               (funcall callback
+                        (funcall response-extractor output))
              (funcall error-callback output)))
          (kill-buffer output-buffer))))))
 
@@ -484,7 +487,7 @@ Used by `chatgpt-shell--send-input's call."
       (json-parse-string json :object-type 'alist)
     (json-parse-error nil)))
 
-(defun chatgpt-shell--extract-content (json)
+(defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
   (when-let (parsed (chatgpt-shell--json-parse-string json))
     (string-trim
