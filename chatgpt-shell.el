@@ -47,6 +47,11 @@
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell--request-timeout 30
+  "Timeout request after this many seconds."
+  :type 'integer
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-prompt "ChatGPT> "
   "Prompt text."
   :type 'string
@@ -388,38 +393,44 @@ where objects are converted into alists."
     ;; Advice around `url-http-create-request' to get the raw request
     ;; message
     (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
-    ;; implement request timeouts using me
     (setq processing-buffer
           (condition-case err
               (url-retrieve chatgpt-shell--api-endpoint
                             #'chatgpt-shell--url-retrieve-callback)
-            (error (chatgpt-shell--write-reply (error-message-string err) t)))
-    ;; (switch-to-buffer chatgpt-shell--url-processing-buffer)
-    )))
+            (error (chatgpt-shell--write-reply (error-message-string err) t))))
+    (run-with-timer chatgpt-shell--request-timeout nil #'chatgpt-shell--check-on-request processing-buffer)))
+
+(defun chatgpt-shell--check-on-request (url-process-buffer)
+  "Check on the status of the HTTP request.
+
+URL-PROCESS-BUFFER is the buffer that is associated with the
+request process."
+  (with-current-buffer url-process-buffer
+    (let ((process (get-buffer-process (current-buffer))))
+      (delete-process process))))
 
 (defun chatgpt-shell--url-retrieve-callback (status &optional cbargs)
   ""
-  ;; move me somewhere else
   (advice-remove #'url-http-create-request #'chatgpt-shell--log-request)
-  (let ((buffer-string (buffer-string))
-        (status (url-http-symbol-value-in-buffer 'url-http-response-status (current-buffer))))
-    (chatgpt-shell--write-output-to-log-buffer buffer-string)
+  (let ((status (url-http-symbol-value-in-buffer 'url-http-response-status (current-buffer))))
+    (chatgpt-shell--write-output-to-log-buffer (buffer-string))
     ;; Something went wrong in the request, either here or on the
     ;; server, but at least we got a response
     (if (not (= status 200))
         (chatgpt-shell--write-reply buffer-string t)
-      ;; straight to the body, who cares about content-types or content-lengths
-      (let ((headers
-             (url-http-symbol-value-in-buffer 'url-http-extra-headers (current-buffer))))
-        (message "%s" headers))
-
-      (search-forward "\n\n")
-      (chatgpt-shell--write-reply
-       (string-trim
-        (map-elt
-         (map-elt
-          (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
-          'message) 'content))))))
+      ;; NOTE Timed out requests will very likely come back completely
+      ;; empty, but they might, in very rare cases, also contain a
+      ;; partial response
+      (condition-case err
+          (search-forward "\n\n")
+        (error (chatgpt-shell--write-reply "Did not get a proper response from the server" t))
+        (:success
+         (chatgpt-shell--write-reply
+          (string-trim
+           (map-elt
+            (map-elt
+             (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
+             'message) 'content))))))))
 
 (defun chatgpt-shell--log-request (request)
   "Write REQUEST to log buffer and return REQUEST."
