@@ -122,6 +122,8 @@ ChatGPT."
 
 (defvar chatgpt-shell--prompt-internal "ChatGPT> ")
 
+(defvar chatgpt-shell--api-endpoint "https://api.openai.com/v1/chat/completions")
+
 (defvar chatgpt-shell--current-request-id 0)
 
 (defvar chatgpt-shell--show-invisible-markers nil)
@@ -388,7 +390,7 @@ where objects are converted into alists."
     (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
     ;; implement timeouts using me
     (setq processing-buffer
-          (url-retrieve "https://api.openai.com/v1/chat/completions"
+          (url-retrieve chatgpt-shell--api-endpoint
                         #'chatgpt-shell--url-retrieve-callback))
     ;; (switch-to-buffer chatgpt-shell--url-processing-buffer)
     ))
