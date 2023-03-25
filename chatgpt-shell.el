@@ -360,8 +360,8 @@ or
                   chatgpt-shell-transmitted-context-length)))
           key)
          (lambda (response)
-           (if-let ((content (chatgpt-shell--extract-content response)))
-               (chatgpt-shell--write-reply content)
+           (if response
+               (chatgpt-shell--write-reply response)
              (chatgpt-shell--write-reply "Error: that's all I know" t))
            (setq chatgpt-shell--busy nil))
          (lambda (error)
@@ -406,7 +406,7 @@ Calls CALLBACK and ERROR-CALLBACK with its output when finished."
          (chatgpt-shell--write-output-to-log-buffer "\n\n")
          (when active
            (if (= (process-exit-status process) 0)
-               (funcall callback output)
+               (funcall callback (chatgpt-shell--extract-content output))
              (funcall error-callback output)))
          (kill-buffer output-buffer))))))
 
