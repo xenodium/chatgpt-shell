@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "27.1")
 ;;                    (markdown-mode "2.5"))
 
@@ -50,6 +50,20 @@
 (defcustom chatgpt-shell-prompt "ChatGPT> "
   "Prompt text."
   :type 'string
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
+                                            ("objective-c" . "objc")
+                                            ("cpp" . "c++"))
+  "Maps external language names to Emacs names.
+
+Use only lower-case names.
+
+For example:
+
+                  lowercase      Emacs mode (without -mode)
+Objective-C -> (\"objective-c\" . \"objc\")"
+  :type '()
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
@@ -115,9 +129,29 @@ ChatGPT."
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
 
 (defconst chatgpt-shell-font-lock-keywords
-  '(;; Markdown triple backticks
-    ("\\(^\\(```\\)[^`\n]*\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
-     (3 'markdown-pre-face))
+  `(;; Markdown triple backticks source blocks
+    ("\\(^\\(```\\)\\([^`\n]*\\)\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
+     ;; (2) ``` (3) language (4) body (6) ```
+     (0 (progn
+          ;; Hide ```
+          (overlay-put (make-overlay (match-beginning 2)
+                                     (match-end 2)) 'invisible t)
+          ;; Language box.
+          (overlay-put (make-overlay (match-beginning 3)
+                                     (match-end 3)) 'face '(:box t))
+          ;; Additional newline after language box.
+          (overlay-put (make-overlay (match-end 3)
+                                     (1+ (match-end 3))) 'display "\n\n")
+          ;; Hide ```
+          (overlay-put (make-overlay (match-beginning 6)
+                                     (match-end 6)) 'invisible t)
+          ;; Show body
+          (chatgpt-shell--fontify-source-block
+           (buffer-substring (match-beginning 3)
+                             (match-end 3))
+           ;; body
+           (match-beginning 4) (match-end 4))
+          nil)))
     ;; Markdown single backticks
     ("`\\([^`\n]+\\)`"
      (1 'markdown-inline-code-face))))
@@ -180,6 +214,38 @@ Uses the interface provided by `comint-mode'"
     (set-process-filter (get-buffer-process (current-buffer)) 'comint-output-filter))
 
   (font-lock-add-keywords nil chatgpt-shell-font-lock-keywords))
+
+(defun chatgpt-shell--fontify-source-block (lang start end)
+  "Fontify using LANG from START to END."
+  (let ((lang-mode (intern (concat (or
+                                    (map-elt chatgpt-shell-language-mapping
+                                             (downcase (string-trim lang)))
+                                    (downcase (string-trim lang)))
+                                   "-mode")))
+        (string (buffer-substring-no-properties start end))
+        (buf (current-buffer))
+        (pos (point-min))
+        (props))
+    (remove-text-properties start end '(face nil))
+    (if (fboundp lang-mode)
+        (with-current-buffer
+            (get-buffer-create
+             (format " *chatgpt-shell-fontification:%s*" lang-mode))
+          (let ((inhibit-modification-hooks nil))
+            (erase-buffer)
+            ;; Additional space ensures property change.
+            (insert string " ")
+            (funcall lang-mode)
+            (font-lock-ensure))
+          (while (< pos (1- (point-max)))
+            (setq props (text-properties-at pos))
+            (with-current-buffer (chatgpt-shell--buffer)
+              (set-text-properties (+ start (1- pos))
+                                   (+ start (1+ (1- pos)))
+                                   props))
+            (setq pos (1+ pos))))
+      (set-text-properties start end
+                           '(face 'markdown-pre-face)))))
 
 (defun chatgpt-shell-return ()
   "RET binding."
@@ -246,6 +312,9 @@ Set SAVE-EXCURSION to prevent point from moving."
      ((string-equal "clear" (string-trim input-string))
       (call-interactively #'comint-clear-buffer)
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
+      (setq chatgpt-shell--busy nil))
+     ((not (json-available-p))
+      (chatgpt-shell--write-reply "Emacs needs to be compiled with --with-json")
       (setq chatgpt-shell--busy nil))
      ((not chatgpt-shell-openai-key)
       (chatgpt-shell--write-reply
