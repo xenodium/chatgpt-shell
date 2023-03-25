@@ -356,12 +356,8 @@ or
          (chatgpt-shell--make-request-command-list
           (vconcat
            (last (chatgpt-shell--extract-commands-and-responses)
-                 (if (null chatgpt-shell-transmitted-context-length)
-                     ;; If variable above is nil, send "full" context
-                     2048
-                   ;; Send in pairs of prompt and completion by
-                   ;; multiplying by 2
-                   (1+ (* 2 chatgpt-shell-transmitted-context-length)))))
+                 (chatgpt-shell--unpaired-length
+                  chatgpt-shell-transmitted-context-length)))
           key)
          (lambda (response)
            (if-let ((content (chatgpt-shell--extract-content response)))
@@ -371,6 +367,18 @@ or
          (lambda (error)
            (chatgpt-shell--write-reply error t)
            (setq chatgpt-shell--busy nil))))))))
+
+(defun chatgpt-shell--unpaired-length (length)
+  "Expand LENGTH to include paired responses.
+
+Each request has a response, so double LENGTH if set.
+
+Add one for current request (without response).
+
+If no LENGTH set, use 2048."
+  (if length
+      (1+ (* 2 length))
+    2048))
 
 (defun chatgpt-shell--async-shell-command (command callback error-callback)
   "Run shell COMMAND asynchronously.
