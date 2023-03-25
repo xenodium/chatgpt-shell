@@ -429,7 +429,10 @@ request process."
           (string-trim
            (map-elt
             (map-elt
-             (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
+             (seq-first (map-elt (condition-case nil
+                                     (json-parse-buffer :object-type 'alist)
+                                   (json-parse-error nil))
+                                 'choices))
              'message) 'content))))))))
 
 (defun chatgpt-shell--log-request (request)
