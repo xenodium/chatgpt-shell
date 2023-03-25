@@ -38,8 +38,7 @@
 (require 'seq)
 
 (eval-when-compile
-  (require 'cl-lib)
-  (declare-function json-pretty-print "ext:json" (begin end &optional minimize)))
+  (require 'cl-lib))
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
