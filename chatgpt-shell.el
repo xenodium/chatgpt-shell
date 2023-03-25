@@ -407,7 +407,9 @@ URL-PROCESS-BUFFER is the buffer that is associated with the
 request process."
   (with-current-buffer url-process-buffer
     (let ((process (get-buffer-process (current-buffer))))
-      (delete-process process))))
+      (condition-case nil
+          (delete-process process)
+        (error nil)))))
 
 (defun chatgpt-shell--url-retrieve-callback (status &optional cbargs)
   ""
