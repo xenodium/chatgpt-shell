@@ -313,6 +313,7 @@ Set SAVE-EXCURSION to prevent point from moving."
     (message "interrupted!")))
 
 (defun chatgpt-shell--eval-input (input-string)
+  "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
   (unless chatgpt-shell--busy
     (setq chatgpt-shell--busy t)
     (cond
