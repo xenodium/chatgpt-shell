@@ -279,18 +279,11 @@ or
                                                                   'invisible (not chatgpt-shell--show-invisible-markers)))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
-        (chatgpt-shell--request-completion
-         key
-         (lambda (response)
-           (chatgpt-shell--write-reply
-            (string-trim
-             (map-elt
-              (map-elt
-               (seq-first (map-elt response 'choices)) 'message) 'content)))))
+        (chatgpt-shell--request-completion key)
         (setq chatgpt-shell--busy nil))))))
 
 ;; Maybe I should be a macro (get rid of callback), maybe not
-(defun chatgpt-shell--request-completion (key callback)
+(defun chatgpt-shell--request-completion (key)
   "Request a completion.
 
 KEY is API key.  CALLBACK is called with a parsed response body,
@@ -319,29 +312,49 @@ where objects are converted into alists."
                              url-request-data))
                                         ; newline not strictly
                                         ; necessary here, but it makes
-                                        ; for easier logging for
-                                        ; now
-         (url-request-data (concat (json-encode url-request-data) "\n"))
-         (response-handler
-          (lambda (status &optional cbargs)
-            (advice-remove #'url-http-create-request #'chatgpt-shell--log-request)
-            (chatgpt-shell--write-output-to-log-buffer (buffer-string))
-            ;; straight to the body, who cares about errors,
-            ;; content-types or content-lengths
-            (search-forward "\n\n")
-            ;; callback handles making the response into something
-            ;; representable
-            (funcall callback (json-parse-buffer :object-type 'alist)))))
+                                        ; for easier logging for now
+         (url-request-data (concat (json-encode url-request-data) "\n")))
     ;; Advice around `url-http-create-request' to get the raw request
     ;; message
     (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
-    (url-retrieve "https://api.openai.com/v1/chat/completions"
-                  response-handler)
+    ;; implement timeouts using me
+    (setq processing-buffer
+          (url-retrieve "https://api.openai.com/v1/chat/completions"
+                        #'chatgpt-shell--url-retrieve-callback))
+    ;; (switch-to-buffer chatgpt-shell--url-processing-buffer)
     ))
 
+(defun chatgpt-shell--url-retrieve-callback (status &optional cbargs)
+  ""
+  ;; move me somewhere else
+  (advice-remove #'url-http-create-request #'chatgpt-shell--log-request)
+  (chatgpt-shell--write-reply (format "%s" status) t)
+
+  (let ((buffer-string (buffer-string))
+        (status (url-http-symbol-value-in-buffer 'url-http-response-status (current-buffer))))
+    (chatgpt-shell--write-output-to-log-buffer buffer-string)
+    ;; Something went wrong in the request, either here or on the
+    ;; server, but at least we got a response
+    (unless (= status 200)
+      (chatgpt-shell--write-reply buffer-string t)))
+  ;; straight to the body, who cares about content-types or content-lengths
+  (let ((headers
+         (url-http-symbol-value-in-buffer 'url-http-extra-headers (current-buffer))))
+    (message "%s" headers))
+
+  (search-forward "\n\n")
+  (chatgpt-shell--write-reply
+   (string-trim
+    (map-elt
+     (map-elt
+      (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
+      'message) 'content))))
+
 (defun chatgpt-shell--log-request (request)
-  (chatgpt-shell--write-output-to-log-buffer request)
-  request)
+  "Write REQUEST to log buffer and return REQUEST."
+  (prog1
+      request
+    (chatgpt-shell--write-output-to-log-buffer request)))
 
 (defun chatgpt-shell--increment-request-id ()
   "Increment `chatgpt-shell--current-request-id'."
