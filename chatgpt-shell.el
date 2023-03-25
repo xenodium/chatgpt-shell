@@ -388,38 +388,38 @@ where objects are converted into alists."
     ;; Advice around `url-http-create-request' to get the raw request
     ;; message
     (advice-add #'url-http-create-request :filter-return #'chatgpt-shell--log-request)
-    ;; implement timeouts using me
+    ;; implement request timeouts using me
     (setq processing-buffer
-          (url-retrieve chatgpt-shell--api-endpoint
-                        #'chatgpt-shell--url-retrieve-callback))
+          (condition-case err
+              (url-retrieve chatgpt-shell--api-endpoint
+                            #'chatgpt-shell--url-retrieve-callback)
+            (error (chatgpt-shell--write-reply (error-message-string err) t)))
     ;; (switch-to-buffer chatgpt-shell--url-processing-buffer)
-    ))
+    )))
 
 (defun chatgpt-shell--url-retrieve-callback (status &optional cbargs)
   ""
   ;; move me somewhere else
   (advice-remove #'url-http-create-request #'chatgpt-shell--log-request)
-  (chatgpt-shell--write-reply (format "%s" status) t)
-
   (let ((buffer-string (buffer-string))
         (status (url-http-symbol-value-in-buffer 'url-http-response-status (current-buffer))))
     (chatgpt-shell--write-output-to-log-buffer buffer-string)
     ;; Something went wrong in the request, either here or on the
     ;; server, but at least we got a response
-    (unless (= status 200)
-      (chatgpt-shell--write-reply buffer-string t)))
-  ;; straight to the body, who cares about content-types or content-lengths
-  (let ((headers
-         (url-http-symbol-value-in-buffer 'url-http-extra-headers (current-buffer))))
-    (message "%s" headers))
+    (if (not (= status 200))
+        (chatgpt-shell--write-reply buffer-string t)
+      ;; straight to the body, who cares about content-types or content-lengths
+      (let ((headers
+             (url-http-symbol-value-in-buffer 'url-http-extra-headers (current-buffer))))
+        (message "%s" headers))
 
-  (search-forward "\n\n")
-  (chatgpt-shell--write-reply
-   (string-trim
-    (map-elt
-     (map-elt
-      (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
-      'message) 'content))))
+      (search-forward "\n\n")
+      (chatgpt-shell--write-reply
+       (string-trim
+        (map-elt
+         (map-elt
+          (seq-first (map-elt (json-parse-buffer :object-type 'alist) 'choices))
+          'message) 'content))))))
 
 (defun chatgpt-shell--log-request (request)
   "Write REQUEST to log buffer and return REQUEST."
