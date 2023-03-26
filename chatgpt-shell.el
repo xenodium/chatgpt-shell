@@ -718,7 +718,13 @@ if `json' is available."
            (remove-text-properties start end '(face nil))
            (add-text-properties
             start end
-            `(display ,(create-image path nil nil :width 400))))))
+            `(display ,(create-image path nil nil :width 400)))
+           (put-text-property start end
+                              'keymap (let ((map (make-sparse-keymap)))
+                                        (define-key map (kbd "RET")
+                                          (lambda () (interactive)
+                                            (find-file path)))
+                                        map)))))
      (lambda (error)
        (when-let* ((loc (chatgpt-shell--find-string-in-buffer
                          buffer
