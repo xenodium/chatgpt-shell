@@ -123,6 +123,14 @@ ChatGPT."
 
 (defvar chatgpt-shell--show-invisible-markers nil)
 
+(cl-defstruct
+    chatgpt-shell-config
+  prompt
+  buffer
+  process-name
+  curl-command-maker
+  response-extrator)
+
 (defvar chatgpt-shell--chatgpt-config
   (make-chatgpt-shell-config
    :buffer (get-buffer-create "*chatgpt*")
@@ -144,14 +152,6 @@ ChatGPT."
 (defvar-local chatgpt-shell--config nil)
 
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
-
-(cl-defstruct
-    chatgpt-shell-config
-  prompt
-  buffer
-  process-name
-  curl-command-maker
-  response-extrator)
 
 (defconst chatgpt-shell-font-lock-keywords
   `(;; Markdown triple backticks source blocks
