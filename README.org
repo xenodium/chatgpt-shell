@@ -6,7 +6,7 @@ A minimal ChatGPT Emacs shell.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/dall-e-vs-chatgpt.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/dall-e-vs-chatgpt.gif" width="100%" />
 
 ** Note
 
