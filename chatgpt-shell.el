@@ -274,26 +274,39 @@ Uses the interface provided by `comint-mode'"
                                    "-mode")))
         (string (buffer-substring-no-properties start end))
         (buf (chatgpt-shell-config-buffer chatgpt-shell--config))
-        (pos (point-min))
+        (pos 0)
         (props)
-        (overlay))
-    (message "Fontifying buffer: %s" (buffer-name buf))
-    (remove-text-properties start end '(face nil))
+        (overlay)
+        (propertized-text))
+    ;; FIXME: Find a more reliable way of highlighting syntax.
+    ;; (remove-text-properties start end '(face nil))
     (if (fboundp lang-mode)
-        (overlay-put (make-overlay start end buf)
-                     'display
-                   (with-current-buffer
-                       (get-buffer-create
-                        (format " *chatgpt-shell-fontification:%s*" lang-mode))
-                     (let ((inhibit-modification-hooks nil))
-                       (erase-buffer)
-                       ;; Additional space ensures property change.
-                       (insert string " ")
-                       (funcall lang-mode)
-                       (font-lock-ensure))
-                     (buffer-string)))
+        (progn
+          (setq propertized-text
+                (with-current-buffer
+                    (get-buffer-create
+                     (format " *chatgpt-shell-fontification:%s*" lang-mode))
+                  (let ((inhibit-modification-hooks nil))
+                    (erase-buffer)
+                    ;; Additional space ensures property change.
+                    (insert string " ")
+                    (funcall lang-mode)
+                    (font-lock-ensure))
+                  (buffer-string)))
+          (while (< pos (length propertized-text))
+            (setq props (text-properties-at pos propertized-text))
+            (setq overlay (make-overlay (+ start pos)
+                                        (+ start (1+ pos))
+                                        buf))
+            ;; (set-text-properties (+ start pos)
+            ;;                      (+ start (1+ pos))
+            ;;                      props)
+            (overlay-put overlay 'face (plist-get props 'face))
+            (setq pos (1+ pos)))
+          ;; (overlay-put (make-overlay start end buf)
+          )
       (set-text-properties start end
-                           '(face 'markdown-pre-face)))))
+                               '(face 'markdown-pre-face)))))
 
 (defun chatgpt-shell-return ()
   "RET binding."
@@ -456,7 +469,13 @@ CALLBACK or ERROR-CALLBACK accordingly."
                (if (= (process-exit-status process) 0)
                    (funcall callback
                             (funcall response-extractor output))
-                 (funcall error-callback output))))
+                 (funcall error-callback output))
+               ;; Only message if not active buffer.
+               (unless (eq (chatgpt-shell-config-buffer chatgpt-shell--config)
+                           (window-buffer (selected-window)))
+                 (message "%s responded"
+                          (buffer-name
+                           (chatgpt-shell-config-buffer chatgpt-shell--config))))))
            (kill-buffer output-buffer)))))))
 
 (defun chatgpt-shell--increment-request-id ()
