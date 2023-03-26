@@ -272,7 +272,7 @@ Uses the interface provided by `comint-mode'"
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties start end))
-        (buf (current-buffer))
+        (buf (chatgpt-shell-config-buffer chatgpt-shell--config))
         (pos (point-min))
         (props))
     (remove-text-properties start end '(face nil))
@@ -288,7 +288,7 @@ Uses the interface provided by `comint-mode'"
             (font-lock-ensure))
           (while (< pos (1- (point-max)))
             (setq props (text-properties-at pos))
-            (with-current-buffer (chatgpt-shell-config-buffer chatgpt-shell--config)
+            (with-current-buffer buf
               (set-text-properties (+ start (1- pos))
                                    (+ start (1+ (1- pos)))
                                    props))
