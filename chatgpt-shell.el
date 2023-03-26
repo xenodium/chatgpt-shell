@@ -123,6 +123,22 @@ ChatGPT."
 
 (defvar chatgpt-shell--show-invisible-markers nil)
 
+(defvar chatgpt-shell--chatgpt-config
+  (make-chatgpt-shell-config
+   :buffer (get-buffer-create "*chatgpt*")
+   :process-name "chatgpt"
+   :prompt "ChatGPT> "
+   :curl-command-maker #'chatgpt-shell--make-chatgpt-request-command-list
+   :response-extrator #'chatgpt-shell--extract-chatgpt-response))
+
+(defvar chatgpt-shell--dall-e-config
+  (make-chatgpt-shell-config
+   :buffer (get-buffer-create "*dalle*")
+   :process-name "dalle"
+   :prompt "DALL-E> "
+   :curl-command-maker #'chatgpt-shell--make-dall-e-request-command-list
+   :response-extrator #'chatgpt-shell--extract-dall-e-response))
+
 (defvar-local chatgpt-shell--busy nil)
 
 (defvar-local chatgpt-shell--config nil)
@@ -186,13 +202,7 @@ ChatGPT."
         (unless (zerop (buffer-size))
           (setq old-point (point)))
         (inferior-chatgpt-mode)
-        (chatgpt-shell--initialize
-         (make-chatgpt-shell-config
-          :buffer (get-buffer-create "*chatgpt*")
-          :process-name "chatgpt"
-          :prompt "ChatGPT> "
-          :curl-command-maker #'chatgpt-shell--make-chatgpt-request-command-list
-          :response-extrator #'chatgpt-shell--extract-chatgpt-response))))
+        (chatgpt-shell--initialize chatgpt-shell--chatgpt-config)))
     (pop-to-buffer-same-window buf-name)
     (when old-point
       (push-mark old-point))))
@@ -210,12 +220,7 @@ ChatGPT."
           (setq old-point (point)))
         (inferior-chatgpt-mode)
         (chatgpt-shell--initialize
-         (make-chatgpt-shell-config
-          :buffer (get-buffer-create "*dalle*")
-          :process-name "dalle"
-          :prompt "DALL-E> "
-          :curl-command-maker #'chatgpt-shell--make-dall-e-request-command-list
-          :response-extrator #'chatgpt-shell--extract-dall-e-response))))
+         chatgpt-shell--dall-e-config)))
     (pop-to-buffer-same-window buf-name)
     (when old-point
       (push-mark old-point))))
@@ -307,6 +312,14 @@ Uses the interface provided by `comint-mode'"
           )
       (set-text-properties start end
                                '(face 'markdown-pre-face)))))
+
+(defun chatgpt-shell-chatgpt-prompt ()
+  "Make a ChatGPT request from the minibuffer."
+  (interactive)
+  (chatgpt-shell-send-to-buffer
+   (read-string (chatgpt-shell-config-prompt
+                 chatgpt-shell--chatgpt-config)))
+  (chatgpt-shell--send-input))
 
 (defun chatgpt-shell-return ()
   "RET binding."
