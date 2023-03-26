@@ -2,7 +2,9 @@
 
 * chatgpt-shell
 
-A minimal ChatGPT Emacs shell.
+Minimal ChatGPT and DALL-E Emacs shells.
+
+A short intro in a [[https://xenodium.com/a-chatgpt-emacs-shell/][blog post]].
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
 
