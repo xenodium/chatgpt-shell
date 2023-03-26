@@ -337,6 +337,16 @@ Uses the interface provided by `comint-mode'"
            (buffer-substring (region-beginning) (region-end))))
   (chatgpt-shell--send-input))
 
+(defun chatgpt-shell-eshell-whats-wrong ()
+  "Ask ChatGPT what's wrong with the last eshell command."
+  (interactive)
+  (chatgpt-shell-send-to-buffer
+   (concat "What's wrong with this command?\n\n"
+           (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
+           "\n\n"
+           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
+  (chatgpt-shell--send-input))
+
 (defun chatgpt-shell-send-region ()
   "Send region to ChatGPT."
   (interactive)
