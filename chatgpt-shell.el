@@ -189,6 +189,7 @@ ChatGPT."
   "Keymap for ChatGPT mode.")
 
 (defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
+(defalias 'chatgpt-shell-explain-code 'chatgpt-shell-describe-code)
 
 ;;;###autoload
 (defun chatgpt-shell ()
