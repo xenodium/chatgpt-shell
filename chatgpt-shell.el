@@ -279,26 +279,18 @@ Uses the interface provided by `comint-mode'"
     (message "Fontifying buffer: %s" (buffer-name buf))
     (remove-text-properties start end '(face nil))
     (if (fboundp lang-mode)
-        (with-current-buffer
-            (get-buffer-create
-             (format " *chatgpt-shell-fontification:%s*" lang-mode))
-          (let ((inhibit-modification-hooks nil))
-            (erase-buffer)
-            ;; Additional space ensures property change.
-            (insert string " ")
-            (funcall lang-mode)
-            (font-lock-ensure))
-          (while (< pos (1- (point-max)))
-            (setq props (text-properties-at pos))
-            (setq overlay (make-overlay (+ start (1- pos))
-                                        (+ start (1+ (1- pos)))
-                                        buf))
-            (with-current-buffer buf
-              (message "Overlaying buffer: %s" (current-buffer))
-              (overlay-put overlay 'face (plist-get props 'face))
-              (overlay-put overlay 'font-lock-face (plist-get props 'font-lock-face))
-              (overlay-put overlay 'font-lock-fontified (plist-get props 'font-lock-fontified)))
-            (setq pos (1+ pos))))
+        (overlay-put (make-overlay start end buf)
+                     'display
+                   (with-current-buffer
+                       (get-buffer-create
+                        (format " *chatgpt-shell-fontification:%s*" lang-mode))
+                     (let ((inhibit-modification-hooks nil))
+                       (erase-buffer)
+                       ;; Additional space ensures property change.
+                       (insert string " ")
+                       (funcall lang-mode)
+                       (font-lock-ensure))
+                     (buffer-string)))
       (set-text-properties start end
                            '(face 'markdown-pre-face)))))
 
