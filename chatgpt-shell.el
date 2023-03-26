@@ -274,7 +274,9 @@ Uses the interface provided by `comint-mode'"
         (string (buffer-substring-no-properties start end))
         (buf (chatgpt-shell-config-buffer chatgpt-shell--config))
         (pos (point-min))
-        (props))
+        (props)
+        (overlay))
+    (message "Fontifying buffer: %s" (buffer-name buf))
     (remove-text-properties start end '(face nil))
     (if (fboundp lang-mode)
         (with-current-buffer
@@ -288,10 +290,14 @@ Uses the interface provided by `comint-mode'"
             (font-lock-ensure))
           (while (< pos (1- (point-max)))
             (setq props (text-properties-at pos))
+            (setq overlay (make-overlay (+ start (1- pos))
+                                        (+ start (1+ (1- pos)))
+                                        buf))
             (with-current-buffer buf
-              (set-text-properties (+ start (1- pos))
-                                   (+ start (1+ (1- pos)))
-                                   props))
+              (message "Overlaying buffer: %s" (current-buffer))
+              (overlay-put overlay 'face (plist-get props 'face))
+              (overlay-put overlay 'font-lock-face (plist-get props 'font-lock-face))
+              (overlay-put overlay 'font-lock-fontified (plist-get props 'font-lock-fontified)))
             (setq pos (1+ pos))))
       (set-text-properties start end
                            '(face 'markdown-pre-face)))))
