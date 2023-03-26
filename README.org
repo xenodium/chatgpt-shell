@@ -6,6 +6,8 @@ A minimal ChatGPT Emacs shell.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
 
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/dall-e-vs-chatgpt.gif" width="80%" />
+
 ** Note
 
 This is very much an experimental proof of concept, possibly incomplete, or maybe with some rough edges. Pull requests with improvements or fixes totally welcome.
@@ -32,7 +34,7 @@ Load =(require 'chatgpt-shell)=
 
 * Launch
 
-Launch with =M-x chatgpt-shell=.
+Launch with =M-x chatgpt-shell= or =dall-e-shell=.
 
 * Clear buffer
 
