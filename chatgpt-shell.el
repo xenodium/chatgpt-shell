@@ -231,6 +231,7 @@ Uses the interface provided by `comint-mode'"
   nil)
 
 (defun chatgpt-shell--initialize (config)
+  "Initialize shell using CONFIG."
   (setq-local chatgpt-shell--config config)
   (visual-line-mode +1)
   (setq comint-prompt-regexp (concat "^" (regexp-quote
