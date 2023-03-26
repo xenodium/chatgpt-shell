@@ -49,6 +49,7 @@
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
+                                            ("objectivec" . "objc")
                                             ("cpp" . "c++"))
   "Maps external language names to Emacs names.
 
