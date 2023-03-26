@@ -23,9 +23,16 @@ Load =(require 'chatgpt-shell)=
 * Set OpenAI key
 ** As function
 #+begin_src emacs-lisp
+  ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
         (lambda ()
           (nth 0 (process-lines "pass" "show" "openai-key"))))
+
+  ;; or if using auth-sources, e.g., so the file ~/.authinfo has this line:
+  ;;  machine openai.com password OPENAI_KEY
+  (setq chatgpt-shell-openai-key
+        (plist-get (car (auth-source-search :host "openai.com"))
+                   :secret))
 #+end_src
 
 ** Manually
