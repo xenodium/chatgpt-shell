@@ -126,7 +126,7 @@ ChatGPT."
 (cl-defstruct
     chatgpt-shell-config
   prompt
-  buffer
+  buffer-name
   process-name
   url
   request-data-maker
@@ -134,7 +134,7 @@ ChatGPT."
 
 (defvar chatgpt-shell--chatgpt-config
   (make-chatgpt-shell-config
-   :buffer (get-buffer-create "*chatgpt*")
+   :buffer-name "*chatgpt*"
    :process-name "chatgpt"
    :prompt "ChatGPT> "
    :url "https://api.openai.com/v1/chat/completions"
@@ -149,7 +149,7 @@ ChatGPT."
 
 (defvar chatgpt-shell--dall-e-config
   (make-chatgpt-shell-config
-   :buffer (get-buffer-create "*dalle*")
+   :buffer-name "*dalle*"
    :process-name "dalle"
    :prompt "DALL-E> "
    :url "https://api.openai.com/v1/images/generations"
@@ -248,6 +248,10 @@ ChatGPT."
 Uses the interface provided by `comint-mode'"
   nil)
 
+(defun chatgpt-shell--buffer (config)
+  "Get buffer from CONFIG."
+  (get-buffer-create (chatgpt-shell-config-buffer-name chatgpt-shell--config)))
+
 (defun chatgpt-shell--initialize (config)
   "Initialize shell using CONFIG."
   (setq-local chatgpt-shell--config config)
@@ -265,13 +269,14 @@ Uses the interface provided by `comint-mode'"
   (setq comint-get-old-input 'chatgpt-shell--get-old-input)
   (setq-local comint-completion-addsuffix nil)
 
-  (unless (comint-check-proc (chatgpt-shell-config-buffer chatgpt-shell--config))
+  (unless (or (comint-check-proc (chatgpt-shell--buffer chatgpt-shell--config))
+              (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
     (condition-case nil
         (start-process (chatgpt-shell-config-process-name chatgpt-shell--config)
-                       (chatgpt-shell-config-buffer chatgpt-shell--config) "hexl")
+                       (chatgpt-shell--buffer chatgpt-shell--config) "hexl")
       (file-error (start-process
                    (chatgpt-shell-config-process-name chatgpt-shell--config)
-                   (chatgpt-shell-config-buffer chatgpt-shell--config) "cat")))
+                   (chatgpt-shell--buffer chatgpt-shell--config) "cat")))
     (set-process-query-on-exit-flag (chatgpt-shell--process) nil)
     (goto-char (point-max))
     (setq-local comint-inhibit-carriage-motion t)
@@ -285,7 +290,7 @@ Uses the interface provided by `comint-mode'"
     (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
     (set-marker comint-last-input-start (chatgpt-shell--pm))
     (set-process-filter (get-buffer-process
-                         (chatgpt-shell-config-buffer chatgpt-shell--config))
+                         (chatgpt-shell--buffer chatgpt-shell--config))
                         'comint-output-filter))
 
   (font-lock-add-keywords nil chatgpt-shell-font-lock-keywords))
@@ -298,7 +303,7 @@ Uses the interface provided by `comint-mode'"
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties start end))
-        (buf (chatgpt-shell-config-buffer chatgpt-shell--config))
+        (buf (chatgpt-shell--buffer chatgpt-shell--config))
         (pos 0)
         (props)
         (overlay)
@@ -400,7 +405,7 @@ Set SAVE-EXCURSION to prevent point from moving."
 (defun chatgpt-shell-interrupt ()
   "Interrupt current request."
   (interactive)
-  (with-current-buffer (chatgpt-shell-config-buffer chatgpt-shell--config)
+  (with-current-buffer (chatgpt-shell--buffer chatgpt-shell--config)
     ;; Increment id, so in-flight request is ignored.
     (chatgpt-shell--increment-request-id)
     (comint-send-input)
@@ -494,7 +499,7 @@ If no LENGTH set, use 2048."
   "Run shell COMMAND asynchronously.
 Calls RESPONSE-EXTRACTOR to extract the response and feeds it to
 CALLBACK or ERROR-CALLBACK accordingly."
-  (let* ((buffer (chatgpt-shell-config-buffer chatgpt-shell--config))
+  (let* ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
          (request-id (chatgpt-shell--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
          (request-process (condition-case err
@@ -525,11 +530,11 @@ CALLBACK or ERROR-CALLBACK accordingly."
                             (funcall response-extractor output))
                  (funcall error-callback output))
                ;; Only message if not active buffer.
-               (unless (eq (chatgpt-shell-config-buffer chatgpt-shell--config)
+               (unless (eq (chatgpt-shell--buffer chatgpt-shell--config)
                            (window-buffer (selected-window)))
                  (message "%s responded"
                           (buffer-name
-                           (chatgpt-shell-config-buffer chatgpt-shell--config))))))
+                           (chatgpt-shell--buffer chatgpt-shell--config))))))
            (kill-buffer output-buffer)))))))
 
 (defun chatgpt-shell--increment-request-id ()
@@ -542,12 +547,12 @@ CALLBACK or ERROR-CALLBACK accordingly."
   "Set the process mark in the current buffer to POS."
   (set-marker (process-mark
                (get-buffer-process
-                (chatgpt-shell-config-buffer chatgpt-shell--config))) pos))
+                (chatgpt-shell--buffer chatgpt-shell--config))) pos))
 
 (defun chatgpt-shell--pm nil
   "Return the process mark of the current buffer."
   (process-mark (get-buffer-process
-                 (chatgpt-shell-config-buffer chatgpt-shell--config))))
+                 (chatgpt-shell--buffer chatgpt-shell--config))))
 
 (defun chatgpt-shell--input-sender (_proc input)
   "Set the variable `chatgpt-shell--input' to INPUT.
@@ -649,7 +654,7 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--extract-commands-and-responses ()
   "Extract all command and responses in buffer."
   (let ((result))
-    (with-current-buffer (chatgpt-shell-config-buffer chatgpt-shell--config)
+    (with-current-buffer (chatgpt-shell--buffer chatgpt-shell--config)
       (mapc (lambda (item)
               (let* ((values (split-string item "<gpt-end-of-prompt>"))
                      (lines (split-string item "\n"))
@@ -693,11 +698,11 @@ if `json' is available."
 
 (defun chatgpt-shell--process nil
   "Get *chatgpt* process."
-  (get-buffer-process (chatgpt-shell-config-buffer chatgpt-shell--config)))
+  (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
 
 (defun chatgpt-shell--extract-dall-e-response (json)
   "Extract DALL-E response from JSON."
-  (when-let ((buffer (chatgpt-shell-config-buffer chatgpt-shell--config))
+  (when-let ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
              (parsed (chatgpt-shell--json-parse-string json))
              (url (map-elt (seq-first (map-elt parsed 'data))
                            'url))
