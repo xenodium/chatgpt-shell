@@ -128,7 +128,8 @@ ChatGPT."
   prompt
   buffer
   process-name
-  curl-command-maker
+  url
+  request-data-maker
   response-extrator)
 
 (defvar chatgpt-shell--chatgpt-config
@@ -136,7 +137,14 @@ ChatGPT."
    :buffer (get-buffer-create "*chatgpt*")
    :process-name "chatgpt"
    :prompt "ChatGPT> "
-   :curl-command-maker #'chatgpt-shell--make-chatgpt-request-command-list
+   :url "https://api.openai.com/v1/chat/completions"
+   :request-data-maker
+   (lambda (commands-and-responses)
+     (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
+                           (messages . ,commands-and-responses))))
+       (when chatgpt-shell-model-temperature
+         (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+       request-data))
    :response-extrator #'chatgpt-shell--extract-chatgpt-response))
 
 (defvar chatgpt-shell--dall-e-config
@@ -144,7 +152,16 @@ ChatGPT."
    :buffer (get-buffer-create "*dalle*")
    :process-name "dalle"
    :prompt "DALL-E> "
-   :curl-command-maker #'chatgpt-shell--make-dall-e-request-command-list
+   :url "https://api.openai.com/v1/images/generations"
+   :request-data-maker
+   (lambda (commands-and-responses)
+     (let ((request-data `((model . ,chatgpt-shell-dall-e-model-version)
+                           (prompt . ,(map-elt (aref commands-and-responses
+                                                     (1- (length commands-and-responses)))
+                                               'content)))))
+       (when chatgpt-shell-model-temperature
+         (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+       request-data))
    :response-extrator #'chatgpt-shell--extract-dall-e-response))
 
 (defvar-local chatgpt-shell--busy nil)
@@ -444,12 +461,13 @@ or
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
         (chatgpt-shell--async-shell-command
-         (funcall (chatgpt-shell-config-curl-command-maker chatgpt-shell--config)
-                  (vconcat
-                   (last (chatgpt-shell--extract-commands-and-responses)
-                         (chatgpt-shell--unpaired-length
-                          chatgpt-shell-transmitted-context-length)))
-                  key)
+         (chatgpt-shell--make-curl-request-command-list
+          key (chatgpt-shell-config-url chatgpt-shell--config)
+          (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
+                   (vconcat
+                    (last (chatgpt-shell--extract-commands-and-responses)
+                          (chatgpt-shell--unpaired-length
+                           chatgpt-shell-transmitted-context-length)))))
          (chatgpt-shell-config-response-extrator chatgpt-shell--config)
          (lambda (response)
            (if response
@@ -564,19 +582,13 @@ Used by `chatgpt-shell--send-input's call."
     (comint-skip-prompt)
     (buffer-substring (point) (progn (forward-sexp 1) (point)))))
 
-(defun chatgpt-shell--make-chatgpt-request-command-list (messages key)
-  "Build ChatGPT curl command list using MESSAGES and KEY."
-  (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
-  (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
-                        (messages . ,messages))))
-    (when chatgpt-shell-model-temperature
-      (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
-    (list "curl"
-          "https://api.openai.com/v1/chat/completions"
-          "--fail" "--no-progress-meter" "-m" "30"
-          "-H" "Content-Type: application/json"
-          "-H" (format "Authorization: Bearer %s" key)
-          "-d" (json-serialize request-data))))
+(defun chatgpt-shell--make-curl-request-command-list (key url request-data)
+  "Build ChatGPT curl command list using KEY URL and REQUEST-DATA."
+  (list "curl" url
+        "--fail" "--no-progress-meter" "-m" "30"
+        "-H" "Content-Type: application/json"
+        "-H" (format "Authorization: Bearer %s" key)
+        "-d" (json-serialize request-data)))
 
 (defun chatgpt-shell--curl-version-supported ()
   "Return t if curl version is 7.67 or newer, nil otherwise."
@@ -682,21 +694,6 @@ if `json' is available."
 (defun chatgpt-shell--process nil
   "Get *chatgpt* process."
   (get-buffer-process (chatgpt-shell-config-buffer chatgpt-shell--config)))
-
-(defun chatgpt-shell--make-dall-e-request-command-list (messages key)
-  "Build DALL-E curl command list using MESSAGES and KEY."
-  (cl-assert chatgpt-shell-openai-key nil "`chatgpt-shell-openai-key' needs to be set with your key")
-  (let ((request-data `((model . ,chatgpt-shell-dall-e-model-version)
-                        (prompt . ,(map-elt (aref messages (1- (length messages)))
-                                            'content)))))
-    (when chatgpt-shell-model-temperature
-      (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
-    (list "curl"
-          "https://api.openai.com/v1/images/generations"
-          "--fail" "--no-progress-meter" "-m" "30"
-          "-H" "Content-Type: application/json"
-          "-H" (format "Authorization: Bearer %s" key)
-          "-d" (json-serialize request-data))))
 
 (defun chatgpt-shell--extract-dall-e-response (json)
   "Extract DALL-E response from JSON."
