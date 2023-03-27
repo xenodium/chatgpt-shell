@@ -465,14 +465,13 @@ or
                                                                   'invisible (not chatgpt-shell--show-invisible-markers)))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
-        (chatgpt-shell--async-shell-command
-         (chatgpt-shell--make-curl-request-command-list
-          key (chatgpt-shell-config-url chatgpt-shell--config)
-          (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
-                   (vconcat
-                    (last (chatgpt-shell--extract-commands-and-responses)
-                          (chatgpt-shell--unpaired-length
-                           chatgpt-shell-transmitted-context-length)))))
+        (chatgpt-shell--async-curl-request
+         key (chatgpt-shell-config-url chatgpt-shell--config)
+         (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
+                  (vconcat
+                   (last (chatgpt-shell--extract-commands-and-responses)
+                         (chatgpt-shell--unpaired-length
+                          chatgpt-shell-transmitted-context-length))))
          (chatgpt-shell-config-response-extrator chatgpt-shell--config)
          (lambda (response)
            (if response
@@ -494,6 +493,15 @@ If no LENGTH set, use 2048."
   (if length
       (1+ (* 2 length))
     2048))
+
+(defun chatgpt-shell--async-curl-request (key url request-data response-extractor callback error-callback)
+  "Make request via `curl' using KEY URL REQUEST-DATA RESPONSE-EXTRACTOR CALLBACK and ERROR-CALLBACK."
+  (chatgpt-shell--async-shell-command
+   (chatgpt-shell--make-curl-request-command-list
+    key url request-data)
+   response-extractor
+   callback
+   error-callback))
 
 (defun chatgpt-shell--async-shell-command (command response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
