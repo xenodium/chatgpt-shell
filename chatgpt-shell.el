@@ -34,6 +34,7 @@
 
 (require 'comint)
 (require 'goto-addr)
+(require 'json)
 (require 'map)
 (require 'markdown-mode)
 (require 'seq)
@@ -434,9 +435,6 @@ Set SAVE-EXCURSION to prevent point from moving."
       (call-interactively 'comint-clear-buffer)
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
       (setq chatgpt-shell--busy nil))
-     ((not (json-available-p))
-      (chatgpt-shell--write-reply "Emacs needs to be compiled with --with-json")
-      (setq chatgpt-shell--busy nil))
      ((not (chatgpt-shell--curl-version-supported))
       (chatgpt-shell--write-reply "You need curl version 7.67 or newer.")
       (setq chatgpt-shell--busy nil))
@@ -608,7 +606,13 @@ Used by `chatgpt-shell--send-input's call."
         "--fail" "--no-progress-meter" "-m" "30"
         "-H" "Content-Type: application/json"
         "-H" (format "Authorization: Bearer %s" key)
-        "-d" (json-serialize request-data)))
+        "-d" (chatgpt-shell--json-encode request-data)))
+
+(defun chatgpt-shell--json-encode (obj)
+  "Serialize OBJ to json. Use fallback if `json-serialize' isn't available."
+  (if (fboundp 'json-serialize)
+      (json-serialize obj)
+    (json-encode obj)))
 
 (defun chatgpt-shell--curl-version-supported ()
   "Return t if curl version is 7.67 or newer, nil otherwise."
@@ -619,9 +623,13 @@ Used by `chatgpt-shell--send-input's call."
 
 (defun chatgpt-shell--json-parse-string (json)
   "Parse JSON and return the parsed data structure, nil otherwise."
-  (condition-case nil
-      (json-parse-string json :object-type 'alist)
-    (json-parse-error nil)))
+  (if (fboundp 'json-parse-string)
+      (condition-case nil
+          (json-parse-string json :object-type 'alist)
+        (json-parse-error nil))
+    (condition-case err
+        (json-read-from-string json)
+      (error nil))))
 
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
@@ -708,7 +716,7 @@ if `json' is available."
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
         (when (and (require 'json nil t)
-                   (ignore-errors (json-parse-string output)))
+                   (ignore-errors (chatgpt-shell--json-parse-string output)))
           (json-pretty-print beginning-of-input (point)))))))
 
 (defun chatgpt-shell--process nil
