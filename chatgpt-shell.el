@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
-;; Author: Alvaro Ramirez
+;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 0.3
 ;; Package-Requires: ((emacs "27.1")
