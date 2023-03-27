@@ -47,6 +47,11 @@
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-request-maker #'chatgpt-shell--async-curl-request
+  "OpenAI key as a string or a function that loads and returns it."
+  :type 'function
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
                                             ("objectivec" . "objc")
@@ -465,22 +470,22 @@ or
                                                                   'invisible (not chatgpt-shell--show-invisible-markers)))
                                 (setq chatgpt-shell--busy nil)
                                 nil))))))
-        (chatgpt-shell--async-curl-request
-         key (chatgpt-shell-config-url chatgpt-shell--config)
-         (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
-                  (vconcat
-                   (last (chatgpt-shell--extract-commands-and-responses)
-                         (chatgpt-shell--unpaired-length
-                          chatgpt-shell-transmitted-context-length))))
-         (chatgpt-shell-config-response-extrator chatgpt-shell--config)
-         (lambda (response)
-           (if response
-               (chatgpt-shell--write-reply response)
-             (chatgpt-shell--write-reply "Error: that's all is known" t))
-           (setq chatgpt-shell--busy nil))
-         (lambda (error)
-           (chatgpt-shell--write-reply error t)
-           (setq chatgpt-shell--busy nil))))))))
+        (funcall chatgpt-shell-request-maker
+                 key (chatgpt-shell-config-url chatgpt-shell--config)
+                 (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
+                          (vconcat
+                           (last (chatgpt-shell--extract-commands-and-responses)
+                                 (chatgpt-shell--unpaired-length
+                                  chatgpt-shell-transmitted-context-length))))
+                 (chatgpt-shell-config-response-extrator chatgpt-shell--config)
+                 (lambda (response)
+                   (if response
+                       (chatgpt-shell--write-reply response)
+                     (chatgpt-shell--write-reply "Error: that's all is known" t))
+                   (setq chatgpt-shell--busy nil))
+                 (lambda (error)
+                   (chatgpt-shell--write-reply error t)
+                   (setq chatgpt-shell--busy nil))))))))
 
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
