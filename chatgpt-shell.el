@@ -33,6 +33,7 @@
 ;;; Code:
 
 (require 'comint)
+(require 'goto-addr)
 (require 'map)
 (require 'markdown-mode)
 (require 'seq)
@@ -261,6 +262,7 @@ Uses the interface provided by `comint-mode'"
   "Initialize shell using CONFIG."
   (setq-local chatgpt-shell--config config)
   (visual-line-mode +1)
+  (goto-address-mode +1)
   (setq comint-prompt-regexp
         (concat "^" (regexp-quote
                      (chatgpt-shell-config-prompt chatgpt-shell--config))))
