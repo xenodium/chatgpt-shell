@@ -390,8 +390,10 @@ Uses the interface provided by `comint-mode'"
 (defun chatgpt-shell-send-region ()
   "Send region to ChatGPT."
   (interactive)
+  (unless (region-active-p)
+    (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
-   (buffer-substring (region-beginning) (region-end)) nil t))
+   (concat "\n\n" (buffer-substring (region-beginning) (region-end))) nil t))
 
 (defun chatgpt-shell-send-to-buffer (text &optional submit save-excursion)
   "Send TEXT to *chatgpt* buffer.
