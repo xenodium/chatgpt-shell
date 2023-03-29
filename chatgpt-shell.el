@@ -54,6 +54,11 @@
   :type 'function
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-request-timeout 60
+  "How long to wait for a request to time out."
+  :type 'function
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
                                             ("objectivec" . "objc")
@@ -605,7 +610,8 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--make-curl-request-command-list (key url request-data)
   "Build ChatGPT curl command list using KEY URL and REQUEST-DATA."
   (list "curl" url
-        "--fail" "--no-progress-meter" "-m" "30"
+        "--fail" "--no-progress-meter"
+        "-m" (number-to-string chatgpt-shell-request-timeout)
         "-H" "Content-Type: application/json"
         "-H" (format "Authorization: Bearer %s" key)
         "-d" (chatgpt-shell--json-encode request-data)))
