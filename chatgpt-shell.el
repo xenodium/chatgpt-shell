@@ -353,12 +353,21 @@ Uses the interface provided by `comint-mode'"
                                '(face 'markdown-pre-face)))))
 
 (defun chatgpt-shell-chatgpt-prompt ()
-  "Make a ChatGPT request from the minibuffer."
+  "Make a ChatGPT request from the minibuffer.
+
+If region is active, append to prompt."
   (interactive)
-  (chatgpt-shell-send-to-buffer
-   (read-string (chatgpt-shell-config-prompt
-                 chatgpt-shell--chatgpt-config)))
-  (chatgpt-shell--send-input))
+  (let ((prompt (read-string (concat
+                              (if (region-active-p)
+                                  "[appending region] "
+                                "")
+                              (chatgpt-shell-config-prompt
+                               chatgpt-shell--chatgpt-config)))))
+    (when (region-active-p)
+      (setq prompt (concat prompt "\n\n"
+                           (buffer-substring (region-beginning) (region-end)))))
+    (chatgpt-shell-send-to-buffer prompt)
+    (chatgpt-shell--send-input)))
 
 (defun chatgpt-shell-return ()
   "RET binding."
