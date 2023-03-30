@@ -57,6 +57,11 @@
 
 (defcustom chatgpt-shell-request-timeout 60
   "How long to wait for a request to time out."
+  :type 'integer
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-display-function #'pop-to-buffer-same-window
+  "Function to display new shell.  Can be set to `display-buffer' or similar."
   :type 'function
   :group 'chatgpt-shell)
 
@@ -236,7 +241,7 @@ ChatGPT."
           (setq old-point (point)))
         (inferior-chatgpt-mode)
         (chatgpt-shell--initialize chatgpt-shell--chatgpt-config)))
-    (pop-to-buffer-same-window buf-name)
+    (funcall chatgpt-shell-display-function buf-name)
     (when old-point
       (push-mark old-point))))
 
@@ -254,7 +259,7 @@ ChatGPT."
         (inferior-chatgpt-mode)
         (chatgpt-shell--initialize
          chatgpt-shell--dall-e-config)))
-    (pop-to-buffer-same-window buf-name)
+    (funcall chatgpt-shell-display-function buf-name)
     (when old-point
       (push-mark old-point))))
 
