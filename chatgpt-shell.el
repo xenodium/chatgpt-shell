@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.3
+;; Version: 0.4
 ;; Package-Requires: ((emacs "27.1")
 ;;                    (markdown-mode "2.5"))
 
@@ -38,6 +38,7 @@
 (require 'map)
 (require 'markdown-mode)
 (require 'seq)
+(require 'shell)
 
 (eval-when-compile
   (require 'cl-lib)
@@ -617,7 +618,7 @@ Used by `chatgpt-shell--send-input's call."
         "-d" (chatgpt-shell--json-encode request-data)))
 
 (defun chatgpt-shell--json-encode (obj)
-  "Serialize OBJ to json. Use fallback if `json-serialize' isn't available."
+  "Serialize OBJ to json.  Use fallback if `json-serialize' isn't available."
   (if (fboundp 'json-serialize)
       (json-serialize obj)
     (json-encode obj)))
@@ -703,9 +704,59 @@ Used by `chatgpt-shell--send-input's call."
                   (when (not (string-empty-p response))
                     (push (list (cons 'role "system")
                                 (cons 'content response)) result)))))
-            (split-string (substring-no-properties (buffer-string))
+            (split-string (buffer-string)
                           chatgpt-shell--prompt-internal)))
     (nreverse result)))
+
+(defun chatgpt-shell--extract-current-command-and-response ()
+  "Extract the current command and response in buffer."
+  (save-excursion
+    (save-restriction
+      (shell-narrow-to-prompt)
+      (let ((items (chatgpt-shell--extract-commands-and-responses)))
+        (cl-assert (or (seq-empty-p items)
+                       (eq (length items) 1)
+                       (eq (length items) 2)))
+        items))))
+
+(defun chatgpt-shell-view-current ()
+  "View current entry in a separate buffer."
+  (interactive)
+  (let* ((items (chatgpt-shell--extract-current-command-and-response))
+         (command (map-elt (seq-find (lambda (item)
+                                       (and (string-equal
+                                             (map-elt item 'role)
+                                             "user")
+                                            (not (string-empty-p
+                                                  (string-trim (map-elt item 'content))))))
+                                     items)
+                           'content))
+         (response (map-elt (seq-find (lambda (item)
+                                        (and (string-equal
+                                              (map-elt item 'role)
+                                              "system")
+                                             (not (string-empty-p
+                                                   (string-trim (map-elt item 'content))))))
+                                      items)
+                            'content))
+         (buf (generate-new-buffer (if command
+                                       (concat
+                                        (chatgpt-shell-config-prompt chatgpt-shell--config)
+                                        ;; Only the first line of prompt.
+                                        (seq-first (split-string command "\n")))
+                                     (concat (chatgpt-shell-config-prompt chatgpt-shell--config)
+                                             "(no prompt)")))))
+    (when (seq-empty-p items)
+      (user-error "Nothing to export"))
+    (with-current-buffer buf
+      (save-excursion
+        (insert (propertize (or command "") 'face font-lock-comment-face))
+        (when (and command response)
+          (insert "\n\n"))
+        (insert (or response "")))
+      (view-mode +1)
+      (setq view-exit-action 'kill-buffer))
+    (switch-to-buffer buf)))
 
 (defun chatgpt-shell--write-output-to-log-buffer (output)
   "Write curl process OUTPUT to log buffer.
