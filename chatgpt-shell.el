@@ -359,31 +359,6 @@ Uses the interface provided by `comint-mode'"
       (set-text-properties start end
                                '(face 'markdown-pre-face)))))
 
-(defun chatgpt-shell-save-session-transcript ()
-  "Save shell transcript to file."
-  (interactive)
-  (if chatgpt-shell--file
-      (let ((content (buffer-string)))
-        (with-temp-buffer
-          (insert content)
-          (write-file chatgpt-shell--file nil)))
-    (when-let ((path (read-file-name "Write file: " nil nil nil "transcript.txt"))
-               (content (buffer-string)))
-      (with-temp-buffer
-        (insert content)
-        (write-file path t))
-      (setq chatgpt-shell--file path))))
-
-(defun chatgpt-shell-restore-session-from-transcript ()
-  "Restore session from transcript."
-  (interactive)
-  (when-let ((path (read-file-name "Restore from: " nil nil t))
-             (inhibit-read-only t))
-    (erase-buffer)
-    (insert-file-contents path)
-    (goto-char (point-min))
-    (setq chatgpt-shell--file path)))
-
 (defun chatgpt-shell-chatgpt-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
