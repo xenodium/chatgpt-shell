@@ -756,7 +756,8 @@ Used by `chatgpt-shell--send-input's call."
         (insert (or response "")))
       (view-mode +1)
       (setq view-exit-action 'kill-buffer))
-    (switch-to-buffer buf)))
+    (switch-to-buffer buf)
+    buf))
 
 (defun chatgpt-shell--write-output-to-log-buffer (output)
   "Write curl process OUTPUT to log buffer.
