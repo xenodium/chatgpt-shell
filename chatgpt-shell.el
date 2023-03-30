@@ -567,7 +567,9 @@ CALLBACK or ERROR-CALLBACK accordingly."
                (if (= (process-exit-status process) 0)
                    (funcall callback
                             (funcall response-extractor output))
-                 (funcall error-callback output))
+                 (if-let ((error (chatgpt-shell--extract-chatgpt-response output)))
+                     (funcall error-callback (concat "error: " error))
+                   (funcall error-callback output)))
                ;; Only message if not active buffer.
                (unless (eq (chatgpt-shell--buffer chatgpt-shell--config)
                            (window-buffer (selected-window)))
@@ -575,6 +577,22 @@ CALLBACK or ERROR-CALLBACK accordingly."
                           (buffer-name
                            (chatgpt-shell--buffer chatgpt-shell--config))))))
            (kill-buffer output-buffer)))))))
+
+(defun chatgpt-shell--json-parse-string-filtering (json regexp)
+  "Attempt to parse JSON.  If unsuccessful, attempt after removing REGEXP."
+  (let ((json-object nil)
+        (curl-lines-removed-str json))
+    ;; Try parsing JSON string as is
+    (condition-case nil
+        (setq json-object (json-read-from-string json))
+      (error nil))
+    ;; If parsing fails, remove curl lines and try again
+    (when (null json-object)
+      (setq curl-lines-removed-str (replace-regexp-in-string regexp "" json))
+      (condition-case nil
+          (setq json-object (json-read-from-string curl-lines-removed-str))
+        (error nil)))
+    json-object))
 
 (defun chatgpt-shell--increment-request-id ()
   "Increment `chatgpt-shell--current-request-id'."
@@ -629,7 +647,8 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--make-curl-request-command-list (key url request-data)
   "Build ChatGPT curl command list using KEY URL and REQUEST-DATA."
   (list "curl" url
-        "--fail" "--no-progress-meter"
+        "--fail-with-body"
+        "--no-progress-meter"
         "-m" (number-to-string chatgpt-shell-request-timeout)
         "-H" "Content-Type: application/json"
         "-H" (format "Authorization: Bearer %s" key)
@@ -661,11 +680,15 @@ Used by `chatgpt-shell--send-input's call."
 
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
-  (when-let (parsed (chatgpt-shell--json-parse-string json))
-    (string-trim
-     (map-elt (map-elt (seq-first (map-elt parsed 'choices))
-                       'message)
-              'content))))
+  (if-let (parsed (chatgpt-shell--json-parse-string json))
+      (string-trim
+       (let-alist parsed
+         (let-alist (seq-first .choices)
+           .message.content)))
+    (if-let (parsed-error (chatgpt-shell--json-parse-string-filtering
+                           json "^curl:.*\n?"))
+        (let-alist parsed-error
+          .error.message))))
 
 (defun chatgpt-shell--find-string-in-buffer (buffer search-str)
   "Find SEARCH-STR in BUFFER and return a cons cell with start and end positions.  Return nil if not found."
