@@ -504,6 +504,15 @@ or
                    (chatgpt-shell--write-reply error t)
                    (setq chatgpt-shell--busy nil))))))))
 
+(defun chatgpt-shell-openai-key ()
+  "Get the ChatGPT key."
+  (cond ((stringp chatgpt-shell-openai-key)
+         chatgpt-shell-openai-key)
+        ((functionp chatgpt-shell-openai-key)
+         (funcall chatgpt-shell-openai-key))
+        (t
+         nil)))
+
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
 
@@ -769,19 +778,14 @@ Used by `chatgpt-shell--send-input's call."
     buf))
 
 (defun chatgpt-shell--write-output-to-log-buffer (output)
-  "Write curl process OUTPUT to log buffer.
-
-Create the log buffer if it does not exist.  Pretty print output
-if `json' is available."
+  "Write OUTPUT to log buffer."
+  (when (chatgpt-shell-openai-key)
+    (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
+                                 output)))
   (let ((buffer (get-buffer chatgpt-shell--log-buffer-name)))
     (unless buffer
       ;; Create buffer
-      (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name))
-      (with-current-buffer buffer
-        ;; Use `js-json-mode' if available, fall back to `js-mode'.
-        (if (fboundp #'js-json-mode)
-            (js-json-mode)
-          (js-mode))))
+      (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name)))
     (with-current-buffer buffer
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
