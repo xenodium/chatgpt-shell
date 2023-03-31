@@ -65,6 +65,15 @@
   :type 'function
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-default-prompts '("Write a unit test for the following code:"
+                                           "Refactor the following code so that "
+                                           "Summarize the output of the following command:"
+                                           "What's wrong with this command?"
+                                           "Explain what the following code does:")
+  "List of default prompts to choose from."
+  :type '(repeat string)
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
                                             ("objectivec" . "objc")
@@ -364,12 +373,13 @@ Uses the interface provided by `comint-mode'"
 
 If region is active, append to prompt."
   (interactive)
-  (let ((prompt (read-string (concat
+  (let ((prompt (completing-read (concat
                               (if (region-active-p)
                                   "[appending region] "
                                 "")
                               (chatgpt-shell-config-prompt
-                               chatgpt-shell--chatgpt-config)))))
+                               chatgpt-shell--chatgpt-config))
+                              chatgpt-shell-default-prompts)))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
