@@ -106,7 +106,7 @@ See
 https://platform.openai.com/docs/api-reference/completions\
 /create#completions/create-temperature
 for details."
-  :type '(choice integer
+  :type '(choice 'float
                  (const nil))
   :group 'chatgpt-shell)
 
