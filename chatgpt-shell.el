@@ -200,7 +200,10 @@ ChatGPT."
 (defvar-local chatgpt-shell--file nil)
 
 (defconst chatgpt-shell-font-lock-keywords
-  `(;; Markdown triple backticks source blocks
+  `(;; Markdown single backticks
+    ("`\\([^`\n]+\\)`"
+     (1 'markdown-inline-code-face))
+    ;; Markdown triple backticks source blocks
     ("\\(^\\(```\\)\\([^`\n]*\\)\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
      ;; (2) ``` (3) language (4) body (6) ```
      (0 (progn
@@ -222,10 +225,7 @@ ChatGPT."
                              (match-end 3))
            ;; body
            (match-beginning 4) (match-end 4))
-          nil)))
-    ;; Markdown single backticks
-    ("`\\([^`\n]+\\)`"
-     (1 'markdown-inline-code-face))))
+          nil)))))
 
 (defvar chatgpt-shell-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
