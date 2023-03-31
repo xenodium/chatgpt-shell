@@ -65,14 +65,28 @@
   :type 'function
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-default-prompts '("Write a unit test for the following code:"
-                                           "Refactor the following code so that "
-                                           "Summarize the output of the following command:"
-                                           "What's wrong with this command?"
-                                           "Explain what the following code does:")
+(defcustom chatgpt-shell-read-string-function (lambda (prompt history)
+                                                (read-string prompt nil history))
+  "Function to read strings from user.
+
+To use `completing-read', it can be done with something like:
+
+(lambda (prompt history)
+ (completing-read prompt (symbol-value history) nil nil nil history))"
+  :type 'function
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-chatgpt-default-prompts
+  '("Write a unit test for the following code:"
+    "Refactor the following code so that "
+    "Summarize the output of the following command:"
+    "What's wrong with this command?"
+    "Explain what the following code does:")
   "List of default prompts to choose from."
   :type '(repeat string)
   :group 'chatgpt-shell)
+
+(defvar chatgpt-shell--chatgpt-prompt-history)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
@@ -373,13 +387,17 @@ Uses the interface provided by `comint-mode'"
 
 If region is active, append to prompt."
   (interactive)
-  (let ((prompt (completing-read (concat
-                              (if (region-active-p)
-                                  "[appending region] "
-                                "")
-                              (chatgpt-shell-config-prompt
-                               chatgpt-shell--chatgpt-config))
-                              chatgpt-shell-default-prompts)))
+  (unless chatgpt-shell--chatgpt-prompt-history
+    (setq chatgpt-shell--chatgpt-prompt-history
+          chatgpt-shell-chatgpt-default-prompts))
+  (let ((prompt (funcall chatgpt-shell-read-string-function
+                         (concat
+                          (if (region-active-p)
+                              "[appending region] "
+                            "")
+                          (chatgpt-shell-config-prompt
+                           chatgpt-shell--chatgpt-config))
+                         'chatgpt-shell--chatgpt-prompt-history)))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
