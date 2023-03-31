@@ -130,8 +130,8 @@ See
 https://platform.openai.com/docs/api-reference/completions\
 /create#completions/create-temperature
 for details."
-  :type '(choice 'float
-                 (const nil))
+  :type '(choice (float :tag "Float")
+                 (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-transmitted-context-length nil
@@ -153,8 +153,8 @@ context.
 
 A Value >1 will send that amount of prompt-completion pairs to
 ChatGPT."
-  :type '(choice integer
-                 (const nil))
+  :type '(choice (integer :tag "Integer value")
+                 (const :tag "Not set" nil))
   :group 'chatgpt-shell)
 
 (defvar chatgpt-shell--log-buffer-name "*chatgpt-shell-log*")
