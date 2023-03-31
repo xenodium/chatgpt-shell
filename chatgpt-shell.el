@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Package-Requires: ((emacs "27.1")
 ;;                    (markdown-mode "2.5"))
 
@@ -87,7 +87,7 @@ To use `completing-read', it can be done with something like:
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defvar chatgpt-shell--chatgpt-prompt-history)
+(defvar chatgpt-shell--chatgpt-prompt-history nil)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
@@ -159,7 +159,7 @@ ChatGPT."
 
 (defvar chatgpt-shell--log-buffer-name "*chatgpt-shell-log*")
 
-(defvar chatgpt-shell--input)
+(defvar chatgpt-shell--input nil)
 
 (defvar chatgpt-shell--current-request-id 0)
 
