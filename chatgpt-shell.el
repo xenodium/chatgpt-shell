@@ -71,8 +71,9 @@
 
 To use `completing-read', it can be done with something like:
 
-(lambda (prompt history)
- (completing-read prompt (symbol-value history) nil nil nil history))"
+\(setq `chatgpt-shell-read-string-function'
+      (lambda (prompt history)
+        (completing-read prompt (symbol-value history) nil nil nil history)))"
   :type 'function
   :group 'chatgpt-shell)
 
