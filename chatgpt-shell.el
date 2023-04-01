@@ -955,7 +955,7 @@ Used by `chatgpt-shell--send-input's call."
       (user-error "Nothing to view"))
     (with-current-buffer buf
       (save-excursion
-        (insert (propertize (or command "") 'face font-lock-comment-face))
+        (insert (propertize (or command "") 'face font-lock-doc-face))
         (when (and command response)
           (insert "\n\n"))
         (insert (or response "")))
