@@ -952,7 +952,7 @@ Used by `chatgpt-shell--send-input's call."
                                      (concat (chatgpt-shell-config-prompt chatgpt-shell--config)
                                              "(no prompt)")))))
     (when (seq-empty-p items)
-      (user-error "Nothing to export"))
+      (user-error "Nothing to view"))
     (with-current-buffer buf
       (save-excursion
         (insert (propertize (or command "") 'face font-lock-comment-face))
