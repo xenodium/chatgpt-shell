@@ -6,11 +6,11 @@ Minimal ChatGPT and DALL-E Emacs shells.
 
 A short intro in a [[https://xenodium.com/a-chatgpt-emacs-shell/][blog post]].
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/chatgpt-shell-demo.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/dalle-shell-demo.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dalle-shell-demo.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/dall-e-vs-chatgpt.gif" width="100%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dall-e-vs-chatgpt.gif" width="100%" />
 
 ** Note
 
@@ -63,3 +63,9 @@ Type =clear= as a prompt.
 #+end_src
 
 Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-buffer=.
+
+* Saving and restoring (experimental)
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dall-e-vs-chatgpt.gif" width="100%" />
+
+Save with `M-x chatgpt-shell-save-session-transcript` and restore with `M-x chatgpt-shell-restore-session-from-transcript`.
