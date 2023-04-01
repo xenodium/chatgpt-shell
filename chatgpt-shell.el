@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.6.3
+;; Version: 0.7.1
 ;; Package-Requires: ((emacs "27.1")
 ;;                    (markdown-mode "2.5"))
 
@@ -281,6 +281,7 @@ or
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\C-m" 'chatgpt-shell-return)
     (define-key map "\C-c\C-c" 'chatgpt-shell-interrupt)
+    (define-key map "\C-x\C-s" 'chatgpt-shell-save-session-transcript)
     map)
   "Keymap for ChatGPT mode.")
 
@@ -426,10 +427,11 @@ Very much EXPERIMENTAL."
   (unless (eq major-mode 'inferior-chatgpt-mode)
     (user-error "Not in a shell"))
   (if chatgpt-shell--file
-      (let ((content (buffer-string)))
+      (let ((content (buffer-string))
+            (path chatgpt-shell--file))
         (with-temp-buffer
           (insert content)
-          (write-file chatgpt-shell--file nil)))
+          (write-file path nil)))
     (when-let ((path (read-file-name "Write file: "
                                      nil nil nil "transcript.txt"))
                (content (buffer-string)))
@@ -458,18 +460,21 @@ Very much EXPERIMENTAL."
          (commands-and-responses (with-temp-buffer
                                    (insert-file-contents path)
                                    (chatgpt-shell--extract-commands-and-responses
-                                     (buffer-string)
-                                     prompt)
-                                   ))
+                                    (buffer-string)
+                                    prompt)))
          (response-extractor (chatgpt-shell-config-response-extractor
                               chatgpt-shell--config))
          (request-maker (chatgpt-shell-config-request-maker
                          chatgpt-shell--config))
          (invalid-input (chatgpt-shell-config-invalid-input
-                              chatgpt-shell--config))
+                         chatgpt-shell--config))
          (command)
-         (response))
-    (condition-case err
+         (response)
+         (failed))
+    ;; Momentarily overrides request handling to replay all commands
+    ;; read from file so comint treats all commands/responses like
+    ;; any other command.
+    (unwind-protect
         (progn
           (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
                 (lambda (json)
@@ -478,44 +483,39 @@ Very much EXPERIMENTAL."
           (setf (chatgpt-shell-config-request-maker chatgpt-shell--config)
                 (lambda (url request-data response-extractor callback error-callback)
                   (setq response (car commands-and-responses))
-                  (unless (string-equal (map-elt response 'role)
-                                        "system")
-                    (user-error "Invalid transcript"))
                   (setq commands-and-responses (cdr commands-and-responses))
-                  (funcall callback (map-elt response 'content))
-                  (setq command (car commands-and-responses))
-                  (unless (string-equal (map-elt command 'role)
-                                        "user")
-                    (user-error "Invalid transcript"))
-                  (setq commands-and-responses (cdr commands-and-responses))
-                  (when command
-                    (insert (map-elt command 'content))
-                    (chatgpt-shell--send-input))))
+                  (when response
+                    (unless (string-equal (map-elt response 'role)
+                                          "system")
+                      (setq failed t)
+                      (user-error "Invalid transcript"))
+                    (funcall callback (map-elt response 'content))
+                    (setq command (car commands-and-responses))
+                    (setq commands-and-responses (cdr commands-and-responses))
+                    (when command
+                      (insert (map-elt command 'content))
+                      (chatgpt-shell--send-input)))))
+          (goto-char (point-max))
           (comint-clear-buffer)
           (setq command (car commands-and-responses))
-          (unless (string-equal (map-elt command 'role)
-                                "user")
-            (user-error "Invalid transcript"))
           (setq commands-and-responses (cdr commands-and-responses))
           (when command
+            (unless (string-equal (map-elt command 'role)
+                                  "user")
+              (setq failed t)
+              (user-error "Invalid transcript"))
             (insert (map-elt command 'content))
-            (chatgpt-shell--send-input))
-          (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
-                response-extractor)
-          (setf (chatgpt-shell-config-invalid-input chatgpt-shell--config)
-                invalid-input)
-          (setf (chatgpt-shell-config-request-maker chatgpt-shell--config)
-                request-maker)
-          (setq chatgpt-shell--file path))
-      (error
-       (setq chatgpt-shell--file nil)
-       (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
-             response-extractor)
-       (setf (chatgpt-shell-config-invalid-input chatgpt-shell--config)
-                invalid-input)
-       (setf (chatgpt-shell-config-request-maker chatgpt-shell--config)
-             request-maker)
-       (user-error "Invalid transcript")))))
+            (chatgpt-shell--send-input)))
+      (if failed
+          (setq chatgpt-shell--file nil)
+        (setq chatgpt-shell--file path))
+      (setq chatgpt-shell--busy nil)
+      (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+            response-extractor)
+      (setf (chatgpt-shell-config-invalid-input chatgpt-shell--config)
+            invalid-input)
+      (setf (chatgpt-shell-config-request-maker chatgpt-shell--config)
+            request-maker))))
 
 (defun chatgpt-shell-chatgpt-prompt ()
   "Make a ChatGPT request from the minibuffer.
