@@ -486,7 +486,7 @@ Very much EXPERIMENTAL."
                   (setq commands-and-responses (cdr commands-and-responses))
                   (when response
                     (unless (string-equal (map-elt response 'role)
-                                          "system")
+                                          "assistant")
                       (setq failed t)
                       (user-error "Invalid transcript"))
                     (funcall callback (map-elt response 'content))
@@ -903,7 +903,7 @@ Used by `chatgpt-shell--send-input's call."
                   (push (list (cons 'role "user")
                               (cons 'content prompt)) result))
                 (when (not (string-empty-p response))
-                  (push (list (cons 'role "system")
+                  (push (list (cons 'role "assistant")
                               (cons 'content response)) result)))))
           (split-string text prompt-regexp))
     (nreverse result)))
@@ -938,7 +938,7 @@ Used by `chatgpt-shell--send-input's call."
          (response (map-elt (seq-find (lambda (item)
                                         (and (string-equal
                                               (map-elt item 'role)
-                                              "system")
+                                              "assistant")
                                              (not (string-empty-p
                                                    (string-trim (map-elt item 'content))))))
                                       items)
