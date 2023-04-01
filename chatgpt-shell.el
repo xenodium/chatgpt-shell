@@ -51,7 +51,7 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-request-maker #'chatgpt-shell--async-curl-request
-  "OpenAI key as a string or a function that loads and returns it."
+  "Function to make http request."
   :type 'function
   :group 'chatgpt-shell)
 
