@@ -172,7 +172,7 @@ ChatGPT."
   process-name
   url
   request-data-maker
-  response-extrator)
+  response-extractor)
 
 (defvar chatgpt-shell--chatgpt-config
   (make-chatgpt-shell-config
@@ -187,7 +187,7 @@ ChatGPT."
        (when chatgpt-shell-model-temperature
          (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
        request-data))
-   :response-extrator #'chatgpt-shell--extract-chatgpt-response))
+   :response-extractor #'chatgpt-shell--extract-chatgpt-response))
 
 (defvar chatgpt-shell--dall-e-config
   (make-chatgpt-shell-config
@@ -204,7 +204,7 @@ ChatGPT."
        (when chatgpt-shell-model-temperature
          (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
        request-data))
-   :response-extrator #'chatgpt-shell--extract-dall-e-response))
+   :response-extractor #'chatgpt-shell--extract-dall-e-response))
 
 (defvar-local chatgpt-shell--busy nil)
 
@@ -383,6 +383,95 @@ Uses the interface provided by `comint-mode'"
       (set-text-properties start end
                                '(face 'markdown-pre-face)))))
 
+(defun chatgpt-shell-save-session-transcript ()
+  "Save shell transcript to file.
+
+Very much EXPERIMENTAL."
+  (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
+  (if chatgpt-shell--file
+      (let ((content (buffer-string)))
+        (with-temp-buffer
+          (insert content)
+          (write-file chatgpt-shell--file nil)))
+    (when-let ((path (read-file-name "Write file: "
+                                     nil nil nil "transcript.txt"))
+               (content (buffer-string)))
+      (with-temp-buffer
+        (insert content)
+        (write-file path t))
+      (setq chatgpt-shell--file path))))
+
+(defun chatgpt-shell--list-to-pairs (items)
+  "Return a list of pairs from the input ITEMS."
+  (let ((pairs '()))
+    (while items
+      (push (cons (car items) (cadr items)) pairs)
+      (setq items (cddr items)))
+    (reverse pairs)))
+
+(defun chatgpt-shell-restore-session-from-transcript ()
+  "Restore session from transcript.
+
+Very much EXPERIMENTAL."
+  (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
+  (let* ((path (read-file-name "Restore from: " nil nil t))
+         (prompt (chatgpt-shell-config-prompt chatgpt-shell--config))
+         (commands-and-responses (with-temp-buffer
+                                   (insert-file-contents path)
+                                   (chatgpt-shell--extract-commands-and-responses
+                                     (buffer-string)
+                                     prompt)
+                                   ))
+         (response-extractor (chatgpt-shell-config-response-extractor
+                              chatgpt-shell--config))
+         (requester chatgpt-shell-request-maker)
+         (command)
+         (response))
+    (condition-case err
+        (progn
+          (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+                (lambda (json)
+                  json))
+          (setq chatgpt-shell-request-maker
+                (lambda (key url request-data response-extractor callback error-callback)
+                  (setq response (car commands-and-responses))
+                  (unless (string-equal (map-elt response 'role)
+                                        "system")
+                    (user-error "Invalid transcript"))
+                  (setq commands-and-responses (cdr commands-and-responses))
+                  (funcall callback (map-elt response 'content))
+                  (setq command (car commands-and-responses))
+                  (unless (string-equal (map-elt command 'role)
+                                        "user")
+                    (user-error "Invalid transcript"))
+                  (setq commands-and-responses (cdr commands-and-responses))
+                  (when command
+                    (insert (map-elt command 'content))
+                    (chatgpt-shell--send-input))))
+          (comint-clear-buffer)
+          (setq command (car commands-and-responses))
+          (unless (string-equal (map-elt command 'role)
+                                "user")
+            (user-error "Invalid transcript"))
+          (setq commands-and-responses (cdr commands-and-responses))
+          (when command
+            (insert (map-elt command 'content))
+            (chatgpt-shell--send-input))
+          (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+                response-extractor)
+          (setq chatgpt-shell-request-maker requester)
+          (setq chatgpt-shell--file path))
+      (error
+       (setq chatgpt-shell--file nil)
+       (setf (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+             response-extractor)
+       (setq chatgpt-shell-request-maker requester)
+       (user-error "Invalid transcript")))))
+
 (defun chatgpt-shell-chatgpt-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
@@ -408,6 +497,8 @@ If region is active, append to prompt."
 (defun chatgpt-shell-return ()
   "RET binding."
   (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
   (chatgpt-shell--send-input))
 
 (defun chatgpt-shell-describe-code ()
@@ -466,6 +557,8 @@ Set SAVE-EXCURSION to prevent point from moving."
 (defun chatgpt-shell-interrupt ()
   "Interrupt current request."
   (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
   (with-current-buffer (chatgpt-shell--buffer chatgpt-shell--config)
     ;; Increment id, so in-flight request is ignored.
     (chatgpt-shell--increment-request-id)
@@ -527,10 +620,14 @@ or
                  key (chatgpt-shell-config-url chatgpt-shell--config)
                  (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
                           (vconcat
-                           (last (chatgpt-shell--extract-commands-and-responses)
+                           (last (chatgpt-shell--extract-commands-and-responses
+                                  (with-current-buffer
+                                      (chatgpt-shell-config-buffer-name chatgpt-shell--config)
+                                    (buffer-string))
+                                  (chatgpt-shell-config-prompt chatgpt-shell--config))
                                  (chatgpt-shell--unpaired-length
                                   chatgpt-shell-transmitted-context-length))))
-                 (chatgpt-shell-config-response-extrator chatgpt-shell--config)
+                 (chatgpt-shell-config-response-extractor chatgpt-shell--config)
                  (lambda (response)
                    (if response
                        (chatgpt-shell--write-reply response)
@@ -761,28 +858,26 @@ Used by `chatgpt-shell--send-input's call."
                                     (funcall error-callback output))
                                   (kill-buffer output-buffer)))))))))
 
-(defun chatgpt-shell--extract-commands-and-responses ()
-  "Extract all command and responses in buffer."
+(defun chatgpt-shell--extract-commands-and-responses (text prompt-regexp)
+  "Extract all command and responses in TEXT with PROMPT-REGEXP."
   (let ((result))
-    (with-current-buffer (chatgpt-shell--buffer chatgpt-shell--config)
-      (mapc (lambda (item)
-              (let* ((values (split-string item "<gpt-end-of-prompt>"))
-                     (lines (split-string item "\n"))
-                     (prompt (string-trim (nth 0 values)))
-                     (response (string-trim (progn
-                                              (if (> (length values) 1)
-                                                  (nth 1 values)
-                                                (string-join
-                                                 (cdr lines) "\n"))))))
-                (unless (string-match "<gpt-ignored-response>" response)
-                  (when (not (string-empty-p prompt))
-                    (push (list (cons 'role "user")
-                                (cons 'content prompt)) result))
-                  (when (not (string-empty-p response))
-                    (push (list (cons 'role "system")
-                                (cons 'content response)) result)))))
-            (split-string (buffer-string)
-                          chatgpt-shell--prompt-internal)))
+    (mapc (lambda (item)
+            (let* ((values (split-string item "<gpt-end-of-prompt>"))
+                   (lines (split-string item "\n"))
+                   (prompt (string-trim (nth 0 values)))
+                   (response (string-trim (progn
+                                            (if (> (length values) 1)
+                                                (nth 1 values)
+                                              (string-join
+                                               (cdr lines) "\n"))))))
+              (unless (string-match "<gpt-ignored-response>" response)
+                (when (not (string-empty-p prompt))
+                  (push (list (cons 'role "user")
+                              (cons 'content prompt)) result))
+                (when (not (string-empty-p response))
+                  (push (list (cons 'role "system")
+                              (cons 'content response)) result)))))
+          (split-string text prompt-regexp))
     (nreverse result)))
 
 (defun chatgpt-shell--extract-current-command-and-response ()
@@ -790,7 +885,9 @@ Used by `chatgpt-shell--send-input's call."
   (save-excursion
     (save-restriction
       (shell-narrow-to-prompt)
-      (let ((items (chatgpt-shell--extract-commands-and-responses)))
+      (let ((items (chatgpt-shell--extract-commands-and-responses
+                    (buffer-string)
+                    (chatgpt-shell-config-prompt chatgpt-shell--config))))
         (cl-assert (or (seq-empty-p items)
                        (eq (length items) 1)
                        (eq (length items) 2)))
@@ -799,6 +896,8 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell-view-current ()
   "View current entry in a separate buffer."
   (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
   (let* ((items (chatgpt-shell--extract-current-command-and-response))
          (command (map-elt (seq-find (lambda (item)
                                        (and (string-equal
