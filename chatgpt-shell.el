@@ -773,7 +773,6 @@ Used by `chatgpt-shell--send-input's call."
 
 (defun chatgpt-shell--send-input ()
   "Send text after the prompt."
-  (interactive)
   (let (chatgpt-shell--input)
     (comint-send-input)
     (chatgpt-shell--eval-input chatgpt-shell--input)))
