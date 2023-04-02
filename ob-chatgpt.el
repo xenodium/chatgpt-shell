@@ -45,6 +45,8 @@
 (require 'chatgpt-shell)
 (require 'map)
 
+(defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")))
+
 (defun org-babel-execute:chatgpt-shell(body params)
   "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
