@@ -74,9 +74,11 @@ Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chat
 
 Load =(require 'ob-chatgpt-shell)=
 
-,#+begin_src chatgpt-shell
-  Hello
-,#+end_src
+#+begin_src org
+  ,#+begin_src chatgpt-shell
+    Hello
+  ,#+end_src
 
-,#+RESULTS:
-: Hi there! How can I assist you today?
+  ,#+RESULTS:
+  : Hi there! How can I assist you today?
+#+end_src
