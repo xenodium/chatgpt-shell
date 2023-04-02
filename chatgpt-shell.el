@@ -207,6 +207,7 @@ or
       (chatgpt-shell--make-curl-request-command-list
        chatgpt-shell-openai-key
        url request-data)
+      t ;; streaming
       response-extractor
       callback
       error-callback))
@@ -245,6 +246,7 @@ or
       (chatgpt-shell--make-curl-request-command-list
        chatgpt-shell-openai-key
        url request-data)
+      nil ;; no streaming
       response-extractor
       callback
       error-callback))
@@ -507,7 +509,7 @@ Very much EXPERIMENTAL."
                                           "assistant")
                       (setq failed t)
                       (user-error "Invalid transcript"))
-                    (funcall callback (map-elt response 'content))
+                    (funcall callback (map-elt response 'content) nil)
                     (setq command (car commands-and-responses))
                     (setq commands-and-responses (cdr commands-and-responses))
                     (when command
@@ -695,7 +697,10 @@ Set SAVE-EXCURSION to prevent point from moving."
 
 (defun chatgpt-shell--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
-  (let ((buffer (chatgpt-shell--buffer chatgpt-shell--config)))
+  (let ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
+        (prefix-newline "")
+        (suffix-newline "\n\n")
+        (response-count 0))
    (unless chatgpt-shell--busy
     (setq chatgpt-shell--busy t)
     (cond
@@ -704,15 +709,17 @@ Set SAVE-EXCURSION to prevent point from moving."
       (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
       (setq chatgpt-shell--busy nil))
      ((not (chatgpt-shell--curl-version-supported))
-      (chatgpt-shell--write-reply "You need curl version 7.76 or newer.")
+      (chatgpt-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
       (setq chatgpt-shell--busy nil))
      ((and (chatgpt-shell-config-invalid-input
             chatgpt-shell--config)
            (funcall (chatgpt-shell-config-invalid-input
                      chatgpt-shell--config) input-string))
       (chatgpt-shell--write-reply
-       (funcall (chatgpt-shell-config-invalid-input
-                 chatgpt-shell--config) input-string))
+       (concat "\n"
+               (funcall (chatgpt-shell-config-invalid-input
+                         chatgpt-shell--config) input-string)
+               "\n\n"))
       (setq chatgpt-shell--busy nil))
      ((string-empty-p (string-trim input-string))
       (comint-output-filter (chatgpt-shell--process)
@@ -735,20 +742,28 @@ Set SAVE-EXCURSION to prevent point from moving."
                                  (chatgpt-shell--unpaired-length
                                   chatgpt-shell-transmitted-context-length))))
                  (chatgpt-shell-config-response-extractor chatgpt-shell--config)
-                 (lambda (response)
+                 (lambda (response partial)
+                   (setq response-count (1+ response-count))
+                   (setq prefix-newline (if (> response-count 1)
+                                            ""
+                                          "\n"))
                    (if response
-                       (progn
-                         (chatgpt-shell--write-reply response)
-                         (chatgpt-shell--announce-response buffer)
-                         (setq chatgpt-shell--busy nil)
-                         (when (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
-                           (funcall (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
-                                    response)))
-                     (chatgpt-shell--write-reply "Error: that's all is known" t)
+                       (if partial
+                           (progn
+                             (chatgpt-shell--write-partial-reply (concat prefix-newline response))
+                             (setq chatgpt-shell--busy partial))
+                         (progn
+                           (chatgpt-shell--write-reply (concat prefix-newline response suffix-newline))
+                           (chatgpt-shell--announce-response buffer)
+                           (setq chatgpt-shell--busy nil)
+                           (when (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
+                             (funcall (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
+                                      (concat prefix-newline response suffix-newline)))))
+                     (chatgpt-shell--write-reply "Error: that's all is known" t) ;; comeback
                      (setq chatgpt-shell--busy nil)
                      (chatgpt-shell--announce-response buffer)))
                  (lambda (error)
-                   (chatgpt-shell--write-reply error t)
+                   (chatgpt-shell--write-reply (concat (string-trim error) suffix-newline) t)
                    (setq chatgpt-shell--busy nil)
                    (chatgpt-shell--announce-response buffer))))))))
 
@@ -780,6 +795,7 @@ For example:
             (when chatgpt-shell-model-temperature
               (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
             request-data))
+         nil ;; streaming
          (chatgpt-shell-config-response-extractor chatgpt-shell--config)
          callback
          error-callback))
@@ -848,10 +864,10 @@ If no LENGTH set, use 2048."
       (1+ (* 2 length))
     2048))
 
-(defun chatgpt-shell--async-shell-command (command response-extractor callback error-callback)
+(defun chatgpt-shell--async-shell-command (command streaming response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
-Calls RESPONSE-EXTRACTOR to extract the response and feeds it to
-CALLBACK or ERROR-CALLBACK accordingly."
+Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
+response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
   (let* ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
          (request-id (chatgpt-shell--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
@@ -866,6 +882,12 @@ CALLBACK or ERROR-CALLBACK accordingly."
       (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
       (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
       (chatgpt-shell--write-output-to-log-buffer "\n\n")
+      (when streaming
+       (set-process-filter
+       request-process
+       (lambda (process output)
+         (when output
+           (funcall callback (funcall response-extractor output) t)))))
       (set-process-sentinel
        request-process
        (lambda (process _event)
@@ -880,9 +902,14 @@ CALLBACK or ERROR-CALLBACK accordingly."
              (when active
                (if (= (process-exit-status process) 0)
                    (funcall callback
-                            (funcall response-extractor output))
-                 (if-let ((error (chatgpt-shell--extract-chatgpt-response output)))
-                     (funcall error-callback (concat "error: " error))
+                            (if (string-empty-p (string-trim output))
+                                output
+                              (funcall response-extractor output))
+                            nil)
+                 (if-let ((error (if (string-empty-p (string-trim output))
+                                     output
+                                   (funcall response-extractor output))))
+                     (funcall error-callback error)
                    (funcall error-callback output)))))
            (kill-buffer output-buffer)))))))
 
@@ -933,13 +960,11 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (comint-output-filter (chatgpt-shell--process)
-                        (concat "\n"
-                                (string-trim reply)
+                        (concat reply
                                 (if failed
-                                    (propertize "\n<gpt-ignored-response>"
+                                    (propertize "<gpt-ignored-response>"
                                                 'invisible (not chatgpt-shell--show-invisible-markers))
                                   "")
-                                "\n\n"
                                 chatgpt-shell--prompt-internal)))
 
 (defun chatgpt-shell--get-old-input nil
@@ -992,17 +1017,45 @@ Used by `chatgpt-shell--send-input's call."
         (json-read-from-string json)
       (error nil))))
 
+(defun chatgpt-shell--write-partial-reply (reply)
+  "Write partial REPLY to prompt."
+  (comint-output-filter (chatgpt-shell--process) reply)
+  (dolist (overlay (overlays-in (point-min) (point-max)))
+    (delete-overlay overlay)))
+
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
-  (if-let (parsed (chatgpt-shell--json-parse-string json))
-      (string-trim
-       (let-alist parsed
-         (let-alist (seq-first .choices)
-           .message.content)))
+  (if-let* ((response (seq-reduce (lambda (reduced data-line)
+                                   (when-let
+                                       ((parsed (chatgpt-shell--json-parse-string data-line))
+                                        (response (let-alist parsed
+                                                    (let-alist (seq-first .choices)
+                                                      (or .delta.content .message.content)))))
+                                     (setq reduced (concat reduced response)))
+                                   reduced)
+                                  (chatgpt-shell--split-data-lines json) ""))
+            (non-empty (not (string-empty-p response))))
+      response
     (if-let (parsed-error (chatgpt-shell--json-parse-string-filtering
                            json "^curl:.*\n?"))
         (let-alist parsed-error
-          .error.message))))
+          .error.message)
+      json)))
+
+(defun chatgpt-shell--split-data-lines (data-lines)
+  "Split DATA-LINES."
+  (let ((lines (split-string data-lines "\n"))
+        (results '())
+        (collecting nil))
+    (dolist (line lines)
+      (if (and collecting (string-prefix-p "data:" line))
+          (progn
+            (push collecting results)
+            (setq collecting (string-remove-prefix "data:" line)))
+        (setq collecting (concat collecting (string-remove-prefix "data:" line)))))
+    (when collecting
+      (push collecting results))
+    (nreverse results)))
 
 (defun chatgpt-shell--find-string-in-buffer (buffer search-str)
   "Find SEARCH-STR in BUFFER and return a cons with start/end.
