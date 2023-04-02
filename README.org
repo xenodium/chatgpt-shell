@@ -69,3 +69,14 @@ Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-
 Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/restore.gif" width="70%" />
+
+* Org babel
+
+Load =(require 'ob-chatgpt-shell)=
+
+,#+begin_src chatgpt-shell
+  Hello
+,#+end_src
+
+,#+RESULTS:
+: Hi there! How can I assist you today?
