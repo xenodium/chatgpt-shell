@@ -45,6 +45,9 @@
 (require 'chatgpt-shell)
 (require 'map)
 
+;; Aliasing enables block syntax highlighting.
+(defalias 'chatgpt-shell-mode #'text-mode)
+
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")))
 
 (defun org-babel-execute:chatgpt-shell(body params)
