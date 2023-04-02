@@ -626,6 +626,28 @@ Set SAVE-EXCURSION to prevent point from moving."
     (when execute
       (ielm-return))))
 
+(defun chatgpt-shell-format-elisp-code (code)
+  "Indent and return CODE if needed."
+  (with-temp-buffer
+    (insert code)
+    (mark-whole-buffer)
+    (indent-for-tab-command)
+    (buffer-substring-no-properties
+     (point-min)
+     (point-max))))
+
+(defun chatgpt-shell-parse-elisp-code (code)
+  "Parse emacs-lisp CODE and return a list of expressions."
+  (with-temp-buffer
+    (insert code)
+    (goto-char (point-min))
+    (let (sexps)
+      (while (not (eobp))
+        (condition-case nil
+            (push (read (current-buffer)) sexps)
+          (error nil)))
+      (reverse sexps))))
+
 (defun chatgpt-shell--markdown-source-blocks (text)
   "Find Markdown code blocks with language labels in TEXT."
   (let (blocks)
