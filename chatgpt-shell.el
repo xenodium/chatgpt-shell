@@ -737,6 +737,50 @@ Set SAVE-EXCURSION to prevent point from moving."
                    (setq chatgpt-shell--busy nil)
                    (chatgpt-shell--announce-response buffer))))))))
 
+(defun chatgpt-shell-post-chatgpt-messages (messages callback error-callback)
+  "Make a single ChatGPT request with MESSAGES, CALLBACK, and ERROR-CALLBACK.
+
+For example:
+
+\(chatgpt-shell-post-chatgpt-messages
+ `(((role . \"user\")
+    (content . \"hello\")))
+ (lambda (response)
+   (message \"%s\" response))
+ (lambda (error)
+   (message \"%s\" error)))"
+  (with-temp-buffer
+    (setq-local chatgpt-shell--config
+                chatgpt-shell--chatgpt-config)
+    (chatgpt-shell--async-shell-command
+     (chatgpt-shell--make-curl-request-command-list
+      chatgpt-shell-openai-key
+      (chatgpt-shell-config-url chatgpt-shell--config)
+      (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
+                            (messages . ,(vconcat
+                                          messages)))))
+        (when chatgpt-shell-model-temperature
+          (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+        request-data))
+     (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+     callback
+     error-callback)))
+
+(defun chatgpt-shell-post-chatgpt-prompt (prompt callback error-callback)
+  "Make a single ChatGPT request with PROMPT, CALLBACK, and ERROR-CALLBACK.
+
+For example:
+
+\(chatgpt-shell-request-oneof-prompt
+ \"hello\"
+ (lambda (response)
+   (message \"%s\" response))
+ (lambda (error)
+   (message \"%s\" error)))"
+  (chatgpt-shell-post-chatgpt-messages `(((role . "user")
+                                          (content . ,prompt)))
+                                       callback error-callback))
+
 (defun chatgpt-shell--announce-response (buffer)
   "Announce response if BUFFER is not active."
   (unless (eq buffer (window-buffer (selected-window)))
