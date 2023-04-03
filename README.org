@@ -72,7 +72,7 @@ Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chat
 
 * Org babel
 
-Load =(require 'ob-chatgpt-shell)=
+Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
 
 #+begin_src org
   ,#+begin_src chatgpt-shell
