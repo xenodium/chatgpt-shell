@@ -39,6 +39,7 @@
 (require 'markdown-mode)
 (require 'seq)
 (require 'shell)
+(require 'view)
 
 (eval-when-compile
   (require 'cl-lib)
@@ -103,7 +104,7 @@ For example:
 
                   lowercase      Emacs mode (without -mode)
 Objective-C -> (\"objective-c\" . \"objc\")"
-  :type '()
+  :type '(repeat (cons string string))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-chatgpt-model-version "gpt-3.5-turbo"
@@ -167,6 +168,8 @@ ChatGPT."
 
 (defvar chatgpt-shell--show-invisible-markers nil)
 
+(defvar chatgpt-shell--prompt-internal nil)
+
 (cl-defstruct
     chatgpt-shell-config
   prompt
@@ -186,7 +189,7 @@ ChatGPT."
    :prompt "ChatGPT> "
    :url "https://api.openai.com/v1/chat/completions"
    :invalid-input
-   (lambda (input)
+   (lambda (_input)
      (unless chatgpt-shell-openai-key
        "Variable `chatgpt-shell-openai-key' needs to be set to your key.
 
@@ -224,7 +227,7 @@ or
    :prompt "DALL-E> "
    :url "https://api.openai.com/v1/images/generations"
    :invalid-input
-   (lambda (input)
+   (lambda (_input)
      (unless chatgpt-shell-openai-key
        "Variable `chatgpt-shell-openai-key' needs to be set to your key.
 
@@ -342,7 +345,7 @@ Uses the interface provided by `comint-mode'"
 
 (defun chatgpt-shell--buffer (config)
   "Get buffer from CONFIG."
-  (get-buffer-create (chatgpt-shell-config-buffer-name chatgpt-shell--config)))
+  (get-buffer-create (chatgpt-shell-config-buffer-name config)))
 
 (defun chatgpt-shell--initialize (config)
   "Initialize shell using CONFIG."
@@ -493,7 +496,7 @@ Very much EXPERIMENTAL."
                   json))
           (setf (chatgpt-shell-config-invalid-input chatgpt-shell--config) nil)
           (setf (chatgpt-shell-config-request-maker chatgpt-shell--config)
-                (lambda (url request-data response-extractor callback error-callback)
+                (lambda (_url _request-data _response-extractor callback _error-callback)
                   (setq response (car commands-and-responses))
                   (setq commands-and-responses (cdr commands-and-responses))
                   (when response
@@ -569,6 +572,7 @@ If region is active, append to prompt."
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
+  (require 'eshell)
   (chatgpt-shell-send-to-buffer
    (concat "What's wrong with this command?\n\n"
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -598,7 +602,7 @@ If region is active, append to prompt."
   "Send TEXT to *chatgpt* buffer.
 Set SUBMIT to automatically submit to ChatGPT.
 Set SAVE-EXCURSION to prevent point from moving."
-  (let (curbuf (current-buffer))
+  (let ((curbuf (current-buffer)))
     (chatgpt-shell)
     (switch-to-buffer-other-window (get-buffer-create "*chatgpt*"))
     (with-current-buffer (get-buffer-create "*chatgpt*")
@@ -617,6 +621,7 @@ Set SAVE-EXCURSION to prevent point from moving."
   "Send TEXT to *ielm* buffer.
 Set EXECUTE to automatically execute.
 Set SAVE-EXCURSION to prevent point from moving."
+  (require 'ielm)
   (ielm)
   (switch-to-buffer (get-buffer-create "*ielm*"))
   (with-current-buffer (get-buffer-create "*ielm*")
@@ -632,7 +637,9 @@ Set SAVE-EXCURSION to prevent point from moving."
   "Indent and return CODE if needed."
   (with-temp-buffer
     (insert code)
-    (mark-whole-buffer)
+    (set-mark (point-min))
+    (goto-char (point-max))
+    (activate-mark)
     (indent-for-tab-command)
     (buffer-substring-no-properties
      (point-min)
@@ -949,7 +956,7 @@ Used by `chatgpt-shell--send-input's call."
                      (cond ((stringp key)
                             key)
                            ((functionp key)
-                            (condition-case err
+                            (condition-case _err
                                 (funcall key)
                               (error
                                "KEY-NOT-FOUND")))))
@@ -975,7 +982,7 @@ Used by `chatgpt-shell--send-input's call."
       (condition-case nil
           (json-parse-string json :object-type 'alist)
         (json-parse-error nil))
-    (condition-case err
+    (condition-case _err
         (json-read-from-string json)
       (error nil))))
 

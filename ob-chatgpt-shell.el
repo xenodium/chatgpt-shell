@@ -50,7 +50,7 @@
 
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")))
 
-(defun org-babel-execute:chatgpt-shell(body params)
+(defun org-babel-execute:chatgpt-shell(body _params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
