@@ -70,6 +70,11 @@ Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chat
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/restore.gif" width="70%" />
 
+* Streaming (experimental)
+=(setq chatgpt-shell-chatgpt-streaming t)= enables streaming.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/stream.gif" width="70%" />
+
 * Org babel
 
 Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
