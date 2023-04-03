@@ -592,32 +592,37 @@ If region is active, append to prompt."
            (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
   (chatgpt-shell--send-input))
 
-(defun chatgpt-shell-send-region ()
-  "Send region to ChatGPT."
-  (interactive)
+(defun chatgpt-shell-send-region (review)
+  "Send region to ChatGPT.
+With prefix REVIEW prompt before sending to ChatGPT."
+  (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
-   (concat (buffer-substring (region-beginning) (region-end)) "\n") t t))
+   (if review
+       (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
+     (buffer-substring (region-beginning) (region-end))) review))
 
-(defun chatgpt-shell-send-to-buffer (text &optional submit save-excursion)
+(defun chatgpt-shell-send-and-review-region ()
+  "Send region to ChatGPT."
+  (interactive)
+  (chatgpt-shell-send-region t))
+
+(defun chatgpt-shell-send-to-buffer (text &optional review)
   "Send TEXT to *chatgpt* buffer.
-Set SUBMIT to automatically submit to ChatGPT.
+Set REVIEW to make changes before submitting to ChatGPT.
 Set SAVE-EXCURSION to prevent point from moving."
-  (let ((curbuf (current-buffer)))
-    (chatgpt-shell)
-    (switch-to-buffer-other-window (get-buffer-create "*chatgpt*"))
-    (with-current-buffer (get-buffer-create "*chatgpt*")
-      (when chatgpt-shell--busy
-        (chatgpt-shell-interrupt))
-      (goto-char (point-max))
-      (if save-excursion
-          (save-excursion
-            (insert text))
-        (insert text))
-      (when submit
-        (chatgpt-shell--send-input)))
-    (switch-to-buffer curbuf)))
+  (chatgpt-shell)
+  (with-selected-window
+      (get-buffer-window (get-buffer-create "*chatgpt*"))
+    (when chatgpt-shell--busy
+      (chatgpt-shell-interrupt))
+    (goto-char (point-max))
+    (if review
+        (save-excursion
+          (insert text))
+      (insert text)
+      (chatgpt-shell--send-input))))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)
   "Send TEXT to *ielm* buffer.
