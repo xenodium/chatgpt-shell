@@ -140,7 +140,7 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-chatgpt-streaming t
+(defcustom chatgpt-shell-chatgpt-streaming nil
   "Whether or not to stream ChatGPT responses (experimental)."
   :type 'boolean
   :group 'chatgpt-shell)
