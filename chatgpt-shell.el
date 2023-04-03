@@ -592,24 +592,26 @@ If region is active, append to prompt."
   (unless (region-active-p)
     (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
-   (concat "\n\n" (buffer-substring (region-beginning) (region-end))) nil t))
+   (concat (buffer-substring (region-beginning) (region-end)) "\n") t t))
 
 (defun chatgpt-shell-send-to-buffer (text &optional submit save-excursion)
   "Send TEXT to *chatgpt* buffer.
 Set SUBMIT to automatically submit to ChatGPT.
 Set SAVE-EXCURSION to prevent point from moving."
-  (chatgpt-shell)
-  (switch-to-buffer (get-buffer-create "*chatgpt*"))
-  (with-current-buffer (get-buffer-create "*chatgpt*")
-    (when chatgpt-shell--busy
-      (chatgpt-shell-interrupt))
-    (goto-char (point-max))
-    (if save-excursion
-        (save-excursion
-          (insert text))
-      (insert text))
-    (when submit
-      (chatgpt-shell--send-input))))
+  (let (curbuf (current-buffer))
+    (chatgpt-shell)
+    (switch-to-buffer-other-window (get-buffer-create "*chatgpt*"))
+    (with-current-buffer (get-buffer-create "*chatgpt*")
+      (when chatgpt-shell--busy
+        (chatgpt-shell-interrupt))
+      (goto-char (point-max))
+      (if save-excursion
+          (save-excursion
+            (insert text))
+        (insert text))
+      (when submit
+        (chatgpt-shell--send-input)))
+    (switch-to-buffer curbuf)))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)
   "Send TEXT to *ielm* buffer.
