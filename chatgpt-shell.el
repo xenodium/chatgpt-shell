@@ -1009,7 +1009,8 @@ Return nil if not found."
         (cons (match-beginning 0) (match-end 0))))))
 
 (defun chatgpt-shell--download-image (url filename callback error-callback)
-  "Download URL to FILENAME.  Invoke CALLBACK on success.  ERROR-CALLBACK otherwise."
+  "Download URL to FILENAME.  Invoke CALLBACK on success.
+ERROR-CALLBACK otherwise."
   ;; Ensure sync failures can be handled in next runloop.
   (run-with-idle-timer 0 nil
                        (lambda ()
