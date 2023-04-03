@@ -140,6 +140,11 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-chatgpt-streaming t
+  "Whether or not to stream ChatGPT responses (experimental)."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-transmitted-context-length nil
   "Controls the amount of context provided to chatGPT.
 
@@ -217,6 +222,8 @@ or
                            (messages . ,commands-and-responses))))
        (when chatgpt-shell-model-temperature
          (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+       (when chatgpt-shell-chatgpt-streaming
+         (push `(stream . t) request-data))
        request-data))
    :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
@@ -268,34 +275,6 @@ or
 (defvaralias 'inferior-chatgpt-mode-map 'chatgpt-shell-map)
 
 (defvar-local chatgpt-shell--file nil)
-
-(defconst chatgpt-shell-font-lock-keywords
-  `(;; Markdown single backticks
-    ("`\\([^`\n]+\\)`"
-     (1 'markdown-inline-code-face))
-    ;; Markdown triple backticks source blocks
-    ("\\(^\\(```\\)\\([^`\n]*\\)\n\\)\\(\\(?:.\\|\n\\)*?\\)\\(^\\(```\\)$\\)"
-     ;; (2) ``` (3) language (4) body (6) ```
-     (0 (progn
-          ;; Hide ```
-          (overlay-put (make-overlay (match-beginning 2)
-                                     (match-end 2)) 'invisible t)
-          ;; Language box.
-          (overlay-put (make-overlay (match-beginning 3)
-                                     (match-end 3)) 'face '(:box t))
-          ;; Additional newline after language box.
-          (overlay-put (make-overlay (match-end 3)
-                                     (1+ (match-end 3))) 'display "\n\n")
-          ;; Hide ```
-          (overlay-put (make-overlay (match-beginning 6)
-                                     (match-end 6)) 'invisible t)
-          ;; Show body
-          (chatgpt-shell--fontify-source-block
-           (buffer-substring (match-beginning 3)
-                             (match-end 3))
-           ;; body
-           (match-beginning 4) (match-end 4))
-          nil)))))
 
 (defvar chatgpt-shell-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
@@ -392,25 +371,51 @@ Uses the interface provided by `comint-mode'"
     (set-marker comint-last-input-start (chatgpt-shell--pm))
     (set-process-filter (get-buffer-process
                          (chatgpt-shell--buffer chatgpt-shell--config))
-                        'comint-output-filter))
+                        'comint-output-filter)))
 
-  (font-lock-add-keywords nil chatgpt-shell-font-lock-keywords))
+(defun chatgpt-shell--put-source-block-overlays ()
+  "Put overlays for all source blocks."
+  (dolist (overlay (overlays-in (point-min) (point-max)))
+    (delete-overlay overlay))
+  (dolist (block (chatgpt-shell--source-blocks))
+    (chatgpt-shell--fontify-source-block
+     (car (map-elt block 'start))
+     (cdr (map-elt block 'start))
+     (buffer-substring-no-properties (car (map-elt block 'language))
+                                     (cdr (map-elt block 'language)))
+     (car (map-elt block 'language))
+     (cdr (map-elt block 'language))
+     (car (map-elt block 'body))
+     (cdr (map-elt block 'body))
+     (car (map-elt block 'end))
+     (cdr (map-elt block 'end)))))
 
-(defun chatgpt-shell--fontify-source-block (lang start end)
-  "Fontify using LANG from START to END."
+(defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
+lang-start lang-end body-start body-end quotes2-start quotes2-end)
+  "Fontify a source block.
+Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
+ BODY-END QUOTES2-START and QUOTES2-END."
+  ;; Hide ```
+  (overlay-put (make-overlay quotes1-start
+                             quotes1-end) 'invisible t)
+  (overlay-put (make-overlay quotes2-start
+                             quotes2-end) 'invisible t)
+  (when (and lang-start lang-end)
+    (overlay-put (make-overlay lang-start
+                               lang-end) 'face '(:box t))
+    (overlay-put (make-overlay lang-end
+                               (1+ lang-end)) 'display "\n\n"))
   (let ((lang-mode (intern (concat (or
                                     (map-elt chatgpt-shell-language-mapping
                                              (downcase (string-trim lang)))
                                     (downcase (string-trim lang)))
                                    "-mode")))
-        (string (buffer-substring-no-properties start end))
+        (string (buffer-substring-no-properties body-start body-end))
         (buf (chatgpt-shell--buffer chatgpt-shell--config))
         (pos 0)
         (props)
         (overlay)
         (propertized-text))
-    ;; FIXME: Find a more reliable way of highlighting syntax.
-    ;; (remove-text-properties start end '(face nil))
     (if (fboundp lang-mode)
         (progn
           (setq propertized-text
@@ -426,18 +431,48 @@ Uses the interface provided by `comint-mode'"
                   (buffer-string)))
           (while (< pos (length propertized-text))
             (setq props (text-properties-at pos propertized-text))
-            (setq overlay (make-overlay (+ start pos)
-                                        (+ start (1+ pos))
+            (setq overlay (make-overlay (+ body-start pos)
+                                        (+ body-start (1+ pos))
                                         buf))
-            ;; (set-text-properties (+ start pos)
-            ;;                      (+ start (1+ pos))
+            ;; (set-text-properties (+ body-start pos)
+            ;;                      (+ body-start (1+ pos))
             ;;                      props)
             (overlay-put overlay 'face (plist-get props 'face))
             (setq pos (1+ pos)))
-          ;; (overlay-put (make-overlay start end buf)
+          ;; (overlay-put (make-overlay body-start body-end buf)
           )
-      (set-text-properties start end
-                               '(face 'markdown-pre-face)))))
+      (set-text-properties body-start body-end
+                           '(face 'markdown-pre-face)))))
+
+(defun chatgpt-shell--source-blocks ()
+  "Get a list of all source blocks in buffer."
+  (let ((markdown-blocks '())
+        (case-fold-search nil))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward
+              (rx bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
+                  (group (zero-or-more (or alphanumeric "-"))) ;; language
+                  (zero-or-more whitespace)
+                  (one-or-more "\n")
+                  (group (*? anychar)) ;; body
+                  (one-or-more "\n")
+                  (group "```"))
+              nil t)
+        (when-let ((begin (match-beginning 0))
+                   (end (match-end 0)))
+          (push
+           (list
+            'start (cons (match-beginning 1)
+                         (match-end 1))
+            'end (cons (match-beginning 4)
+                       (match-end 4))
+            'language (when (and (match-beginning 2)
+                                 (match-end 2))
+                        (cons (match-beginning 2)
+                              (match-end 2)))
+            'body (cons (match-beginning 3) (match-end 3))) markdown-blocks))))
+    (nreverse markdown-blocks)))
 
 (defun chatgpt-shell-save-session-transcript ()
   "Save shell transcript to file.
@@ -875,19 +910,28 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                               (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
                                                              command))
                             (error
-                             (funcall error-callback (error-message-string err))
+                             (with-current-buffer buffer
+                              (funcall error-callback (error-message-string err)))
                              nil)))
+         (preparsed)
+         (remaining-text)
          (process-connection-type nil))
     (when request-process
       (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
       (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
       (chatgpt-shell--write-output-to-log-buffer "\n\n")
       (when streaming
-       (set-process-filter
-       request-process
-       (lambda (process output)
-         (when output
-           (funcall callback (funcall response-extractor output) t)))))
+        (set-process-filter
+         request-process
+         (lambda (process output)
+           (when (eq request-id chatgpt-shell--current-request-id)
+             (setq remaining-text (concat remaining-text output))
+             (setq preparsed (chatgpt-shell--preparse-json remaining-text))
+             (mapc (lambda (obj)
+                     (with-current-buffer buffer
+                       (funcall callback (funcall response-extractor obj) t)))
+                   (car preparsed))
+             (setq remaining-text (cdr preparsed))))))
       (set-process-sentinel
        request-process
        (lambda (process _event)
@@ -959,13 +1003,15 @@ Used by `chatgpt-shell--send-input's call."
 
 (defun chatgpt-shell--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
-  (comint-output-filter (chatgpt-shell--process)
-                        (concat reply
-                                (if failed
-                                    (propertize "<gpt-ignored-response>"
-                                                'invisible (not chatgpt-shell--show-invisible-markers))
-                                  "")
-                                chatgpt-shell--prompt-internal)))
+  (let ((inhibit-read-only t))
+    (comint-output-filter (chatgpt-shell--process)
+                          (concat reply
+                                  (if failed
+                                      (propertize "<gpt-ignored-response>"
+                                                  'invisible (not chatgpt-shell--show-invisible-markers))
+                                    "")
+                                  chatgpt-shell--prompt-internal)))
+  (chatgpt-shell--put-source-block-overlays))
 
 (defun chatgpt-shell--get-old-input nil
   "Return the previous input surrounding point."
@@ -1019,43 +1065,45 @@ Used by `chatgpt-shell--send-input's call."
 
 (defun chatgpt-shell--write-partial-reply (reply)
   "Write partial REPLY to prompt."
-  (comint-output-filter (chatgpt-shell--process) reply)
-  (dolist (overlay (overlays-in (point-min) (point-max)))
-    (delete-overlay overlay)))
+  (let ((inhibit-read-only t))
+    (comint-output-filter (chatgpt-shell--process) reply)))
 
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
-  (if-let* ((response (seq-reduce (lambda (reduced data-line)
-                                   (when-let
-                                       ((parsed (chatgpt-shell--json-parse-string data-line))
-                                        (response (let-alist parsed
-                                                    (let-alist (seq-first .choices)
-                                                      (or .delta.content .message.content)))))
-                                     (setq reduced (concat reduced response)))
-                                   reduced)
-                                  (chatgpt-shell--split-data-lines json) ""))
-            (non-empty (not (string-empty-p response))))
-      response
-    (if-let (parsed-error (chatgpt-shell--json-parse-string-filtering
-                           json "^curl:.*\n?"))
-        (let-alist parsed-error
-          .error.message)
-      json)))
+  (if (eq (type-of json) 'cons)
+      (let-alist json ;; already parsed
+        (let-alist (seq-first .choices)
+          (or .delta.content
+              .message.content
+              "")))
+    (if-let (parsed (chatgpt-shell--json-parse-string json))
+        (string-trim
+         (let-alist parsed
+           (let-alist (seq-first .choices)
+             .message.content)))
+      (if-let (parsed-error (chatgpt-shell--json-parse-string-filtering
+                             json "^curl:.*\n?"))
+          (let-alist parsed-error
+            .error.message)))))
 
-(defun chatgpt-shell--split-data-lines (data-lines)
-  "Split DATA-LINES."
-  (let ((lines (split-string data-lines "\n"))
-        (results '())
-        (collecting nil))
-    (dolist (line lines)
-      (if (and collecting (string-prefix-p "data:" line))
-          (progn
-            (push collecting results)
-            (setq collecting (string-remove-prefix "data:" line)))
-        (setq collecting (concat collecting (string-remove-prefix "data:" line)))))
-    (when collecting
-      (push collecting results))
-    (nreverse results)))
+(defun chatgpt-shell--preparse-json (json)
+  (let ((parsed)
+        (remaining)
+        (loc))
+    (setq json (replace-regexp-in-string (rx bol "data:") "" json))
+    (with-temp-buffer ;; with-current-buffer (get-buffer-create "*preparse*")
+      (erase-buffer)
+      (insert json)
+      (goto-char (point-min))
+      (setq loc (point))
+      (while (when-let
+                 ((data (ignore-errors (json-read))))
+               (setq parsed (append parsed (list data)))
+               (setq loc (point))))
+      (setq remaining (buffer-substring-no-properties loc (point-max)))
+      (cons parsed
+            (string-trim remaining)))))
+
 
 (defun chatgpt-shell--find-string-in-buffer (buffer search-str)
   "Find SEARCH-STR in BUFFER and return a cons with start/end.
