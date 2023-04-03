@@ -1004,14 +1004,15 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
+    (goto-char (point-max))
     (comint-output-filter (chatgpt-shell--process)
                           (concat reply
                                   (if failed
                                       (propertize "<gpt-ignored-response>"
                                                   'invisible (not chatgpt-shell--show-invisible-markers))
                                     "")
-                                  chatgpt-shell--prompt-internal)))
-  (chatgpt-shell--put-source-block-overlays))
+                                  chatgpt-shell--prompt-internal))
+    (chatgpt-shell--put-source-block-overlays)))
 
 (defun chatgpt-shell--get-old-input nil
   "Return the previous input surrounding point."
@@ -1066,6 +1067,9 @@ Used by `chatgpt-shell--send-input's call."
 (defun chatgpt-shell--write-partial-reply (reply)
   "Write partial REPLY to prompt."
   (let ((inhibit-read-only t))
+    (goto-char (point-max))
+    (dolist (overlay (overlays-in (point-min) (point-max)))
+      (delete-overlay overlay))
     (comint-output-filter (chatgpt-shell--process) reply)))
 
 (defun chatgpt-shell--extract-chatgpt-response (json)
