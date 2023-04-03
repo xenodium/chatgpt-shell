@@ -48,13 +48,13 @@
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")))
 
 (defun org-babel-execute:chatgpt-shell(body params)
-  "Execute a block of SwiftUI code in BODY with org-babel header PARAMS.
+  "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
   (chatgpt-shell-post-chatgpt-prompt body))
 
 (defun ob-chatgpt-shell-setup ()
-  "Set up babel SwiftUI support."
+  "Set up babel ChatGPT support."
   (org-babel-do-load-languages 'org-babel-load-languages
                                (append org-babel-load-languages
                                        '((chatgpt-shell . t))))
