@@ -33,7 +33,10 @@
 ;;; Code:
 
 (require 'comint)
+(require 'esh-mode)
+(require 'eshell)
 (require 'goto-addr)
+(require 'ielm)
 (require 'json)
 (require 'map)
 (require 'markdown-mode)
@@ -572,7 +575,6 @@ If region is active, append to prompt."
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
-  (require 'eshell)
   (chatgpt-shell-send-to-buffer
    (concat "What's wrong with this command?\n\n"
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -621,7 +623,6 @@ Set SAVE-EXCURSION to prevent point from moving."
   "Send TEXT to *ielm* buffer.
 Set EXECUTE to automatically execute.
 Set SAVE-EXCURSION to prevent point from moving."
-  (require 'ielm)
   (ielm)
   (switch-to-buffer (get-buffer-create "*ielm*"))
   (with-current-buffer (get-buffer-create "*ielm*")
@@ -999,7 +1000,8 @@ Used by `chatgpt-shell--send-input's call."
           .error.message))))
 
 (defun chatgpt-shell--find-string-in-buffer (buffer search-str)
-  "Find SEARCH-STR in BUFFER and return a cons cell with start and end positions.  Return nil if not found."
+  "Find SEARCH-STR in BUFFER and return a cons with start/end.
+Return nil if not found."
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-min))
