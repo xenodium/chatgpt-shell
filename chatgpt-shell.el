@@ -930,26 +930,34 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
          request-process
          (lambda (process output)
            (when (eq request-id chatgpt-shell--current-request-id)
+             (chatgpt-shell--write-output-to-log-buffer
+              (format "// Filter output\n\n%s\n\n" output))
              (setq remaining-text (concat remaining-text output))
              (setq preparsed (chatgpt-shell--preparse-json remaining-text))
-             (mapc (lambda (obj)
-                     (with-current-buffer buffer
-                       (funcall callback (funcall response-extractor obj) t)))
-                   (car preparsed))
+             (if (car preparsed)
+                 (mapc (lambda (obj)
+                         (with-current-buffer buffer
+                           (funcall callback (funcall response-extractor obj) t)))
+                       (car preparsed))
+               (with-current-buffer buffer
+                 (funcall callback (cdr preparsed) t)))
              (setq remaining-text (cdr preparsed))))))
       (set-process-sentinel
        request-process
        (lambda (process _event)
          (let ((active (eq request-id chatgpt-shell--current-request-id))
                (output (with-current-buffer (process-buffer process)
-                         (buffer-string))))
+                         (buffer-string)))
+               (exit-status (process-exit-status process)))
            (chatgpt-shell--write-output-to-log-buffer
             (format "// Response (%s)\n\n" (if active "active" "inactive")))
+           (chatgpt-shell--write-output-to-log-buffer
+            (format "Exit status: %d\n\n" exit-status))
            (chatgpt-shell--write-output-to-log-buffer output)
            (chatgpt-shell--write-output-to-log-buffer "\n\n")
            (with-current-buffer buffer
              (when active
-               (if (= (process-exit-status process) 0)
+               (if (= exit-status 0)
                    (funcall callback
                             (if (string-empty-p (string-trim output))
                                 output
@@ -1081,10 +1089,11 @@ Used by `chatgpt-shell--send-input's call."
   "Extract ChatGPT response from JSON."
   (if (eq (type-of json) 'cons)
       (let-alist json ;; already parsed
-        (let-alist (seq-first .choices)
-          (or .delta.content
-              .message.content
-              "")))
+        (or (let-alist (seq-first .choices)
+              (or .delta.content
+                  .message.content))
+            .error.message
+            ""))
     (if-let (parsed (chatgpt-shell--json-parse-string json))
         (string-trim
          (let-alist parsed
@@ -1250,41 +1259,47 @@ ERROR-CALLBACK otherwise."
 
 (defun chatgpt-shell--extract-dall-e-response (json)
   "Extract DALL-E response from JSON."
-  (when-let ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
-             (parsed (chatgpt-shell--json-parse-string json))
-             (url (map-elt (seq-first (map-elt parsed 'data))
-                           'url))
-             (created (concat (number-to-string (map-elt parsed 'created))
-                              ".png")))
-    (chatgpt-shell--download-image
-     url created
-     (lambda (path)
-       (let* ((loc (chatgpt-shell--find-string-in-buffer
-                    buffer
-                    created))
-              (start (car loc))
-              (end (cdr loc)))
-         (with-current-buffer buffer
-           (remove-text-properties start end '(face nil))
-           (add-text-properties
-            start end
-            `(display ,(create-image path nil nil :width 400)))
-           (put-text-property start end
-                              'keymap (let ((map (make-sparse-keymap)))
-                                        (define-key map (kbd "RET")
-                                          (lambda () (interactive)
-                                            (find-file path)))
-                                        map)))))
-     (lambda (error)
-       (when-let* ((loc (chatgpt-shell--find-string-in-buffer
-                         buffer
-                         created))
-                   (start (car loc))
-                   (end (cdr loc)))
-         (with-current-buffer buffer
-           (remove-text-properties start end '(face nil))
-           (add-text-properties start end `(display ,error))))))
-    (propertize created 'display "[downloading...]")))
+  (if-let ((parsed (chatgpt-shell--json-parse-string-filtering
+                    json "^curl:.*\n?"))
+           (buffer (chatgpt-shell--buffer chatgpt-shell--config)))
+      (if-let* ((url (let-alist parsed
+                       (let-alist (seq-first .data)
+                         .url)))
+                (created (number-to-string (let-alist parsed
+                                             .created)))
+                (filename (concat created ".png")))
+          (progn
+            (chatgpt-shell--download-image
+             url filename
+             (lambda (path)
+               (let* ((loc (chatgpt-shell--find-string-in-buffer
+                            buffer
+                            filename))
+                      (start (car loc))
+                      (end (cdr loc)))
+                 (with-current-buffer buffer
+                   (remove-text-properties start end '(face nil))
+                   (add-text-properties
+                    start end
+                    `(display ,(create-image path nil nil :width 400)))
+                   (put-text-property start end
+                                      'keymap (let ((map (make-sparse-keymap)))
+                                                (define-key map (kbd "RET")
+                                                  (lambda () (interactive)
+                                                    (find-file path)))
+                                                map)))))
+             (lambda (error)
+               (when-let* ((loc (chatgpt-shell--find-string-in-buffer
+                                 buffer
+                                 filename))
+                           (start (car loc))
+                           (end (cdr loc)))
+                 (with-current-buffer buffer
+                   (remove-text-properties start end '(face nil))
+                   (add-text-properties start end `(display ,error))))))
+            (propertize filename 'display "[downloading...]"))
+        (let-alist parsed
+          .error.message))))
 
 (provide 'chatgpt-shell)
 
