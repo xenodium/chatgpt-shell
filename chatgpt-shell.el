@@ -666,7 +666,6 @@ Set SAVE-EXCURSION to prevent point from moving."
 Set EXECUTE to automatically execute.
 Set SAVE-EXCURSION to prevent point from moving."
   (ielm)
-  (switch-to-buffer (get-buffer-create "*ielm*"))
   (with-current-buffer (get-buffer-create "*ielm*")
     (goto-char (point-max))
     (if save-excursion
@@ -675,18 +674,6 @@ Set SAVE-EXCURSION to prevent point from moving."
       (insert text))
     (when execute
       (ielm-return))))
-
-(defun chatgpt-shell-format-elisp-code (code)
-  "Indent and return CODE if needed."
-  (with-temp-buffer
-    (insert code)
-    (set-mark (point-min))
-    (goto-char (point-max))
-    (activate-mark)
-    (indent-for-tab-command)
-    (buffer-substring-no-properties
-     (point-min)
-     (point-max))))
 
 (defun chatgpt-shell-parse-elisp-code (code)
   "Parse emacs-lisp CODE and return a list of expressions."
@@ -699,6 +686,26 @@ Set SAVE-EXCURSION to prevent point from moving."
             (push (read (current-buffer)) sexps)
           (error nil)))
       (reverse sexps))))
+
+(defun chatgpt-shell-split-elisp-expressions (code)
+  "Split emacs-lisp CODE into a list of stringified expressions."
+  (mapcar
+   (lambda (form)
+     (prin1-to-string form))
+   (chatgpt-shell-parse-elisp-code code)))
+
+(defun chatgpt-shell-last-output ()
+  "Get the last command output from the shell."
+  (let ((proc (get-buffer-process (current-buffer))))
+    (save-excursion
+      (let* ((pmark (progn (goto-char (process-mark proc))
+			   (forward-line 0)
+			   (point-marker)))
+             (output (buffer-substring comint-last-input-end pmark))
+             (items (split-string output "<gpt-end-of-prompt>")))
+        (if (> (length items) 1)
+            (nth 1 items)
+          (nth 0 items))))))
 
 (defun chatgpt-shell--markdown-source-blocks (text)
   "Find Markdown code blocks with language labels in TEXT."
