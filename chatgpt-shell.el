@@ -263,8 +263,6 @@ or
                            (prompt . ,(map-elt (aref commands-and-responses
                                                      (1- (length commands-and-responses)))
                                                'content)))))
-       (when chatgpt-shell-model-temperature
-         (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
        request-data))
    :response-extractor #'chatgpt-shell--extract-dall-e-response))
 
