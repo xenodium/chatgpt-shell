@@ -81,7 +81,7 @@ Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chat
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/explain.gif" width="70%" />
 
-* Org babel
+* ChatGPT org babel
 
 Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
 
@@ -92,4 +92,17 @@ Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
 
   ,#+RESULTS:
   : Hi there! How can I assist you today?
+#+end_src
+
+* DALL-E org babel
+
+Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
+
+#+begin_src org
+  ,#+begin_src dall-e-shell
+    Pretty clouds
+  ,#+end_src
+
+  ,#+RESULTS:
+  [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
 #+end_src
