@@ -75,6 +75,12 @@ Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chat
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/stream.gif" width="70%" />
 
+* Explain code in region
+
+=M-x chatgpt-shell-explain-code=
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/explain.gif" width="70%" />
+
 * Org babel
 
 Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
