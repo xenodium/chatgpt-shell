@@ -76,7 +76,7 @@ To use `completing-read', it can be done with something like:
   :type 'function
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-response-post-process-function nil
+(defcustom chatgpt-shell-chatgpt-on-response-function nil
   "Function to automatically execute after last command output.
 
 This is useful if you'd like to automatically handle or suggest things."
@@ -228,8 +228,8 @@ or
    :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
    (lambda (response)
-     (when chatgpt-shell-response-post-process-function
-       (funcall chatgpt-shell-response-post-process-function response)))))
+     (when chatgpt-shell-chatgpt-on-response-function
+       (funcall chatgpt-shell-chatgpt-on-response-function response)))))
 
 (defvar chatgpt-shell--dall-e-config
   (make-chatgpt-shell-config
