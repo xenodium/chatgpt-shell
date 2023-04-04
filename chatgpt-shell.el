@@ -792,8 +792,9 @@ Set SAVE-EXCURSION to prevent point from moving."
                            (chatgpt-shell--announce-response buffer)
                            (setq chatgpt-shell--busy nil)
                            (when (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
+                             ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
                              (funcall (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
-                                      (concat prefix-newline response suffix-newline)))))
+                                      (chatgpt-shell-last-output)))))
                      (chatgpt-shell--write-reply "Error: that's all is known" t) ;; comeback
                      (setq chatgpt-shell--busy nil)
                      (chatgpt-shell--announce-response buffer)))
