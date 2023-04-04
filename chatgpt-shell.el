@@ -886,6 +886,55 @@ For example:
                                        version
                                        callback error-callback))
 
+(defun chatgpt-shell-post-dall-e-prompt (prompt &optional version)
+  "Make a single DALL-E request with PROMPT.
+
+Optionally provide model VERSION."
+  (with-temp-buffer
+    (setq-local chatgpt-shell--config
+                chatgpt-shell--dall-e-config)
+    (let* ((api-buffer (current-buffer))
+           (command
+            (chatgpt-shell--make-curl-request-command-list
+             chatgpt-shell-openai-key
+             (chatgpt-shell-config-url chatgpt-shell--config)
+             (let ((request-data `((model . ,(or version
+                                                 chatgpt-shell-dall-e-model-version))
+                                   (prompt . ,prompt))))
+               request-data)))
+           (status (condition-case err
+                       (apply #'call-process (seq-first command)
+                              nil api-buffer nil (cdr command))
+                     (error
+                      (insert (error-message-string err))
+                      1)))
+           (response (chatgpt-shell--extract-dall-e-response
+                      (buffer-substring-no-properties
+	               (point-min)
+	               (point-max))
+                      t)))
+      (if (and (map-elt response 'url)
+               (map-elt response 'path)
+               (map-elt response 'created))
+          (with-temp-buffer
+            (let* ((download-buffer (current-buffer))
+                   (status (condition-case err
+                               (call-process "curl" nil download-buffer
+                                             "curl" "--no-progress-meter"
+                                             "-o" (map-elt response 'path)
+                                             (map-elt response 'url))
+                             (error
+                              (insert (error-message-string err))
+                              1)))
+                   (output (with-current-buffer download-buffer
+                             (buffer-string))))
+              (message "outcome: %s" output)
+              (if (= status 0)
+                  (map-elt response 'path)
+                output)))
+        (or response (with-current-buffer api-buffer
+                       (buffer-string)))))))
+
 (defun chatgpt-shell--announce-response (buffer)
   "Announce response if BUFFER is not active."
   (unless (eq buffer (window-buffer (selected-window)))
@@ -1141,18 +1190,18 @@ Return nil if not found."
       (when (search-forward search-str nil t)
         (cons (match-beginning 0) (match-end 0))))))
 
-(defun chatgpt-shell--download-image (url filename callback error-callback)
-  "Download URL to FILENAME.  Invoke CALLBACK on success.
+(defun chatgpt-shell--download-image (url path callback error-callback)
+  "Download URL to PATH.  Invoke CALLBACK on success.
 ERROR-CALLBACK otherwise."
   ;; Ensure sync failures can be handled in next runloop.
   (run-with-idle-timer 0 nil
                        (lambda ()
-                         (let* ((path (expand-file-name filename temporary-file-directory))
-                                (output-buffer (generate-new-buffer " *temp*"))
+                         (let* ((output-buffer (generate-new-buffer " *temp*"))
                                 (request-process
                                  (condition-case err
                                      (start-process "curl" (buffer-name output-buffer)
-                                                    "curl" "-o" path
+                                                    "curl" "--no-progress-meter"
+                                                    "-o" path
                                                     url)
                                    (error
                                     (funcall error-callback (error-message-string err))
@@ -1265,8 +1314,9 @@ ERROR-CALLBACK otherwise."
   "Get *chatgpt* process."
   (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
 
-(defun chatgpt-shell--extract-dall-e-response (json)
-  "Extract DALL-E response from JSON."
+(defun chatgpt-shell--extract-dall-e-response (json &optional no-download)
+  "Extract DALL-E response from JSON.
+Set NO-DOWNLOAD to skip automatic downloading."
   (if-let ((parsed (chatgpt-shell--json-parse-string-filtering
                     json "^curl:.*\n?"))
            (buffer (chatgpt-shell--buffer chatgpt-shell--config)))
@@ -1275,37 +1325,41 @@ ERROR-CALLBACK otherwise."
                          .url)))
                 (created (number-to-string (let-alist parsed
                                              .created)))
-                (filename (concat created ".png")))
-          (progn
-            (chatgpt-shell--download-image
-             url filename
-             (lambda (path)
-               (let* ((loc (chatgpt-shell--find-string-in-buffer
-                            buffer
-                            filename))
-                      (start (car loc))
-                      (end (cdr loc)))
-                 (with-current-buffer buffer
-                   (remove-text-properties start end '(face nil))
-                   (add-text-properties
-                    start end
-                    `(display ,(create-image path nil nil :width 400)))
-                   (put-text-property start end
-                                      'keymap (let ((map (make-sparse-keymap)))
-                                                (define-key map (kbd "RET")
-                                                  (lambda () (interactive)
-                                                    (find-file path)))
-                                                map)))))
-             (lambda (error)
-               (when-let* ((loc (chatgpt-shell--find-string-in-buffer
-                                 buffer
-                                 filename))
-                           (start (car loc))
-                           (end (cdr loc)))
-                 (with-current-buffer buffer
-                   (remove-text-properties start end '(face nil))
-                   (add-text-properties start end `(display ,error))))))
-            (propertize filename 'display "[downloading...]"))
+                (path (expand-file-name (concat created ".png") temporary-file-directory)))
+          (if no-download
+              `((url . ,url)
+                (created . ,created)
+                (path . ,path))
+            (progn
+              (chatgpt-shell--download-image
+               url path
+               (lambda (path)
+                 (let* ((loc (chatgpt-shell--find-string-in-buffer
+                              buffer
+                              path))
+                        (start (car loc))
+                        (end (cdr loc)))
+                   (with-current-buffer buffer
+                     (remove-text-properties start end '(face nil))
+                     (add-text-properties
+                      start end
+                      `(display ,(create-image path nil nil :width 400)))
+                     (put-text-property start end
+                                        'keymap (let ((map (make-sparse-keymap)))
+                                                  (define-key map (kbd "RET")
+                                                    (lambda () (interactive)
+                                                      (find-file path)))
+                                                  map)))))
+               (lambda (error)
+                 (when-let* ((loc (chatgpt-shell--find-string-in-buffer
+                                   buffer
+                                   path))
+                             (start (car loc))
+                             (end (cdr loc)))
+                   (with-current-buffer buffer
+                     (remove-text-properties start end '(face nil))
+                     (add-text-properties start end `(display ,error))))))
+              (propertize path 'display "[downloading...]")))
         (let-alist parsed
           .error.message))))
 
