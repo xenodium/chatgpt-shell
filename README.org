@@ -96,7 +96,7 @@ Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
 
 * DALL-E org babel
 
-Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
+Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 
 #+begin_src org
   ,#+begin_src dall-e-shell
