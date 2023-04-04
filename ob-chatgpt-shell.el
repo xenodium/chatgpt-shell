@@ -1,4 +1,4 @@
-;;; ob-chatgpt-shell.el --- Org babel functions for SwiftUI evaluation -*- lexical-binding: t; -*-
+;;; ob-chatgpt-shell.el --- Org babel functions for ChatGPT evaluation -*- lexical-binding: t; -*-
 
 ;; Copyright (C) Alvaro Ramirez
 
@@ -24,7 +24,7 @@
 
 ;;; Commentary:
 
-;; Run and render SwiftUI blocks using org babel.
+;; Run and get responses from ChatGPT blocks using org babel.
 ;;
 ;; Install with:
 ;;
