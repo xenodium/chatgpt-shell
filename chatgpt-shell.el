@@ -802,8 +802,9 @@ Set SAVE-EXCURSION to prevent point from moving."
                    (setq chatgpt-shell--busy nil)
                    (chatgpt-shell--announce-response buffer))))))))
 
-(defun chatgpt-shell-post-chatgpt-messages (messages &optional callback error-callback)
-  "Make a single ChatGPT request with MESSAGES, CALLBACK, and ERROR-CALLBACK.
+(defun chatgpt-shell-post-chatgpt-messages (messages &optional version callback error-callback)
+  "Make a single ChatGPT request with MESSAGES.
+Optionally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
@@ -812,6 +813,7 @@ For example:
 \(chatgpt-shell-post-chatgpt-messages
  `(((role . \"user\")
     (content . \"hello\")))
+ \"gpt-3.5-turbo\"
  (lambda (response)
    (message \"%s\" response))
  (lambda (error)
@@ -824,7 +826,8 @@ For example:
          (chatgpt-shell--make-curl-request-command-list
           chatgpt-shell-openai-key
           (chatgpt-shell-config-url chatgpt-shell--config)
-          (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
+          (let ((request-data `((model . ,(or version
+                                              chatgpt-shell-chatgpt-model-version))
                                 (messages . ,(vconcat
                                               messages)))))
             (when chatgpt-shell-model-temperature
@@ -842,22 +845,22 @@ For example:
               (chatgpt-shell--make-curl-request-command-list
                chatgpt-shell-openai-key
                (chatgpt-shell-config-url chatgpt-shell--config)
-               (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
+               (let ((request-data `((model . ,(or version
+                                                   chatgpt-shell-chatgpt-model-version))
                                      (messages . ,(vconcat
                                                    messages)))))
                  (when chatgpt-shell-model-temperature
                    (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
                  request-data)))
              (status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
-        (if (eq status 0)
-            (chatgpt-shell--extract-chatgpt-response
+        (chatgpt-shell--extract-chatgpt-response
              (buffer-substring-no-properties
 	      (point-min)
-	      (point-max)))
-          "Error: Something's wrong")))))
+	      (point-max)))))))
 
-(defun chatgpt-shell-post-chatgpt-prompt (prompt &optional callback error-callback)
-  "Make a single ChatGPT request with PROMPT, CALLBACK, and ERROR-CALLBACK.
+(defun chatgpt-shell-post-chatgpt-prompt (prompt &optional version callback error-callback)
+  "Make a single ChatGPT request with PROMPT.
+Optioally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
@@ -865,12 +868,14 @@ For example:
 
 \(chatgpt-shell-request-oneof-prompt
  \"hello\"
+ \"gpt-3.5-turbo\"
  (lambda (response)
    (message \"%s\" response))
  (lambda (error)
    (message \"%s\" error)))"
   (chatgpt-shell-post-chatgpt-messages `(((role . "user")
                                           (content . ,prompt)))
+                                       version
                                        callback error-callback))
 
 (defun chatgpt-shell--announce-response (buffer)
@@ -1091,6 +1096,7 @@ Used by `chatgpt-shell--send-input's call."
             .error.message)))))
 
 (defun chatgpt-shell--preparse-json (json)
+  "Preparse JSON and return a cons of parsed objects vs unparsed text."
   (let ((parsed)
         (remaining)
         (loc))
