@@ -604,6 +604,8 @@ If region is active, append to prompt."
 (defun chatgpt-shell-describe-code ()
   "Describe code from region using ChatGPT."
   (interactive)
+  (unless (region-active-p)
+    (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
    (concat "What does the following code do?\n\n"
            (buffer-substring (region-beginning) (region-end))))
