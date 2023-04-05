@@ -290,6 +290,7 @@ or
     (define-key map "\C-m" 'chatgpt-shell-return)
     (define-key map "\C-c\C-c" 'chatgpt-shell-interrupt)
     (define-key map "\C-x\C-s" 'chatgpt-shell-save-session-transcript)
+    (define-key map "\C-\M-h" 'chatgpt-shell-mark-output)
     map)
   "Keymap for ChatGPT mode.")
 
@@ -720,6 +721,52 @@ Set SAVE-EXCURSION to prevent point from moving."
         (if (> (length items) 1)
             (nth 1 items)
           (nth 0 items))))))
+
+(defun chatgpt-shell-mark-output ()
+  "If at latest prompt, mark last output.
+Otherwise mark current output at location."
+  (interactive)
+  (let ((current-pos (point))
+        (revert-pos)
+        (start)
+        (end)
+        (prompt-pos (save-excursion
+                      (goto-char (process-mark
+                                  (get-buffer-process (current-buffer))))
+		      (point))))
+    (when (>= (point) prompt-pos)
+      (goto-char prompt-pos)
+      (forward-line 0))
+    (save-excursion
+      (unless
+          (cond
+           ((re-search-backward "<gpt-end-of-prompt>" nil t)
+            (forward-char (length "<gpt-end-of-prompt>"))
+            t)
+           ((re-search-backward
+             (concat "^"
+                     (chatgpt-shell-config-prompt chatgpt-shell--config))nil t)
+            (if (re-search-forward "<gpt-end-of-prompt>" nil t)
+                t
+              (end-of-line))
+            t)
+           (t
+            nil))
+        (setq revert-pos t))
+      (setq start (point)))
+    (save-excursion
+      (unless (re-search-forward
+               (concat "^"
+                       (chatgpt-shell-config-prompt chatgpt-shell--config)) nil t)
+        (goto-char current-pos)
+        (setq revert-pos t))
+      (backward-char (length (chatgpt-shell-config-prompt chatgpt-shell--config)))
+      (setq end (point)))
+    (when revert-pos
+      (goto-char current-pos)
+      (user-error "Not available"))
+    (set-mark (1- end))
+    (goto-char (1+ start))))
 
 (defun chatgpt-shell--markdown-source-blocks (text)
   "Find Markdown code blocks with language labels in TEXT."
