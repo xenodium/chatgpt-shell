@@ -902,10 +902,10 @@ For example:
                                        version
                                        callback error-callback))
 
-(defun chatgpt-shell-post-dall-e-prompt (prompt &optional version)
+(defun chatgpt-shell-post-dall-e-prompt (prompt &optional version image-size)
   "Make a single DALL-E request with PROMPT.
 
-Optionally provide model VERSION."
+Optionally provide model VERSION or IMAGE-SIZE."
   (with-temp-buffer
     (setq-local chatgpt-shell--config
                 chatgpt-shell--dall-e-config)
@@ -917,8 +917,9 @@ Optionally provide model VERSION."
              (let ((request-data `((model . ,(or version
                                                  chatgpt-shell-dall-e-model-version))
                                    (prompt . ,prompt))))
-               (when chatgpt-shell-dall-e-image-size
-                 (push `(size . ,chatgpt-shell-dall-e-image-size) request-data))
+               (when (or image-size chatgpt-shell-dall-e-image-size)
+                 (push `(image-size . ,(or image-size chatgpt-shell-dall-e-image-size))
+                       request-data))
                request-data)))
            (status (condition-case err
                        (apply #'call-process (seq-first command)
