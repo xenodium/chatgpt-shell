@@ -119,6 +119,11 @@ https://platform.openai.com/docs/models/model-endpoint-compatibility."
   :type 'string
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-dall-e-image-size nil
+  "The default size of the requested image."
+  :type 'string
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-dall-e-model-version "image-alpha-001"
   "The used DALL-E OpenAI model."
   :type 'string
@@ -263,6 +268,8 @@ or
                            (prompt . ,(map-elt (aref commands-and-responses
                                                      (1- (length commands-and-responses)))
                                                'content)))))
+       (when chatgpt-shell-dall-e-image-size
+         (push `(size . ,chatgpt-shell-dall-e-image-size) request-data))
        request-data))
    :response-extractor #'chatgpt-shell--extract-dall-e-response))
 
@@ -905,6 +912,8 @@ Optionally provide model VERSION."
              (let ((request-data `((model . ,(or version
                                                  chatgpt-shell-dall-e-model-version))
                                    (prompt . ,prompt))))
+               (when chatgpt-shell-dall-e-image-size
+                 (push `(size . ,chatgpt-shell-dall-e-image-size) request-data))
                request-data)))
            (status (condition-case err
                        (apply #'call-process (seq-first command)
