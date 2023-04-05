@@ -357,7 +357,10 @@ Uses the interface provided by `comint-mode'"
   (setq-local comint-prompt-read-only t)
   (setq comint-get-old-input 'chatgpt-shell--get-old-input)
   (setq-local comint-completion-addsuffix nil)
-
+  (setq-local imenu-generic-expression
+              `(("Prompt" ,(concat "^" (regexp-quote
+                                        (chatgpt-shell-config-prompt chatgpt-shell--config))
+                                   "\\(.*\\)") 1)))
   (unless (or (comint-check-proc (chatgpt-shell--buffer chatgpt-shell--config))
               (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
     (condition-case nil
