@@ -106,3 +106,35 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
   ,#+RESULTS:
   [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
 #+end_src
+
+* Details
+
+| Customizations                             |                                                                           |
+|--------------------------------------------+---------------------------------------------------------------------------|
+| chatgpt-shell-chatgpt-default-prompts      | List of prompts to choose from in the minibuffer.                         |
+| chatgpt-shell-chatgpt-model-version        | The used ChatGPT OpenAI model.                                            |
+| chatgpt-shell-chatgpt-on-response-function | Function to automatically execute after last command output.              |
+| chatgpt-shell-chatgpt-streaming            | Whether or not to stream ChatGPT responses (experimental).                |
+| chatgpt-shell-chatgpt-system-prompt        | The system message helps set the behavior of the assistant.               |
+| chatgpt-shell-dall-e-image-size            | The default size of the requested image as a string.                      |
+| chatgpt-shell-dall-e-model-version         | The used DALL-E OpenAI model.                                             |
+| chatgpt-shell-display-function             | Function to display new shell. Can be set to `display-buffer' or similar. |
+| chatgpt-shell-language-mapping             | Maps external language names to Emacs names.                              |
+| chatgpt-shell-model-temperature            | What sampling temperature to use, between 0 and 2, or nil.                |
+| chatgpt-shell-openai-key                   | OpenAI key as a string or a function that loads and returns it.           |
+| chatgpt-shell-read-string-function         | Function to read strings from user.                                       |
+| chatgpt-shell-request-timeout              | How long to wait for a request to time out.                               |
+
+| Commands                                           |                                                        |
+|----------------------------------------------------+--------------------------------------------------------|
+| dall-e-shell                                       | Start a DALL-E shell.                                  |
+| chatgpt-shell                                      | Start a ChatGPT shell.                                 |
+| chatgpt-shell-chatgpt-prompt                       | Make a ChatGPT request from the minibuffer.            |
+| chatgpt-shell-describe-code                        | Describe code from region using ChatGPT.               |
+| chatgpt-shell-eshell-summarize-last-command-output | Ask ChatGPT to summarize the last command output.      |
+| chatgpt-shell-eshell-whats-wrong-with-last-command | Ask ChatGPT what's wrong with the last eshell command. |
+| chatgpt-shell-mark-output                          | Mark last or current output.                           |
+| chatgpt-shell-restore-session-from-transcript      | Restore session from transcript.                       |
+| chatgpt-shell-save-session-transcript              | Save shell transcript to file.                         |
+| chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.      |
+| chatgpt-shell-send-region                          | Send region to ChatGPT.                                |

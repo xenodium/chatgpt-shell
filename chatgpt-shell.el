@@ -330,7 +330,7 @@ or
 
 ;;;###autoload
 (defun dall-e-shell ()
-  "Start a ChatGPT shell."
+  "Start a DALL-E shell."
   (interactive)
   (let ((old-point)
         (buf-name "*dalle*"))
@@ -670,7 +670,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
      (buffer-substring (region-beginning) (region-end))) review))
 
 (defun chatgpt-shell-send-and-review-region ()
-  "Send region to ChatGPT."
+  "Send region to ChatGPT, review before submitting."
   (interactive)
   (chatgpt-shell-send-region t))
 
