@@ -274,6 +274,8 @@ or
 
 (defvar-local chatgpt-shell--file nil)
 
+(defvar-local chatgpt-shell--request-process nil)
+
 (defvar chatgpt-shell-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\C-m" 'chatgpt-shell-return)
@@ -734,6 +736,8 @@ Set SAVE-EXCURSION to prevent point from moving."
                                               'invisible (not chatgpt-shell--show-invisible-markers))
                                   "\n"
                                   chatgpt-shell--prompt-internal))
+    (when (process-live-p chatgpt-shell--request-process)
+      (kill-process chatgpt-shell--request-process))
     (setq chatgpt-shell--busy nil)
     (message "interrupted!")))
 
@@ -979,6 +983,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
          (remaining-text)
          (process-connection-type nil))
     (when request-process
+      (setq chatgpt-shell--request-process request-process)
       (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
       (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
       (chatgpt-shell--write-output-to-log-buffer "\n\n")
