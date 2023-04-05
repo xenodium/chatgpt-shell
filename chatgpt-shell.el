@@ -726,6 +726,8 @@ Set SAVE-EXCURSION to prevent point from moving."
   "If at latest prompt, mark last output.
 Otherwise mark current output at location."
   (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
         (start)
