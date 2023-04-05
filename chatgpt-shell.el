@@ -120,7 +120,9 @@ https://platform.openai.com/docs/models/model-endpoint-compatibility."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-dall-e-image-size nil
-  "The default size of the requested image."
+  "The default size of the requested image as a string.
+
+For example: \"1024x1024\""
   :type 'string
   :group 'chatgpt-shell)
 
