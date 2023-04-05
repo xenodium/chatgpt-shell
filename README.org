@@ -107,9 +107,8 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
   [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
 #+end_src
 
-* Details
+* Customizations
 
-| Customizations                             |                                                                           |
 |--------------------------------------------+---------------------------------------------------------------------------|
 | chatgpt-shell-chatgpt-default-prompts      | List of prompts to choose from in the minibuffer.                         |
 | chatgpt-shell-chatgpt-model-version        | The used ChatGPT OpenAI model.                                            |
