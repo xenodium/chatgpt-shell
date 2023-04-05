@@ -965,7 +965,7 @@ Optionally provide model VERSION or IMAGE-SIZE."
                                                  chatgpt-shell-dall-e-model-version))
                                    (prompt . ,prompt))))
                (when (or image-size chatgpt-shell-dall-e-image-size)
-                 (push `(image-size . ,(or image-size chatgpt-shell-dall-e-image-size))
+                 (push `(size . ,(or image-size chatgpt-shell-dall-e-image-size))
                        request-data))
                request-data)))
            (status (condition-case err
