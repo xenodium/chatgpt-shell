@@ -123,8 +123,10 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 | chatgpt-shell-openai-key                   | OpenAI key as a string or a function that loads and returns it.           |
 | chatgpt-shell-read-string-function         | Function to read strings from user.                                       |
 | chatgpt-shell-request-timeout              | How long to wait for a request to time out.                               |
+|--------------------------------------------+---------------------------------------------------------------------------|
 
-| Commands                                           |                                                        |
+* Commands
+
 |----------------------------------------------------+--------------------------------------------------------|
 | dall-e-shell                                       | Start a DALL-E shell.                                  |
 | chatgpt-shell                                      | Start a ChatGPT shell.                                 |
@@ -137,3 +139,4 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 | chatgpt-shell-save-session-transcript              | Save shell transcript to file.                         |
 | chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.      |
 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                |
+|----------------------------------------------------+--------------------------------------------------------|
