@@ -145,6 +145,15 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-chatgpt-system-prompt nil
+  "The system message helps set the behavior of the assistant.
+
+For example: You are a helpful assistant that translates English to French.
+
+See https://platform.openai.com/docs/guides/chat/introduction"
+  :type 'string
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-chatgpt-streaming nil
   "Whether or not to stream ChatGPT responses (experimental)."
   :type 'boolean
@@ -224,7 +233,14 @@ or
    :request-data-maker
    (lambda (commands-and-responses)
      (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
-                           (messages . ,commands-and-responses))))
+                           (messages . ,(if chatgpt-shell-chatgpt-system-prompt
+                                            (vconcat
+                                             (list
+                                              (list
+                                               (cons 'role "system")
+                                               (cons 'content chatgpt-shell-chatgpt-system-prompt)))
+                                             commands-and-responses)
+                                          commands-and-responses)))))
        (when chatgpt-shell-model-temperature
          (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
        (when chatgpt-shell-chatgpt-streaming
