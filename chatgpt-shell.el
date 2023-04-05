@@ -5,8 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 0.11.1
-;; Package-Requires: ((emacs "27.1")
-;;                    (markdown-mode "2.5"))
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -39,7 +38,6 @@
 (require 'ielm)
 (require 'json)
 (require 'map)
-(require 'markdown-mode)
 (require 'seq)
 (require 'shell)
 (require 'view)
@@ -455,7 +453,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
           ;; (overlay-put (make-overlay body-start body-end buf)
           )
       (set-text-properties body-start body-end
-                           '(face 'markdown-pre-face)))))
+                           '(face 'font-lock-doc-markup-face)))))
 
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
