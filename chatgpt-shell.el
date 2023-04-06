@@ -587,10 +587,10 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
  BODY-END QUOTES2-START and QUOTES2-END."
   ;; Hide ```
   (overlay-put (make-overlay quotes1-start
-                             quotes1-end) 'invisible t)
+                             quotes1-end) 'invisible 'chatgpt-shell)
   (overlay-put (make-overlay quotes2-start
-                             quotes2-end) 'invisible t)
-  (when (and lang-start lang-end)
+                             quotes2-end) 'invisible 'chatgpt-shell)
+  (unless (eq lang-start lang-end)
     (overlay-put (make-overlay lang-start
                                lang-end) 'face '(:box t))
     (overlay-put (make-overlay lang-end
