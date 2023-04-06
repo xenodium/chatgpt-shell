@@ -42,7 +42,7 @@
 ;;; Code:
 (require 'ob)
 (require 'org)
-(require 'chatgpt-shell)
+(require 'dall-e-shell)
 (require 'map)
 
 (defalias 'dall-e-shell-mode #'text-mode)
@@ -54,7 +54,7 @@
   "Execute a block of DALL-E prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing DALL-E source code block")
-  (chatgpt-shell-post-dall-e-prompt body (map-elt params :version)))
+  (dall-e-shell-post-prompt body (map-elt params :version)))
 
 (defun ob-dall-e-shell-setup ()
   "Set up babel DALL-E support."

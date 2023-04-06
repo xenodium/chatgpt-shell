@@ -1,38 +1,75 @@
-;;; dall-e-shell.el --- Interaction mode for ChatGPT  -*- lexical-binding: t -*-
+;;; dall-e-shell.el --- Interaction mode for DALL-E  -*- lexical-binding: t -*-
 
-(defcustom chatgpt-shell-dall-e-image-size nil
+;; Copyright (C) 2023 Alvaro Ramirez
+
+;; Author: Alvaro Ramirez https://xenodium.com
+;; URL: https://github.com/xenodium/chatgpt-shell
+
+;; This package is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This package is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; You must set `dall-e-shell-openai-key' to your key before using.
+;;
+;; Run `chatgpt-shell' to get a ChatGPT shell.
+
+(require 'mk-shell)
+
+(defcustom dall-e-shell-openai-key nil
+  "OpenAI key as a string or a function that loads and returns it."
+  :type '(choice (function :tag "Function")
+                 (string :tag "String"))
+  :group 'dall-e-shell)
+
+(defcustom dall-e-image-size nil
   "The default size of the requested image as a string.
 
 For example: \"1024x1024\""
   :type 'string
-  :group 'chatgpt-shell)
+  :group 'dall-e-shell)
 
-(defcustom chatgpt-shell-dall-e-model-version "image-alpha-001"
+(defcustom dall-e-model-version "image-alpha-001"
   "The used DALL-E OpenAI model."
   :type 'string
-  :group 'chatgpt-shell)
+  :group 'dall-e-shell)
 
-(defvar chatgpt-shell--dall-e-config
-  (make-chatgpt-shell-config
+(defcustom dall-e-shell-request-timeout 60
+  "How long to wait for a request to time out."
+  :type 'integer
+  :group 'dall-e-shell)
+
+(defvar dall-e--config
+  (make-mk-shell-config
    :buffer-name "*dalle*"
    :process-name "dalle"
    :prompt "DALL-E> "
    :url "https://api.openai.com/v1/images/generations"
    :invalid-input
    (lambda (_input)
-     (unless chatgpt-shell-openai-key
-       "Variable `chatgpt-shell-openai-key' needs to be set to your key.
+     (unless dall-e-shell-openai-key
+       "Variable `dall-e-shell-openai-key' needs to be set to your key.
 
-Try M-x set-variable chatgpt-shell-openai-key
+Try M-x set-variable dall-e-shell-openai-key
 
 or
 
-(setq chatgpt-shell-openai-key \"my-key\")"))
+(setq dall-e-shell-openai-key \"my-key\")"))
    :request-maker
    (lambda (url request-data response-extractor callback error-callback)
-     (chatgpt-shell--async-shell-command
-      (chatgpt-shell--make-curl-request-command-list
-       chatgpt-shell-openai-key
+     (mk-shell--async-shell-command
+      (dall-e--make-curl-request-command-list
+       dall-e-shell-openai-key
        url request-data)
       nil ;; no streaming
       response-extractor
@@ -40,39 +77,27 @@ or
       error-callback))
    :request-data-maker
    (lambda (commands-and-responses)
-     (let ((request-data `((model . ,chatgpt-shell-dall-e-model-version)
+     (let ((request-data `((model . ,dall-e-model-version)
                            (prompt . ,(map-elt (aref commands-and-responses
                                                      (1- (length commands-and-responses)))
                                                'content)))))
-       (when chatgpt-shell-dall-e-image-size
-         (push `(size . ,chatgpt-shell-dall-e-image-size) request-data))
+       (when dall-e-image-size
+         (push `(size . ,dall-e-image-size) request-data))
        request-data))
-   :response-extractor #'chatgpt-shell--extract-dall-e-response))
+   :response-extractor #'dall-e-shell--extract-response))
 
 ;;;###autoload
 (defun dall-e-shell ()
   "Start a DALL-E shell."
   (interactive)
-  (let ((old-point)
-        (buf-name "*dalle*"))
-    (unless (comint-check-proc buf-name)
-      (with-current-buffer (get-buffer-create "*dalle*")
-        (setq-local chatgpt-shell--busy nil)
-        (unless (zerop (buffer-size))
-          (setq old-point (point)))
-        (chatgpt-shell-mode)
-        (chatgpt-shell--initialize
-         chatgpt-shell--dall-e-config)))
-    (funcall chatgpt-shell-display-function buf-name)
-    (when old-point
-      (push-mark old-point))))
+  (mk-start-shell dall-e--config))
 
-(defun chatgpt-shell--extract-dall-e-response (json &optional no-download)
+(defun dall-e-shell--extract-response (json &optional no-download)
   "Extract DALL-E response from JSON.
 Set NO-DOWNLOAD to skip automatic downloading."
-  (if-let ((parsed (chatgpt-shell--json-parse-string-filtering
+  (if-let ((parsed (mk-shell--json-parse-string-filtering
                     json "^curl:.*\n?"))
-           (buffer (chatgpt-shell--buffer chatgpt-shell--config)))
+           (buffer (mk-shell-buffer mk-shell-config)))
       (if-let* ((url (let-alist parsed
                        (let-alist (seq-first .data)
                          .url)))
@@ -84,10 +109,10 @@ Set NO-DOWNLOAD to skip automatic downloading."
                 (created . ,created)
                 (path . ,path))
             (progn
-              (chatgpt-shell--download-image
+              (dall-e-shell--download-image
                url path
                (lambda (path)
-                 (let* ((loc (chatgpt-shell--find-string-in-buffer
+                 (let* ((loc (dall-e-shell--find-string-in-buffer
                               buffer
                               path))
                         (start (car loc))
@@ -104,7 +129,7 @@ Set NO-DOWNLOAD to skip automatic downloading."
                                                       (find-file path)))
                                                   map)))))
                (lambda (error)
-                 (when-let* ((loc (chatgpt-shell--find-string-in-buffer
+                 (when-let* ((loc (dall-e-shell--find-string-in-buffer
                                    buffer
                                    path))
                              (start (car loc))
@@ -116,23 +141,23 @@ Set NO-DOWNLOAD to skip automatic downloading."
         (let-alist parsed
           .error.message))))
 
-(defun chatgpt-shell-post-dall-e-prompt (prompt &optional version image-size)
+(defun dall-e-shell-post-prompt (prompt &optional version image-size)
   "Make a single DALL-E request with PROMPT.
 
 Optionally provide model VERSION or IMAGE-SIZE."
   (with-temp-buffer
-    (setq-local chatgpt-shell--config
-                chatgpt-shell--dall-e-config)
+    (setq-local mk-shell-config
+                dall-e--config)
     (let* ((api-buffer (current-buffer))
            (command
-            (chatgpt-shell--make-curl-request-command-list
-             chatgpt-shell-openai-key
-             (chatgpt-shell-config-url chatgpt-shell--config)
+            (dall-e--make-curl-request-command-list
+             dall-e-shell-openai-key
+             (mk-shell-config-url mk-shell-config)
              (let ((request-data `((model . ,(or version
-                                                 chatgpt-shell-dall-e-model-version))
+                                                 dall-e-model-version))
                                    (prompt . ,prompt))))
-               (when (or image-size chatgpt-shell-dall-e-image-size)
-                 (push `(size . ,(or image-size chatgpt-shell-dall-e-image-size))
+               (when (or image-size dall-e-image-size)
+                 (push `(size . ,(or image-size dall-e-image-size))
                        request-data))
                request-data)))
            (_status (condition-case err
@@ -141,7 +166,7 @@ Optionally provide model VERSION or IMAGE-SIZE."
                       (error
                        (insert (error-message-string err))
                        1)))
-           (response (chatgpt-shell--extract-dall-e-response
+           (response (dall-e-shell--extract-response
                       (buffer-substring-no-properties
 	               (point-min)
 	               (point-max))
@@ -168,7 +193,7 @@ Optionally provide model VERSION or IMAGE-SIZE."
         (or response (with-current-buffer api-buffer
                        (buffer-string)))))))
 
-(defun chatgpt-shell--find-string-in-buffer (buffer search-str)
+(defun dall-e-shell--find-string-in-buffer (buffer search-str)
   "Find SEARCH-STR in BUFFER and return a cons with start/end.
 Return nil if not found."
   (with-current-buffer buffer
@@ -177,7 +202,7 @@ Return nil if not found."
       (when (search-forward search-str nil t)
         (cons (match-beginning 0) (match-end 0))))))
 
-(defun chatgpt-shell--download-image (url path callback error-callback)
+(defun dall-e-shell--download-image (url path callback error-callback)
   "Download URL to PATH.  Invoke CALLBACK on success.
 ERROR-CALLBACK otherwise."
   ;; Ensure sync failures can be handled in next runloop.
@@ -204,3 +229,24 @@ ERROR-CALLBACK otherwise."
                                       (funcall callback path)
                                     (funcall error-callback output))
                                   (kill-buffer output-buffer)))))))))
+
+(defun dall-e--make-curl-request-command-list (key url request-data)
+  "Build DALL-E curl command list using KEY URL and REQUEST-DATA."
+  (list "curl" url
+        "--fail-with-body"
+        "--no-progress-meter"
+        "-m" (number-to-string dall-e-shell-request-timeout)
+        "-H" "Content-Type: application/json"
+        "-H" (format "Authorization: Bearer %s"
+                     (cond ((stringp key)
+                            key)
+                           ((functionp key)
+                            (condition-case _err
+                                (funcall key)
+                              (error
+                               "KEY-NOT-FOUND")))))
+        "-d" (mk-shell--json-encode request-data)))
+
+(provide 'dall-e-shell)
+
+;;; dall-e-shell.el ends here

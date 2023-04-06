@@ -1,4 +1,4 @@
-;;; mk-shell.el --- Interaction mode for ChatGPT  -*- lexical-binding: t -*-
+;;; mk-shell.el --- Interaction mode for making comint shells  -*- lexical-binding: t -*-
 
 (require 'comint)
 (require 'goto-addr)
@@ -12,42 +12,43 @@
   (require 'cl-lib)
   (declare-function json-pretty-print "ext:json" (begin end &optional minimize)))
 
-(defcustom chatgpt-shell-display-function #'pop-to-buffer-same-window
+(defcustom mk-shell-display-function #'pop-to-buffer-same-window
   "Function to display new shell.  Can be set to `display-buffer' or similar."
   :type 'function
-  :group 'chatgpt-shell)
+  :group 'mk-shell)
 
-(defcustom chatgpt-shell-read-string-function (lambda (prompt history)
+(defcustom mk-shell-read-string-function (lambda (prompt history)
                                                 (read-string prompt nil history))
   "Function to read strings from user.
 
 To use `completing-read', it can be done with something like:
 
-\(setq `chatgpt-shell-read-string-function'
+\(setq `mk-shell-read-string-function'
       (lambda (prompt history)
         (completing-read prompt (symbol-value history) nil nil nil history)))"
   :type 'function
-  :group 'chatgpt-shell)
+  :group 'mk-shell)
 
-(defcustom chatgpt-shell-chatgpt-on-response-function nil
+(defcustom mk-shell-on-response-function nil
   "Function to automatically execute after last command output.
 
 This is useful if you'd like to automatically handle or suggest things."
   :type 'function
-  :group 'chatgpt-shell)
+  :group 'mk-shell)
 
-(defvar chatgpt-shell--log-buffer-name "*chatgpt-shell-log*")
+;; FIXME: Make log buffer shell-specific.
+(defvar mk-shell--log-buffer-name "*mk-shell-log*")
 
-(defvar chatgpt-shell--input nil)
+(defvar mk-shell--input nil)
 
-(defvar chatgpt-shell--current-request-id 0)
+(defvar mk-shell--current-request-id 0)
 
-(defvar chatgpt-shell--show-invisible-markers nil)
+(defvar mk-shell--show-invisible-markers nil)
 
-(defvar chatgpt-shell--prompt-internal nil)
+(defvar mk-shell--prompt-internal nil)
 
 (cl-defstruct
-    chatgpt-shell-config
+    mk-shell-config
   prompt
   buffer-name
   process-name
@@ -58,119 +59,115 @@ This is useful if you'd like to automatically handle or suggest things."
   response-extractor
   response-post-processor)
 
-(defvar-local chatgpt-shell--busy nil)
+(defvar-local mk-shell--busy nil)
 
-(defvar-local chatgpt-shell--config nil)
+(defvar-local mk-shell-config nil)
 
-(defvaralias 'chatgpt-shell-mode-map 'chatgpt-shell-map)
+(defvaralias 'mk-shell-mode-map 'mk-shell-map)
 
-(defvar-local chatgpt-shell--file nil)
+(defvar-local mk-shell--file nil)
 
-(defvar-local chatgpt-shell--request-process nil)
+(defvar-local mk-shell--request-process nil)
 
-(defvar chatgpt-shell-map
+(defvar mk-shell-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map "\C-m" 'chatgpt-shell-return)
-    (define-key map "\C-c\C-c" 'chatgpt-shell-interrupt)
-    (define-key map "\C-x\C-s" 'chatgpt-shell-save-session-transcript)
-    (define-key map "\C-\M-h" 'chatgpt-shell-mark-output)
+    (define-key map "\C-m" 'mk-shell-return)
+    (define-key map "\C-c\C-c" 'mk-shell-interrupt)
+    (define-key map "\C-x\C-s" 'mk-shell-save-session-transcript)
+    (define-key map "\C-\M-h" 'mk-shell-mark-output)
     map)
-  "Keymap for ChatGPT mode.")
+  "Keymap for mk-shell-mode.")
 
-(define-derived-mode chatgpt-shell-mode comint-mode "CHATGPT"
-  "Major mode for interactively evaluating ChatGPT prompts.
+(define-derived-mode mk-shell-mode comint-mode "mk-shell"
+  "Major mode for interactively evaluating mk-shell prompts.
 Uses the interface provided by `comint-mode'"
   nil)
 
-(defun chatgpt-shell--buffer (config)
+(defun mk-shell-buffer (config)
   "Get buffer from CONFIG."
-  (get-buffer-create (chatgpt-shell-config-buffer-name config)))
+  (get-buffer-create (mk-shell-config-buffer-name config)))
 
-(defun chatgpt-shell--initialize (config)
+(defun mk-start-shell (config)
+  (let ((old-point)
+        (buf-name (mk-shell-config-buffer-name config)))
+    (unless (comint-check-proc buf-name)
+      (with-current-buffer (get-buffer-create buf-name)
+        (setq-local mk-shell--busy nil)
+        (unless (zerop (buffer-size))
+          (setq old-point (point)))
+        (mk-shell-mode)
+        (mk-shell--initialize config)))
+    (funcall mk-shell-display-function buf-name)
+    (when old-point
+      (push-mark old-point))))
+
+(defun mk-shell--initialize (config)
   "Initialize shell using CONFIG."
-  (setq-local chatgpt-shell--config config)
+  (setq-local mk-shell-config config)
   (visual-line-mode +1)
   (goto-address-mode +1)
   (setq comint-prompt-regexp
         (concat "^" (regexp-quote
-                     (chatgpt-shell-config-prompt chatgpt-shell--config))))
+                     (mk-shell-config-prompt mk-shell-config))))
   (setq-local paragraph-separate "\\'")
   (setq-local paragraph-start comint-prompt-regexp)
-  (setq comint-input-sender 'chatgpt-shell--input-sender)
+  (setq comint-input-sender 'mk-shell--input-sender)
   (setq comint-process-echoes nil)
-  (setq-local chatgpt-shell--prompt-internal
-              (chatgpt-shell-config-prompt chatgpt-shell--config))
+  (setq-local mk-shell--prompt-internal
+              (mk-shell-config-prompt mk-shell-config))
   (setq-local comint-prompt-read-only t)
-  (setq comint-get-old-input 'chatgpt-shell--get-old-input)
+  (setq comint-get-old-input 'mk-shell--get-old-input)
   (setq-local comint-completion-addsuffix nil)
   (setq-local imenu-generic-expression
               `(("Prompt" ,(concat "^" (regexp-quote
-                                        (chatgpt-shell-config-prompt chatgpt-shell--config))
+                                        (mk-shell-config-prompt mk-shell-config))
                                    "\\(.*\\)") 1)))
-  (unless (or (comint-check-proc (chatgpt-shell--buffer chatgpt-shell--config))
-              (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
+  (unless (or (comint-check-proc (mk-shell-buffer mk-shell-config))
+              (get-buffer-process (mk-shell-buffer mk-shell-config)))
     (condition-case nil
-        (start-process (chatgpt-shell-config-process-name chatgpt-shell--config)
-                       (chatgpt-shell--buffer chatgpt-shell--config) "hexl")
+        (start-process (mk-shell-config-process-name mk-shell-config)
+                       (mk-shell-buffer mk-shell-config) "hexl")
       (file-error (start-process
-                   (chatgpt-shell-config-process-name chatgpt-shell--config)
-                   (chatgpt-shell--buffer chatgpt-shell--config) "cat")))
-    (set-process-query-on-exit-flag (chatgpt-shell--process) nil)
+                   (mk-shell-config-process-name mk-shell-config)
+                   (mk-shell-buffer mk-shell-config) "cat")))
+    (set-process-query-on-exit-flag (mk-shell--process) nil)
     (goto-char (point-max))
     (setq-local comint-inhibit-carriage-motion t)
 
-    (chatgpt-shell--set-pm (point-max))
+    (mk-shell--set-pm (point-max))
     (unless comint-use-prompt-regexp
       (let ((inhibit-read-only t))
         (add-text-properties
          (point-min) (point-max)
          '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
-    (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
-    (set-marker comint-last-input-start (chatgpt-shell--pm))
+    (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
+    (set-marker comint-last-input-start (mk-shell--pm))
     (set-process-filter (get-buffer-process
-                         (chatgpt-shell--buffer chatgpt-shell--config))
+                         (mk-shell-buffer mk-shell-config))
                         'comint-output-filter)))
 
-;; FIXME: Move to chatgpt-shell.
-(defun chatgpt-shell--put-source-block-overlays ()
-  "Put overlays for all source blocks."
-  (dolist (overlay (overlays-in (point-min) (point-max)))
-    (delete-overlay overlay))
-  (dolist (block (chatgpt-shell--source-blocks))
-    (chatgpt-shell--fontify-source-block
-     (car (map-elt block 'start))
-     (cdr (map-elt block 'start))
-     (buffer-substring-no-properties (car (map-elt block 'language))
-                                     (cdr (map-elt block 'language)))
-     (car (map-elt block 'language))
-     (cdr (map-elt block 'language))
-     (car (map-elt block 'body))
-     (cdr (map-elt block 'body))
-     (car (map-elt block 'end))
-     (cdr (map-elt block 'end)))))
-
-(defun chatgpt-shell--write-reply (reply &optional failed)
+(defun mk-shell--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
-    (comint-output-filter (chatgpt-shell--process)
+    (comint-output-filter (mk-shell--process)
                           (concat reply
                                   (if failed
                                       (propertize "<gpt-ignored-response>"
-                                                  'invisible (not chatgpt-shell--show-invisible-markers))
+                                                  'invisible (not mk-shell--show-invisible-markers))
                                     "")
-                                  chatgpt-shell--prompt-internal))
+                                  mk-shell--prompt-internal))
     ;; FIXME: Move to chatgpt-shell.
     (chatgpt-shell--put-source-block-overlays)))
 
-(defun chatgpt-shell-return ()
+(defun mk-shell-return ()
   "RET binding."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
-  (chatgpt-shell--send-input))
+  (mk-shell--send-input))
 
-(defun chatgpt-shell-last-output ()
+(defun mk-shell-last-output ()
   "Get the last command output from the shell."
   (let ((proc (get-buffer-process (current-buffer))))
     (save-excursion
@@ -183,11 +180,11 @@ Uses the interface provided by `comint-mode'"
             (nth 1 items)
           (nth 0 items))))))
 
-(defun chatgpt-shell-mark-output ()
+(defun mk-shell-mark-output ()
   "If at latest prompt, mark last output.
 Otherwise mark current output at location."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
@@ -208,7 +205,7 @@ Otherwise mark current output at location."
             t)
            ((re-search-backward
              (concat "^"
-                     (chatgpt-shell-config-prompt chatgpt-shell--config))nil t)
+                     (mk-shell-config-prompt mk-shell-config))nil t)
             (if (re-search-forward "<gpt-end-of-prompt>" nil t)
                 t
               (end-of-line))
@@ -220,10 +217,10 @@ Otherwise mark current output at location."
     (save-excursion
       (unless (re-search-forward
                (concat "^"
-                       (chatgpt-shell-config-prompt chatgpt-shell--config)) nil t)
+                       (mk-shell-config-prompt mk-shell-config)) nil t)
         (goto-char current-pos)
         (setq revert-pos t))
-      (backward-char (length (chatgpt-shell-config-prompt chatgpt-shell--config)))
+      (backward-char (length (mk-shell-config-prompt mk-shell-config)))
       (setq end (point)))
     (when revert-pos
       (goto-char current-pos)
@@ -231,11 +228,11 @@ Otherwise mark current output at location."
     (set-mark (1- end))
     (goto-char (1+ start))))
 
-(defun chatgpt-shell-save-output ()
+(defun mk-shell-save-output ()
   "If at latest prompt, save last output.
 Otherwise save current output at location."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
   (let ((orig-point (point))
         (orig-region-active (region-active-p))
@@ -243,7 +240,7 @@ Otherwise save current output at location."
         (orig-region-end (region-end)))
     (unwind-protect
         (progn
-          (chatgpt-shell-mark-output)
+          (mk-shell-mark-output)
           (write-region (region-beginning)
                         (region-end)
                         (read-file-name "Write file: ")))
@@ -254,74 +251,76 @@ Otherwise save current output at location."
         (setq mark-active nil)
         (goto-char orig-point)))))
 
-(defun chatgpt-shell-interrupt ()
+(defun mk-shell-interrupt ()
   "Interrupt current request."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
-  (with-current-buffer (chatgpt-shell--buffer chatgpt-shell--config)
+  (with-current-buffer (mk-shell-buffer mk-shell-config)
     ;; Increment id, so in-flight request is ignored.
-    (chatgpt-shell--increment-request-id)
+    (mk-shell--increment-request-id)
     (comint-send-input)
     (goto-char (point-max))
-    (comint-output-filter (chatgpt-shell--process)
+    (comint-output-filter (mk-shell--process)
                           (concat (propertize "<gpt-ignored-response>"
-                                              'invisible (not chatgpt-shell--show-invisible-markers))
+                                              'invisible (not mk-shell--show-invisible-markers))
                                   "\n"
-                                  chatgpt-shell--prompt-internal))
-    (when (process-live-p chatgpt-shell--request-process)
-      (kill-process chatgpt-shell--request-process))
-    (setq chatgpt-shell--busy nil)
+                                  mk-shell--prompt-internal))
+    (when (process-live-p mk-shell--request-process)
+      (kill-process mk-shell--request-process))
+    (setq mk-shell--busy nil)
     (message "interrupted!")))
 
-(defun chatgpt-shell--eval-input (input-string)
+(defun mk-shell--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
-  (let ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
+  (let ((buffer (mk-shell-buffer mk-shell-config))
         (prefix-newline "")
         (suffix-newline "\n\n")
         (response-count 0))
-   (unless chatgpt-shell--busy
-    (setq chatgpt-shell--busy t)
+   (unless mk-shell--busy
+    (setq mk-shell--busy t)
     (cond
      ((string-equal "clear" (string-trim input-string))
       (call-interactively 'comint-clear-buffer)
-      (comint-output-filter (chatgpt-shell--process) chatgpt-shell--prompt-internal)
-      (setq chatgpt-shell--busy nil))
-     ((not (chatgpt-shell--curl-version-supported))
-      (chatgpt-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
-      (setq chatgpt-shell--busy nil))
-     ((and (chatgpt-shell-config-invalid-input
-            chatgpt-shell--config)
-           (funcall (chatgpt-shell-config-invalid-input
-                     chatgpt-shell--config) input-string))
-      (chatgpt-shell--write-reply
+      (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
+      (setq mk-shell--busy nil))
+     ((not (mk-shell--curl-version-supported))
+      (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
+      (setq mk-shell--busy nil))
+     ((and (mk-shell-config-invalid-input
+            mk-shell-config)
+           (funcall (mk-shell-config-invalid-input
+                     mk-shell-config) input-string))
+      (mk-shell--write-reply
        (concat "\n"
-               (funcall (chatgpt-shell-config-invalid-input
-                         chatgpt-shell--config) input-string)
+               (funcall (mk-shell-config-invalid-input
+                         mk-shell-config) input-string)
                "\n\n"))
-      (setq chatgpt-shell--busy nil))
+      (setq mk-shell--busy nil))
      ((string-empty-p (string-trim input-string))
-      (comint-output-filter (chatgpt-shell--process)
-                            (concat "\n" chatgpt-shell--prompt-internal))
-      (setq chatgpt-shell--busy nil))
+      (comint-output-filter (mk-shell--process)
+                            (concat "\n" mk-shell--prompt-internal))
+      (setq mk-shell--busy nil))
      (t
       ;; For viewing prompt delimiter (used to handle multiline prompts).
-      ;; (comint-output-filter (chatgpt-shell--process) "<gpt-end-of-prompt>")
-      (comint-output-filter (chatgpt-shell--process)
+      ;; (comint-output-filter (mk-shell--process) "<gpt-end-of-prompt>")
+      (comint-output-filter (mk-shell--process)
                             (propertize "<gpt-end-of-prompt>"
-                                        'invisible (not chatgpt-shell--show-invisible-markers)))
-      (funcall (chatgpt-shell-config-request-maker chatgpt-shell--config)
-                 (chatgpt-shell-config-url chatgpt-shell--config)
-                 (funcall (chatgpt-shell-config-request-data-maker chatgpt-shell--config)
+                                        'invisible (not mk-shell--show-invisible-markers)))
+      (funcall (mk-shell-config-request-maker mk-shell-config)
+                 (mk-shell-config-url mk-shell-config)
+                 (funcall (mk-shell-config-request-data-maker mk-shell-config)
                           (vconcat
                            ;; FIXME: Move to chatgpt-shell.
                            (last (chatgpt-shell--extract-commands-and-responses
                                   (with-current-buffer buffer
                                     (buffer-string))
-                                  (chatgpt-shell-config-prompt chatgpt-shell--config))
+                                  (mk-shell-config-prompt mk-shell-config))
+                                 ;; FIXME: Move to chatgpt-shell.
                                  (chatgpt-shell--unpaired-length
+                                  ;; FIXME: Move to chatgpt-shell.
                                   chatgpt-shell-transmitted-context-length))))
-                 (chatgpt-shell-config-response-extractor chatgpt-shell--config)
+                 (mk-shell-config-response-extractor mk-shell-config)
                  (lambda (response partial)
                    (setq response-count (1+ response-count))
                    (setq prefix-newline (if (> response-count 1)
@@ -330,51 +329,40 @@ Otherwise save current output at location."
                    (if response
                        (if partial
                            (progn
-                             (chatgpt-shell--write-partial-reply (concat prefix-newline response))
-                             (setq chatgpt-shell--busy partial))
+                             (mk-shell--write-partial-reply (concat prefix-newline response))
+                             (setq mk-shell--busy partial))
                          (progn
-                           (chatgpt-shell--write-reply (concat prefix-newline response suffix-newline))
-                           (chatgpt-shell--announce-response buffer)
-                           (setq chatgpt-shell--busy nil)
-                           (when (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
+                           (mk-shell--write-reply (concat prefix-newline response suffix-newline))
+                           (mk-shell--announce-response buffer)
+                           (setq mk-shell--busy nil)
+                           (when (mk-shell-config-response-post-processor mk-shell-config)
                              ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                             (funcall (chatgpt-shell-config-response-post-processor chatgpt-shell--config)
-                                      (chatgpt-shell-last-output)))))
-                     (chatgpt-shell--write-reply "Error: that's all is known" t) ;; comeback
-                     (setq chatgpt-shell--busy nil)
-                     (chatgpt-shell--announce-response buffer)))
+                             (funcall (mk-shell-config-response-post-processor mk-shell-config)
+                                      (mk-shell-last-output)))))
+                     (mk-shell--write-reply "Error: that's all is known" t) ;; comeback
+                     (setq mk-shell--busy nil)
+                     (mk-shell--announce-response buffer)))
                  (lambda (error)
-                   (chatgpt-shell--write-reply (concat (string-trim error) suffix-newline) t)
-                   (setq chatgpt-shell--busy nil)
-                   (chatgpt-shell--announce-response buffer))))))))
+                   (mk-shell--write-reply (concat (string-trim error) suffix-newline) t)
+                   (setq mk-shell--busy nil)
+                   (mk-shell--announce-response buffer))))))))
 
-(defun chatgpt-shell--announce-response (buffer)
+(defun mk-shell--announce-response (buffer)
   "Announce response if BUFFER is not active."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
 
-;; FIXME: Move to chatgpt-shell.
-(defun chatgpt-shell--unpaired-length (length)
-  "Expand LENGTH to include paired responses.
-
-Each request has a response, so double LENGTH if set.
-
-Add one for current request (without response).
-
-If no LENGTH set, use 2048."
-  (if length
-      (1+ (* 2 length))
-    2048))
-
-(defun chatgpt-shell--async-shell-command (command streaming response-extractor callback error-callback)
+(defun mk-shell--async-shell-command (command streaming response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
-  (let* ((buffer (chatgpt-shell--buffer chatgpt-shell--config))
-         (request-id (chatgpt-shell--increment-request-id))
+  (let* ((buffer (mk-shell-buffer mk-shell-config))
+         (request-id (mk-shell--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
          (request-process (condition-case err
-                              (apply #'start-process (append (list "ChatGPT" (buffer-name output-buffer))
+                              (apply #'start-process (append (list
+                                                              (mk-shell-config-buffer-name mk-shell-config)
+                                                              (buffer-name output-buffer))
                                                              command))
                             (error
                              (with-current-buffer buffer
@@ -384,19 +372,19 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
          (remaining-text)
          (process-connection-type nil))
     (when request-process
-      (setq chatgpt-shell--request-process request-process)
-      (chatgpt-shell--write-output-to-log-buffer "// Request\n\n")
-      (chatgpt-shell--write-output-to-log-buffer (string-join command " "))
-      (chatgpt-shell--write-output-to-log-buffer "\n\n")
+      (setq mk-shell--request-process request-process)
+      (mk-shell--write-output-to-log-buffer "// Request\n\n")
+      (mk-shell--write-output-to-log-buffer (string-join command " "))
+      (mk-shell--write-output-to-log-buffer "\n\n")
       (when streaming
         (set-process-filter
          request-process
          (lambda (_process output)
-           (when (eq request-id chatgpt-shell--current-request-id)
-             (chatgpt-shell--write-output-to-log-buffer
+           (when (eq request-id mk-shell--current-request-id)
+             (mk-shell--write-output-to-log-buffer
               (format "// Filter output\n\n%s\n\n" output))
              (setq remaining-text (concat remaining-text output))
-             (setq preparsed (chatgpt-shell--preparse-json remaining-text))
+             (setq preparsed (mk-shell--preparse-json remaining-text))
              (if (car preparsed)
                  (mapc (lambda (obj)
                          (with-current-buffer buffer
@@ -408,16 +396,16 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (let ((active (eq request-id chatgpt-shell--current-request-id))
+         (let ((active (eq request-id mk-shell--current-request-id))
                (output (with-current-buffer (process-buffer process)
                          (buffer-string)))
                (exit-status (process-exit-status process)))
-           (chatgpt-shell--write-output-to-log-buffer
+           (mk-shell--write-output-to-log-buffer
             (format "// Response (%s)\n\n" (if active "active" "inactive")))
-           (chatgpt-shell--write-output-to-log-buffer
+           (mk-shell--write-output-to-log-buffer
             (format "Exit status: %d\n\n" exit-status))
-           (chatgpt-shell--write-output-to-log-buffer output)
-           (chatgpt-shell--write-output-to-log-buffer "\n\n")
+           (mk-shell--write-output-to-log-buffer output)
+           (mk-shell--write-output-to-log-buffer "\n\n")
            (with-current-buffer buffer
              (when active
                (if (= exit-status 0)
@@ -433,7 +421,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                    (funcall error-callback output)))))
            (kill-buffer output-buffer)))))))
 
-(defun chatgpt-shell--json-parse-string-filtering (json regexp)
+(defun mk-shell--json-parse-string-filtering (json regexp)
   "Attempt to parse JSON.  If unsuccessful, attempt after removing REGEXP."
   (let ((json-object nil)
         (curl-lines-removed-str json))
@@ -449,35 +437,35 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
         (error nil)))
     json-object))
 
-(defun chatgpt-shell--increment-request-id ()
-  "Increment `chatgpt-shell--current-request-id'."
-  (if (= chatgpt-shell--current-request-id most-positive-fixnum)
-      (setq chatgpt-shell--current-request-id 0)
-    (setq chatgpt-shell--current-request-id (1+ chatgpt-shell--current-request-id))))
+(defun mk-shell--increment-request-id ()
+  "Increment `mk-shell--current-request-id'."
+  (if (= mk-shell--current-request-id most-positive-fixnum)
+      (setq mk-shell--current-request-id 0)
+    (setq mk-shell--current-request-id (1+ mk-shell--current-request-id))))
 
-(defun chatgpt-shell--set-pm (pos)
+(defun mk-shell--set-pm (pos)
   "Set the process mark in the current buffer to POS."
   (set-marker (process-mark
                (get-buffer-process
-                (chatgpt-shell--buffer chatgpt-shell--config))) pos))
+                (mk-shell-buffer mk-shell-config))) pos))
 
-(defun chatgpt-shell--pm nil
+(defun mk-shell--pm nil
   "Return the process mark of the current buffer."
   (process-mark (get-buffer-process
-                 (chatgpt-shell--buffer chatgpt-shell--config))))
+                 (mk-shell-buffer mk-shell-config))))
 
-(defun chatgpt-shell--input-sender (_proc input)
-  "Set the variable `chatgpt-shell--input' to INPUT.
-Used by `chatgpt-shell--send-input's call."
-  (setq chatgpt-shell--input input))
+(defun mk-shell--input-sender (_proc input)
+  "Set the variable `mk-shell--input' to INPUT.
+Used by `mk-shell--send-input's call."
+  (setq mk-shell--input input))
 
-(defun chatgpt-shell--send-input ()
+(defun mk-shell--send-input ()
   "Send text after the prompt."
-  (let (chatgpt-shell--input)
+  (let (mk-shell--input)
     (comint-send-input)
-    (chatgpt-shell--eval-input chatgpt-shell--input)))
+    (mk-shell--eval-input mk-shell--input)))
 
-(defun chatgpt-shell--get-old-input nil
+(defun mk-shell--get-old-input nil
   "Return the previous input surrounding point."
   (save-excursion
     (beginning-of-line)
@@ -486,13 +474,13 @@ Used by `chatgpt-shell--send-input's call."
     (comint-skip-prompt)
     (buffer-substring (point) (progn (forward-sexp 1) (point)))))
 
-(defun chatgpt-shell--json-encode (obj)
+(defun mk-shell--json-encode (obj)
   "Serialize OBJ to json.  Use fallback if `json-serialize' isn't available."
   (if (fboundp 'json-serialize)
       (json-serialize obj)
     (json-encode obj)))
 
-(defun chatgpt-shell--curl-version-supported ()
+(defun mk-shell--curl-version-supported ()
   "Return t if curl version is 7.76 or newer, nil otherwise."
   (let* ((curl-error-redirect (if (eq system-type (or 'windows-nt 'ms-dos)) "2> NUL" "2>/dev/null"))
          (curl-version-string (shell-command-to-string (concat "curl --version " curl-error-redirect))))
@@ -500,7 +488,7 @@ Used by `chatgpt-shell--send-input's call."
       (let ((version (match-string 1 curl-version-string)))
         (version<= "7.76" version)))))
 
-(defun chatgpt-shell--json-parse-string (json)
+(defun mk-shell--json-parse-string (json)
   "Parse JSON and return the parsed data structure, nil otherwise."
   (if (fboundp 'json-parse-string)
       (condition-case nil
@@ -510,15 +498,15 @@ Used by `chatgpt-shell--send-input's call."
         (json-read-from-string json)
       (error nil))))
 
-(defun chatgpt-shell--write-partial-reply (reply)
+(defun mk-shell--write-partial-reply (reply)
   "Write partial REPLY to prompt."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
     (dolist (overlay (overlays-in (point-min) (point-max)))
       (delete-overlay overlay))
-    (comint-output-filter (chatgpt-shell--process) reply)))
+    (comint-output-filter (mk-shell--process) reply)))
 
-(defun chatgpt-shell--preparse-json (json)
+(defun mk-shell--preparse-json (json)
   "Preparse JSON and return a cons of parsed objects vs unparsed text."
   (let ((parsed)
         (remaining)
@@ -537,28 +525,6 @@ Used by `chatgpt-shell--send-input's call."
       (cons parsed
             (string-trim remaining)))))
 
-(defun chatgpt-shell--extract-commands-and-responses (text prompt-regexp)
-  "Extract all command and responses in TEXT with PROMPT-REGEXP."
-  (let ((result))
-    (mapc (lambda (item)
-            (let* ((values (split-string item "<gpt-end-of-prompt>"))
-                   (lines (split-string item "\n"))
-                   (prompt (string-trim (nth 0 values)))
-                   (response (string-trim (progn
-                                            (if (> (length values) 1)
-                                                (nth 1 values)
-                                              (string-join
-                                               (cdr lines) "\n"))))))
-              (unless (string-match "<gpt-ignored-response>" response)
-                (when (not (string-empty-p prompt))
-                  (push (list (cons 'role "user")
-                              (cons 'content prompt)) result))
-                (when (not (string-empty-p response))
-                  (push (list (cons 'role "assistant")
-                              (cons 'content response)) result)))))
-          (split-string text prompt-regexp))
-    (nreverse result)))
-
 ;; FIXME: Use invisible markers to extract text.
 (defun chatgpt-shell--extract-current-command-and-response ()
   "Extract the current command and response in buffer."
@@ -567,71 +533,51 @@ Used by `chatgpt-shell--send-input's call."
       (shell-narrow-to-prompt)
       (let ((items (chatgpt-shell--extract-commands-and-responses
                     (buffer-string)
-                    (chatgpt-shell-config-prompt chatgpt-shell--config))))
+                    (mk-shell-config-prompt mk-shell-config))))
         (cl-assert (or (seq-empty-p items)
                        (eq (length items) 1)
                        (eq (length items) 2)))
         items))))
 
-(defun chatgpt-shell-view-current ()
-  "View current entry in a separate buffer."
-  (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
-    (user-error "Not in a shell"))
-  (let* ((items (chatgpt-shell--extract-current-command-and-response))
-         (command (map-elt (seq-find (lambda (item)
-                                       (and (string-equal
-                                             (map-elt item 'role)
-                                             "user")
-                                            (not (string-empty-p
-                                                  (string-trim (map-elt item 'content))))))
-                                     items)
-                           'content))
-         (response (map-elt (seq-find (lambda (item)
-                                        (and (string-equal
-                                              (map-elt item 'role)
-                                              "assistant")
-                                             (not (string-empty-p
-                                                   (string-trim (map-elt item 'content))))))
-                                      items)
-                            'content))
-         (buf (generate-new-buffer (if command
-                                       (concat
-                                        (chatgpt-shell-config-prompt chatgpt-shell--config)
-                                        ;; Only the first line of prompt.
-                                        (seq-first (split-string command "\n")))
-                                     (concat (chatgpt-shell-config-prompt chatgpt-shell--config)
-                                             "(no prompt)")))))
-    (when (seq-empty-p items)
-      (user-error "Nothing to view"))
-    (with-current-buffer buf
-      (save-excursion
-        (insert (propertize (or command "") 'face font-lock-doc-face))
-        (when (and command response)
-          (insert "\n\n"))
-        (insert (or response "")))
-      (view-mode +1)
-      (setq view-exit-action 'kill-buffer))
-    (switch-to-buffer buf)
-    buf))
-
-(defun chatgpt-shell--write-output-to-log-buffer (output)
+(defun mk-shell--write-output-to-log-buffer (output)
   "Write OUTPUT to log buffer."
+  ;; FIXME: Make redacting generic.
   (when (chatgpt-shell-openai-key)
     (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
                                  output)))
-  (let ((buffer (get-buffer chatgpt-shell--log-buffer-name)))
+  (let ((buffer (get-buffer mk-shell--log-buffer-name)))
     (unless buffer
-      (setq buffer (get-buffer-create chatgpt-shell--log-buffer-name)))
+      (setq buffer (get-buffer-create mk-shell--log-buffer-name)))
     (with-current-buffer buffer
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
         (when (and (require 'json nil t)
-                   (ignore-errors (chatgpt-shell--json-parse-string output)))
+                   (ignore-errors (mk-shell--json-parse-string output)))
           (json-pretty-print beginning-of-input (point)))))))
 
-(defun chatgpt-shell--process nil
-  "Get *chatgpt* process."
-  (get-buffer-process (chatgpt-shell--buffer chatgpt-shell--config)))
+(defun mk-shell--process nil
+  "Get shell buffer process."
+  (get-buffer-process (mk-shell-buffer mk-shell-config)))
+
+(defun mk-shell-save-session-transcript ()
+  "Save shell transcript to file.
+
+Very much EXPERIMENTAL."
+  (interactive)
+  (unless (eq major-mode 'mk-shell-mode)
+    (user-error "Not in a shell"))
+  (if mk-shell--file
+      (let ((content (buffer-string))
+            (path mk-shell--file))
+        (with-temp-buffer
+          (insert content)
+          (write-file path nil)))
+    (when-let ((path (read-file-name "Write file: "
+                                     nil nil nil "transcript.txt"))
+               (content (buffer-string)))
+      (with-temp-buffer
+        (insert content)
+        (write-file path t))
+      (setq mk-shell--file path))))
 
 (provide 'mk-shell)
