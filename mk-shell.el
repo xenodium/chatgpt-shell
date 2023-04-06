@@ -184,11 +184,11 @@ Otherwise mark current output at location."
 		      (point))))
     (when (>= (point) prompt-pos)
       (goto-char prompt-pos)
-      (previous-line)
+      (forward-line -1)
       (end-of-line))
     (save-excursion
       (save-restriction
-        (shell-narrow-to-prompt)
+        (mk-shell-narrow-to-prompt)
         (unless
             (cond
              ((re-search-backward "<gpt-end-of-prompt>" nil t)
@@ -513,11 +513,11 @@ Used by `mk-shell--send-input's call."
             (string-trim remaining)))))
 
 ;; FIXME: Use invisible markers to extract text.
-(defun chatgpt-shell--extract-current-command-and-response ()
+(defun chatgpt-shell--command-and-response-at-point ()
   "Extract the current command and response in buffer."
   (save-excursion
     (save-restriction
-      (shell-narrow-to-prompt)
+      (mk-shell-narrow-to-prompt)
       (let ((items (chatgpt-shell--extract-commands-and-responses
                     (buffer-string)
                     (mk-shell-config-prompt mk-shell-config))))
