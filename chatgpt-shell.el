@@ -664,45 +664,41 @@ If no LENGTH set, use 2048."
       (1+ (* 2 length))
     2048))
 
-(defun chatgpt-shell-view-current ()
-  "View current entry in a separate buffer."
+(defun chatgpt-shell-view-at-point ()
+  "View prompt and putput at point in a separate buffer."
   (interactive)
   (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
-  (let* ((items (chatgpt-shell--extract-current-command-and-response))
-         (command (map-elt (seq-find (lambda (item)
-                                       (and (string-equal
-                                             (map-elt item 'role)
-                                             "user")
-                                            (not (string-empty-p
-                                                  (string-trim (map-elt item 'content))))))
-                                     items)
-                           'content))
-         (response (map-elt (seq-find (lambda (item)
-                                        (and (string-equal
-                                              (map-elt item 'role)
-                                              "assistant")
-                                             (not (string-empty-p
-                                                   (string-trim (map-elt item 'content))))))
-                                      items)
-                            'content))
-         (buf (generate-new-buffer (if command
-                                       (concat
-                                        (mk-shell-config-prompt mk-shell-config)
-                                        ;; Only the first line of prompt.
-                                        (seq-first (split-string command "\n")))
-                                     (concat (mk-shell-config-prompt mk-shell-config)
-                                             "(no prompt)")))))
-    (when (seq-empty-p items)
-      (user-error "Nothing to view"))
-    (with-current-buffer buf
-      (save-excursion
-        (insert (propertize (or command "") 'face font-lock-doc-face))
-        (when (and command response)
-          (insert "\n\n"))
-        (insert (or response "")))
-      (view-mode +1)
-      (setq view-exit-action 'kill-buffer))
+  (let ((prompt-pos (save-excursion
+                      (goto-char (process-mark
+                                  (get-buffer-process (current-buffer))))
+		      (point)))
+        (buf))
+    (save-excursion
+      (when (>= (point) prompt-pos)
+        (goto-char prompt-pos)
+        (forward-line -1)
+        (end-of-line))
+      (let* ((items (chatgpt-shell--command-and-response-at-point))
+             (command (string-trim (or (map-elt (seq-first items) 'content) "")))
+             (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
+        (setq buf (generate-new-buffer (if command
+                                           (concat
+                                            (mk-shell-config-prompt mk-shell-config)
+                                            ;; Only the first line of prompt.
+                                            (seq-first (split-string command "\n")))
+                                         (concat (mk-shell-config-prompt mk-shell-config)
+                                                 "(no prompt)"))))
+        (when (seq-empty-p items)
+          (user-error "Nothing to view"))
+        (with-current-buffer buf
+          (save-excursion
+            (insert (propertize (or command "") 'face font-lock-doc-face))
+            (when (and command response)
+              (insert "\n\n"))
+            (insert (or response "")))
+          (view-mode +1)
+          (setq view-exit-action 'kill-buffer))))
     (switch-to-buffer buf)
     buf))
 
