@@ -984,7 +984,7 @@ For example:
                  (when chatgpt-shell-model-temperature
                    (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
                  request-data)))
-             (status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
+             (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
         (chatgpt-shell--extract-chatgpt-response
              (buffer-substring-no-properties
 	      (point-min)
@@ -1029,12 +1029,12 @@ Optionally provide model VERSION or IMAGE-SIZE."
                  (push `(size . ,(or image-size chatgpt-shell-dall-e-image-size))
                        request-data))
                request-data)))
-           (status (condition-case err
-                       (apply #'call-process (seq-first command)
-                              nil api-buffer nil (cdr command))
-                     (error
-                      (insert (error-message-string err))
-                      1)))
+           (_status (condition-case err
+                        (apply #'call-process (seq-first command)
+                               nil api-buffer nil (cdr command))
+                      (error
+                       (insert (error-message-string err))
+                       1)))
            (response (chatgpt-shell--extract-dall-e-response
                       (buffer-substring-no-properties
 	               (point-min)
@@ -1113,7 +1113,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (when streaming
         (set-process-filter
          request-process
-         (lambda (process output)
+         (lambda (_process output)
            (when (eq request-id chatgpt-shell--current-request-id)
              (chatgpt-shell--write-output-to-log-buffer
               (format "// Filter output\n\n%s\n\n" output))
