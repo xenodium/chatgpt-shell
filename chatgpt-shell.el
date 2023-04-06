@@ -639,27 +639,26 @@ If region is active, append to prompt."
   (chatgpt-shell--send-input))
 
 (defun chatgpt-shell-send-region-with-header (header)
-  "Send text with header from region using ChatGPT."
+  "Send text with HEADER from region using ChatGPT."
   (chatgpt-shell-send-to-buffer
    (concat header
-           (buffer-substring (region-beginning) (region-end))
-           "\n")))
+           "\n\n"
+           (buffer-substring (region-beginning) (region-end)))))
 
 (defun chatgpt-shell-refactory-code ()
   "Refactoring code from region using ChatGPT."
   (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'. "))
+  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'."))
 
-(defun chatgpt-shell-gen-unit-test ()
+(defun chatgpt-shell-generate-unit-test ()
   "Generate unit-test for the code from region using ChatGPT."
   (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me generate unit-test following function: "))
+  (chatgpt-shell-send-region-with-header "Please help me generate unit-test following function:"))
 
 (defun chatgpt-shell-proofreading-doc ()
-  "proofread english from region using ChatGPT."
+  "Proofread English from region using ChatGPT."
   (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me proofread the following paragraph with English: "))
-
+  (chatgpt-shell-send-region-with-header "Please help me proofread the following paragraph with English:"))
 
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
