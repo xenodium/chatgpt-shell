@@ -29,9 +29,6 @@ To use `completing-read', it can be done with something like:
   :type 'function
   :group 'mk-shell)
 
-;; FIXME: Make log buffer shell-specific.
-(defvar mk-shell--log-buffer-name "*mk-shell-log*")
-
 (defvar mk-shell--input nil)
 
 (defvar mk-shell--current-request-id 0)
@@ -538,15 +535,13 @@ Used by `mk-shell--send-input's call."
   (when (chatgpt-shell-openai-key)
     (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
                                  output)))
-  (let ((buffer (get-buffer mk-shell--log-buffer-name)))
-    (unless buffer
-      (setq buffer (get-buffer-create mk-shell--log-buffer-name)))
-    (with-current-buffer buffer
+  (with-current-buffer (get-buffer-create (format "*%s-log*"
+                                           (mk-shell-config-process-name mk-shell-config)))
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
         (when (and (require 'json nil t)
                    (ignore-errors (mk-shell--json-parse-string output)))
-          (json-pretty-print beginning-of-input (point)))))))
+          (json-pretty-print beginning-of-input (point))))))
 
 (defun mk-shell--process nil
   "Get shell buffer process."
