@@ -186,32 +186,31 @@ Otherwise mark current output at location."
 		      (point))))
     (when (>= (point) prompt-pos)
       (goto-char prompt-pos)
-      (forward-line 0))
+      (previous-line)
+      (end-of-line))
     (save-excursion
-      (unless
-          (cond
-           ((re-search-backward "<gpt-end-of-prompt>" nil t)
-            (forward-char (length "<gpt-end-of-prompt>"))
-            t)
-           ((re-search-backward
-             (concat "^"
-                     (mk-shell-config-prompt mk-shell-config))nil t)
-            (if (re-search-forward "<gpt-end-of-prompt>" nil t)
-                t
-              (end-of-line))
-            t)
-           (t
-            nil))
-        (setq revert-pos t))
-      (setq start (point)))
-    (save-excursion
-      (unless (re-search-forward
+      (save-restriction
+        (shell-narrow-to-prompt)
+        (unless
+            (cond
+             ((re-search-backward "<gpt-end-of-prompt>" nil t)
+              (forward-char (length "<gpt-end-of-prompt>"))
+              t)
+             ((re-search-backward
                (concat "^"
-                       (mk-shell-config-prompt mk-shell-config)) nil t)
-        (goto-char current-pos)
-        (setq revert-pos t))
-      (backward-char (length (mk-shell-config-prompt mk-shell-config)))
-      (setq end (point)))
+                       (mk-shell-config-prompt mk-shell-config))nil t)
+              (if (re-search-forward "<gpt-end-of-prompt>" nil t)
+                  t
+                (end-of-line))
+              t)
+             (t
+              nil))
+          (setq revert-pos t))
+        (setq start (point))))
+    (save-excursion
+      (save-restriction
+        (shell-narrow-to-prompt)
+        (setq end (point-max))))
     (when revert-pos
       (goto-char current-pos)
       (user-error "Not available"))
