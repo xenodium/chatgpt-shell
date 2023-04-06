@@ -806,6 +806,29 @@ Otherwise mark current output at location."
     (set-mark (1- end))
     (goto-char (1+ start))))
 
+(defun chatgpt-shell-save-output ()
+  "If at latest prompt, save last output.
+Otherwise save current output at location."
+  (interactive)
+  (unless (eq major-mode 'inferior-chatgpt-mode)
+    (user-error "Not in a shell"))
+  (let ((orig-point (point))
+        (orig-region-active (region-active-p))
+        (orig-region-start (region-beginning))
+        (orig-region-end (region-end)))
+    (unwind-protect
+        (progn
+          (chatgpt-shell-mark-output)
+          (write-region (region-beginning)
+                        (region-end)
+                        (read-file-name "Write file: ")))
+      (if orig-region-active
+          (progn
+            (set-mark orig-region-start)
+            (goto-char orig-region-end))
+        (setq mark-active nil)
+        (goto-char orig-point)))))
+
 (defun chatgpt-shell--markdown-source-blocks (text)
   "Find Markdown code blocks with language labels in TEXT."
   (let (blocks)
