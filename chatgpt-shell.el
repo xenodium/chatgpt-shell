@@ -194,6 +194,7 @@ or
    :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
    (lambda (response)
+     (chatgpt-shell--put-source-block-overlays)
      (when chatgpt-shell-on-response-function
        (funcall chatgpt-shell-on-response-function response)))))
 

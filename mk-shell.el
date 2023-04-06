@@ -146,9 +146,7 @@ Uses the interface provided by `comint-mode'"
                                       (propertize "<gpt-ignored-response>"
                                                   'invisible (not mk-shell--show-invisible-markers))
                                     "")
-                                  mk-shell--prompt-internal))
-    ;; FIXME: Move to chatgpt-shell.
-    (chatgpt-shell--put-source-block-overlays)))
+                                  mk-shell--prompt-internal))))
 
 (defun mk-shell-return ()
   "RET binding."
