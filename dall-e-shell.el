@@ -49,6 +49,10 @@ For example: \"1024x1024\""
   :type 'integer
   :group 'dall-e-shell)
 
+(defvaralias 'dall-e-shell-display-function 'mk-shell-display-function)
+
+(defvaralias 'dall-e-read-string-function 'mk-shell-read-string-function)
+
 (defvar dall-e--config
   (make-mk-shell-config
    :buffer-name "*dalle*"

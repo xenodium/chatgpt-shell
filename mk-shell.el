@@ -29,13 +29,6 @@ To use `completing-read', it can be done with something like:
   :type 'function
   :group 'mk-shell)
 
-(defcustom mk-shell-on-response-function nil
-  "Function to automatically execute after last command output.
-
-This is useful if you'd like to automatically handle or suggest things."
-  :type 'function
-  :group 'mk-shell)
-
 ;; FIXME: Make log buffer shell-specific.
 (defvar mk-shell--log-buffer-name "*mk-shell-log*")
 

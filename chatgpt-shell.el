@@ -57,6 +57,19 @@
   :type '(repeat string)
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-on-response-function nil
+  "Function to automatically execute after last command output.
+
+This is useful if you'd like to automatically handle or suggest things."
+  :type 'function
+  :group 'mk-shell)
+
+(defvaralias 'chatgpt-shell-display-function 'mk-shell-display-function)
+
+(defvaralias 'chatgpt-shell-read-string-function 'mk-shell-read-string-function)
+
+(defalias 'chatgpt-shell-save-session-transcript 'mk-shell-save-session-transcript)
+
 (defvar chatgpt-shell--chatgpt-prompt-history nil)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
@@ -181,8 +194,8 @@ or
    :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
    (lambda (response)
-     (when mk-shell-on-response-function
-       (funcall mk-shell-on-response-function response)))))
+     (when chatgpt-shell-on-response-function
+       (funcall chatgpt-shell-on-response-function response)))))
 
 (defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
 (defalias 'chatgpt-shell-explain-code 'chatgpt-shell-describe-code)
