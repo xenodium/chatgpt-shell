@@ -829,7 +829,7 @@ Otherwise mark current output at location."
     (comint-send-input)
     (goto-char (point-max))
     (comint-output-filter (chatgpt-shell--process)
-                          (concat (propertize "<gpt-end-of-prompt>\n<gpt-ignored-response>"
+                          (concat (propertize "<gpt-ignored-response>"
                                               'invisible (not chatgpt-shell--show-invisible-markers))
                                   "\n"
                                   chatgpt-shell--prompt-internal))
