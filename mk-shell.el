@@ -168,6 +168,64 @@ Uses the interface provided by `comint-mode'"
             (nth 1 items)
           (nth 0 items))))))
 
+(defun mk-shell--output-at-point ()
+  "Output at point range returns a cons of start and end."
+  (unless (eq major-mode 'mk-shell-mode)
+    (user-error "Not in a shell"))
+  (let ((current-pos (point))
+        (revert-pos)
+        (start)
+        (end)
+        (prompt-pos (save-excursion
+                      (goto-char (process-mark
+                                  (get-buffer-process (current-buffer))))
+		      (point))))
+    (when (>= (point) prompt-pos)
+      (goto-char prompt-pos)
+      (forward-line 0))
+    (save-excursion
+      (unless
+          (cond
+           ((re-search-backward "<gpt-end-of-prompt>" nil t)
+            (forward-char (length "<gpt-end-of-prompt>"))
+            t)
+           ((re-search-backward
+             (concat "^"
+                     (mk-shell-config-prompt mk-shell-config)) nil t)
+            (if (re-search-forward "<gpt-end-of-prompt>" nil t)
+                t
+              (end-of-line))
+            t)
+           (t
+            nil))
+        (setq revert-pos t))
+      (setq start (point)))
+    (save-excursion
+      (unless (re-search-forward
+               (concat "^"
+                       (mk-shell-config-prompt mk-shell-config)) nil t)
+        (goto-char current-pos)
+        (setq revert-pos t))
+      (backward-char (length (mk-shell-config-prompt mk-shell-config)))
+      (setq end (point)))
+    (when revert-pos
+      (goto-char current-pos)
+      (user-error "Not available"))
+    (cons start end)))
+
+(defun mk-shell-narrow-to-prompt ()
+  "Narrow buffer to the command line (and any following command output) at point."
+  (interactive)
+  (let ((begin (shell--prompt-begin-position)))
+    (narrow-to-region
+     begin
+     (save-excursion
+       (goto-char (shell--prompt-end-position))
+       (re-search-forward (mk-shell-config-prompt mk-shell-config) nil t)
+       (if (= begin (shell--prompt-begin-position))
+           (point-max)
+         (shell--prompt-begin-position))))))
+
 (defun mk-shell-mark-output ()
   "If at latest prompt, mark last output.
 Otherwise mark current output at location."
