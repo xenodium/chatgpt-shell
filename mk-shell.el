@@ -394,14 +394,13 @@ Otherwise save current output at location."
                            (progn
                              (mk-shell--write-partial-reply (concat prefix-newline response))
                              (setq mk-shell--busy partial))
-                         (progn
-                           (mk-shell--write-reply (concat prefix-newline response suffix-newline))
-                           (mk-shell--announce-response buffer)
-                           (setq mk-shell--busy nil)
-                           (when (mk-shell-config-response-post-processor mk-shell-config)
-                             ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                             (funcall (mk-shell-config-response-post-processor mk-shell-config)
-                                      (mk-shell-last-output)))))
+                         (mk-shell--write-reply (concat prefix-newline response suffix-newline))
+                         (mk-shell--announce-response buffer)
+                         (setq mk-shell--busy nil)
+                         (when (mk-shell-config-response-post-processor mk-shell-config)
+                           ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
+                           (funcall (mk-shell-config-response-post-processor mk-shell-config)
+                                    (mk-shell-last-output))))
                      (mk-shell--write-reply "Error: that's all is known" t) ;; comeback
                      (setq mk-shell--busy nil)
                      (mk-shell--announce-response buffer)))
