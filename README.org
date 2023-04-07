@@ -111,7 +111,7 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 
 |---------------------------------------+---------------------------------------------------------------------------|
 | chatgpt-shell-chatgpt-default-prompts | List of prompts to choose from in the minibuffer.                         |
-| chatgpt-shell-chatgpt-model-version   | The used ChatGPT OpenAI model.                                            |
+| chatgpt-shell-model-version           | The used ChatGPT OpenAI model.                                            |
 | chatgpt-shell-chatgpt-streaming       | Whether or not to stream ChatGPT responses (experimental).                |
 | chatgpt-shell-chatgpt-system-prompt   | The system message helps set the behavior of the assistant.               |
 | chatgpt-shell-language-mapping        | Maps external language names to Emacs names.                              |

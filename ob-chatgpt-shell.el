@@ -55,13 +55,13 @@
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
   (if (map-elt params :preface)
-      (chatgpt-shell-post-chatgpt-messages
+      (chatgpt-shell-post-messages
        (vconcat ;; Vector for json
         (map-elt params :preface)
         `(((role . "user")
            (content . ,body))))
        (map-elt params :version))
-    (chatgpt-shell-post-chatgpt-prompt body (map-elt params :version))))
+    (chatgpt-shell-post-prompt body (map-elt params :version))))
 
 (defun ob-chatgpt-shell-setup ()
   "Set up babel ChatGPT support."

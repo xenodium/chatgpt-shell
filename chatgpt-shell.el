@@ -47,7 +47,7 @@
   :type 'integer
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-chatgpt-default-prompts
+(defcustom chatgpt-shell-default-prompts
   '("Write a unit test for the following code:"
     "Refactor the following code so that "
     "Summarize the output of the following command:"
@@ -70,7 +70,7 @@ This is useful if you'd like to automatically handle or suggest things."
 
 (defalias 'chatgpt-shell-save-session-transcript 'mk-shell-save-session-transcript)
 
-(defvar chatgpt-shell--chatgpt-prompt-history nil)
+(defvar chatgpt-shell--prompt-history nil)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
                                             ("objective-c" . "objc")
@@ -87,7 +87,7 @@ Objective-C -> (\"objective-c\" . \"objc\")"
   :type '(repeat (cons string string))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-chatgpt-model-version "gpt-3.5-turbo"
+(defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
   "The used ChatGPT OpenAI model.
 
 The list of models supported by /v1/chat/completions endpoint is
@@ -112,7 +112,7 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-chatgpt-system-prompt nil
+(defcustom chatgpt-shell-system-prompt nil
   "The system message helps set the behavior of the assistant.
 
 For example: You are a helpful assistant that translates English to French.
@@ -121,7 +121,7 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   :type 'string
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-chatgpt-streaming nil
+(defcustom chatgpt-shell-streaming nil
   "Whether or not to stream ChatGPT responses (experimental)."
   :type 'boolean
   :group 'chatgpt-shell)
@@ -149,7 +149,7 @@ ChatGPT."
                  (const :tag "Not set" nil))
   :group 'chatgpt-shell)
 
-(defvar chatgpt-shell--chatgpt-config
+(defvar chatgpt-shell--config
   (make-mk-shell-config
    :buffer-name "*chatgpt*"
    :process-name "chatgpt" ;; FIXME consolidate with buffer-name
@@ -171,7 +171,7 @@ or
       (chatgpt-shell--make-curl-request-command-list
        chatgpt-shell-openai-key
        url request-data)
-      chatgpt-shell-chatgpt-streaming
+      chatgpt-shell-streaming
       response-extractor
       callback
       error-callback))
@@ -194,7 +194,7 @@ or
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
   (interactive)
-  (mk-start-shell chatgpt-shell--chatgpt-config))
+  (mk-start-shell chatgpt-shell--config))
 
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
@@ -226,22 +226,22 @@ or
             'body (cons (match-beginning 3) (match-end 3))) markdown-blocks))))
     (nreverse markdown-blocks)))
 
-(defun chatgpt-shell-chatgpt-prompt ()
+(defun chatgpt-shell-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
 If region is active, append to prompt."
   (interactive)
-  (unless chatgpt-shell--chatgpt-prompt-history
-    (setq chatgpt-shell--chatgpt-prompt-history
-          chatgpt-shell-chatgpt-default-prompts))
+  (unless chatgpt-shell--prompt-history
+    (setq chatgpt-shell--prompt-history
+          chatgpt-shell-default-prompts))
   (let ((prompt (funcall mk-shell-read-string-function
                          (concat
                           (if (region-active-p)
                               "[appending region] "
                             "")
                           (mk-shell-config-prompt
-                           chatgpt-shell--chatgpt-config))
-                         'chatgpt-shell--chatgpt-prompt-history)))
+                           chatgpt-shell--config))
+                         'chatgpt-shell--prompt-history)))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
@@ -378,7 +378,7 @@ Set SAVE-EXCURSION to prevent point from moving."
       (setq text (substring text (match-end 0))))
     (reverse blocks)))
 
-(defun chatgpt-shell-post-chatgpt-messages (messages &optional version callback error-callback)
+(defun chatgpt-shell-post-messages (messages &optional version callback error-callback)
   "Make a single ChatGPT request with MESSAGES.
 Optionally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
 
@@ -386,7 +386,7 @@ If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
 For example:
 
-\(chatgpt-shell-post-chatgpt-messages
+\(chatgpt-shell-post-messages
  `(((role . \"user\")
     (content . \"hello\")))
  \"gpt-3.5-turbo\"
@@ -397,13 +397,13 @@ For example:
   (if (and callback error-callback)
       (with-temp-buffer
         (setq-local mk-shell-config
-                    chatgpt-shell--chatgpt-config)
+                    chatgpt-shell--config)
         (mk-shell--async-shell-command
          (chatgpt-shell--make-curl-request-command-list
           chatgpt-shell-openai-key
           (mk-shell-config-url mk-shell-config)
           (let ((request-data `((model . ,(or version
-                                              chatgpt-shell-chatgpt-model-version))
+                                              chatgpt-shell-model-version))
                                 (messages . ,(vconcat ;; Vector for json
                                               messages)))))
             (when chatgpt-shell-model-temperature
@@ -415,14 +415,14 @@ For example:
          error-callback))
     (with-temp-buffer
       (setq-local mk-shell-config
-                  chatgpt-shell--chatgpt-config)
+                  chatgpt-shell--config)
       (let* ((buffer (current-buffer))
              (command
               (chatgpt-shell--make-curl-request-command-list
                chatgpt-shell-openai-key
                (mk-shell-config-url mk-shell-config)
                (let ((request-data `((model . ,(or version
-                                                   chatgpt-shell-chatgpt-model-version))
+                                                   chatgpt-shell-model-version))
                                      (messages . ,(vconcat ;; Vector for json
                                                    messages)))))
                  (when chatgpt-shell-model-temperature
@@ -430,11 +430,11 @@ For example:
                  request-data)))
              (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
         (chatgpt-shell--extract-chatgpt-response
-             (buffer-substring-no-properties
-	      (point-min)
-	      (point-max)))))))
+         (buffer-substring-no-properties
+	  (point-min)
+	  (point-max)))))))
 
-(defun chatgpt-shell-post-chatgpt-prompt (prompt &optional version callback error-callback)
+(defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback)
   "Make a single ChatGPT request with PROMPT.
 Optioally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
 
@@ -449,10 +449,10 @@ For example:
    (message \"%s\" response))
  (lambda (error)
    (message \"%s\" error)))"
-  (chatgpt-shell-post-chatgpt-messages `(((role . "user")
-                                          (content . ,prompt)))
-                                       version
-                                       callback error-callback))
+  (chatgpt-shell-post-messages `(((role . "user")
+                                  (content . ,prompt)))
+                               version
+                               callback error-callback))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
@@ -486,18 +486,18 @@ For example:
         (vconcat ;; Vector for json
          (chatgpt-shell--user-assistant-messages
           commands-and-responses)))
-  (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
-                        (messages . ,(if chatgpt-shell-chatgpt-system-prompt
+  (let ((request-data `((model . ,chatgpt-shell-model-version)
+                        (messages . ,(if chatgpt-shell-system-prompt
                                          (vconcat ;; Vector for json
                                           (list
                                            (list
                                             (cons 'role "system")
-                                            (cons 'content chatgpt-shell-chatgpt-system-prompt)))
+                                            (cons 'content chatgpt-shell-system-prompt)))
                                           commands-and-responses)
                                        commands-and-responses)))))
     (when chatgpt-shell-model-temperature
       (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
-    (when chatgpt-shell-chatgpt-streaming
+    (when chatgpt-shell-streaming
       (push `(stream . t) request-data))
     request-data))
 
