@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "27.1"))
 
 ;;; License:
 
@@ -44,8 +45,6 @@
 (require 'org)
 (require 'dall-e-shell)
 (require 'map)
-
-(defalias 'dall-e-shell-mode #'text-mode)
 
 (defvar org-babel-default-header-args:dall-e-shell '((:results . "file")
                                                      (:version . nil)))

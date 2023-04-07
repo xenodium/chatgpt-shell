@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -34,14 +35,14 @@
                  (string :tag "String"))
   :group 'dall-e-shell)
 
-(defcustom dall-e-image-size nil
+(defcustom dall-e-shell-image-size nil
   "The default size of the requested image as a string.
 
 For example: \"1024x1024\""
   :type 'string
   :group 'dall-e-shell)
 
-(defcustom dall-e-model-version "image-alpha-001"
+(defcustom dall-e-shell-model-version "image-alpha-001"
   "The used DALL-E OpenAI model."
   :type 'string
   :group 'dall-e-shell)
@@ -53,9 +54,12 @@ For example: \"1024x1024\""
 
 (defvaralias 'dall-e-shell-display-function 'mk-shell-display-function)
 
-(defvaralias 'dall-e-read-string-function 'mk-shell-read-string-function)
+(defvaralias 'dall-e-shell-read-string-function 'mk-shell-read-string-function)
 
-(defvar dall-e--config
+;; Aliasing enables editing as text in babel.
+(defalias 'dall-e-shell-mode #'text-mode)
+
+(defvar dall-e-shell--config
   (make-mk-shell-config
    :buffer-name "*dalle*"
    :process-name "dalle"
@@ -74,7 +78,7 @@ or
    :request-maker
    (lambda (url request-data response-extractor callback error-callback)
      (mk-shell--async-shell-command
-      (dall-e--make-curl-request-command-list
+      (dall-e-shell--make-curl-request-command-list
        dall-e-shell-openai-key
        url request-data)
       nil ;; no streaming
@@ -88,15 +92,15 @@ or
 (defun dall-e-shell ()
   "Start a DALL-E shell."
   (interactive)
-  (mk-start-shell dall-e--config))
+  (mk-start-shell dall-e-shell--config))
 
 (defun dall-e-shell--make-data (commands-and-responses)
   "Create the request payload from COMMANDS-AND-RESPONSES."
-  (let ((request-data `((model . ,dall-e-model-version)
+  (let ((request-data `((model . ,dall-e-shell-model-version)
                         (prompt . ,(car (aref commands-and-responses
                                               (1- (length commands-and-responses))))))))
-    (when dall-e-image-size
-      (push `(size . ,dall-e-image-size) request-data))
+    (when dall-e-shell-image-size
+      (push `(size . ,dall-e-shell-image-size) request-data))
     request-data))
 
 (defun dall-e-shell--extract-response (json &optional no-download)
@@ -154,17 +158,17 @@ Set NO-DOWNLOAD to skip automatic downloading."
 Optionally provide model VERSION or IMAGE-SIZE."
   (with-temp-buffer
     (setq-local mk-shell-config
-                dall-e--config)
+                dall-e-shell--config)
     (let* ((api-buffer (current-buffer))
            (command
-            (dall-e--make-curl-request-command-list
+            (dall-e-shell--make-curl-request-command-list
              dall-e-shell-openai-key
              (mk-shell-config-url mk-shell-config)
              (let ((request-data `((model . ,(or version
-                                                 dall-e-model-version))
+                                                 dall-e-shell-model-version))
                                    (prompt . ,prompt))))
-               (when (or image-size dall-e-image-size)
-                 (push `(size . ,(or image-size dall-e-image-size))
+               (when (or image-size dall-e-shell-image-size)
+                 (push `(size . ,(or image-size dall-e-shell-image-size))
                        request-data))
                request-data)))
            (_status (condition-case err
@@ -237,7 +241,7 @@ ERROR-CALLBACK otherwise."
                                     (funcall error-callback output))
                                   (kill-buffer output-buffer)))))))))
 
-(defun dall-e--make-curl-request-command-list (key url request-data)
+(defun dall-e-shell--make-curl-request-command-list (key url request-data)
   "Build DALL-E curl command list using KEY URL and REQUEST-DATA."
   (list "curl" url
         "--fail-with-body"

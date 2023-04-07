@@ -184,7 +184,11 @@ or
        (funcall chatgpt-shell-on-response-function response)))))
 
 (defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
+
 (defalias 'chatgpt-shell-explain-code 'chatgpt-shell-describe-code)
+
+;; Aliasing enables editing as text in babel.
+(defalias 'chatgpt-shell-mode #'text-mode)
 
 ;;;###autoload
 (defun chatgpt-shell ()

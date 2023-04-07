@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "27.1"))
 
 ;;; License:
 
@@ -44,9 +45,6 @@
 (require 'org)
 (require 'chatgpt-shell)
 (require 'map)
-
-;; Aliasing enables block syntax highlighting.
-(defalias 'chatgpt-shell-mode #'text-mode)
 
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
                                                       (:version . nil)
