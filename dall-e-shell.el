@@ -79,15 +79,7 @@ or
       response-extractor
       callback
       error-callback))
-   :request-data-maker
-   (lambda (commands-and-responses)
-     (let ((request-data `((model . ,dall-e-model-version)
-                           (prompt . ,(map-elt (aref commands-and-responses
-                                                     (1- (length commands-and-responses)))
-                                               'content)))))
-       (when dall-e-image-size
-         (push `(size . ,dall-e-image-size) request-data))
-       request-data))
+   :request-data-maker #'dall-e-shell--make-data
    :response-extractor #'dall-e-shell--extract-response))
 
 ;;;###autoload
@@ -95,6 +87,14 @@ or
   "Start a DALL-E shell."
   (interactive)
   (mk-start-shell dall-e--config))
+
+(defun dall-e-shell--make-data (commands-and-responses)
+  (let ((request-data `((model . ,dall-e-model-version)
+                        (prompt . ,(car (aref commands-and-responses
+                                              (1- (length commands-and-responses))))))))
+    (when dall-e-image-size
+      (push `(size . ,dall-e-image-size) request-data))
+    request-data))
 
 (defun dall-e-shell--extract-response (json &optional no-download)
   "Extract DALL-E response from JSON.

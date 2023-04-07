@@ -18,7 +18,7 @@
   :group 'mk-shell)
 
 (defcustom mk-shell-read-string-function (lambda (prompt history)
-                                                (read-string prompt nil history))
+                                           (read-string prompt nil history))
   "Function to read strings from user.
 
 To use `completing-read', it can be done with something like:
@@ -322,49 +322,47 @@ Otherwise save current output at location."
         (prefix-newline "")
         (suffix-newline "\n\n")
         (response-count 0))
-   (unless mk-shell--busy
-    (setq mk-shell--busy t)
-    (cond
-     ((string-equal "clear" (string-trim input-string))
-      (call-interactively 'comint-clear-buffer)
-      (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
-      (setq mk-shell--busy nil))
-     ((not (mk-shell--curl-version-supported))
-      (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
-      (setq mk-shell--busy nil))
-     ((and (mk-shell-config-invalid-input
-            mk-shell-config)
-           (funcall (mk-shell-config-invalid-input
-                     mk-shell-config) input-string))
-      (mk-shell--write-reply
-       (concat "\n"
-               (funcall (mk-shell-config-invalid-input
-                         mk-shell-config) input-string)
-               "\n\n"))
-      (setq mk-shell--busy nil))
-     ((string-empty-p (string-trim input-string))
-      (comint-output-filter (mk-shell--process)
-                            (concat "\n" mk-shell--prompt-internal))
-      (setq mk-shell--busy nil))
-     (t
-      ;; For viewing prompt delimiter (used to handle multiline prompts).
-      ;; (comint-output-filter (mk-shell--process) "<gpt-end-of-prompt>")
-      (comint-output-filter (mk-shell--process)
-                            (propertize "<gpt-end-of-prompt>"
-                                        'invisible (not mk-shell--show-invisible-markers)))
-      (funcall (mk-shell-config-request-maker mk-shell-config)
+    (unless mk-shell--busy
+      (setq mk-shell--busy t)
+      (cond
+       ((string-equal "clear" (string-trim input-string))
+        (call-interactively 'comint-clear-buffer)
+        (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
+        (setq mk-shell--busy nil))
+       ((not (mk-shell--curl-version-supported))
+        (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
+        (setq mk-shell--busy nil))
+       ((and (mk-shell-config-invalid-input
+              mk-shell-config)
+             (funcall (mk-shell-config-invalid-input
+                       mk-shell-config) input-string))
+        (mk-shell--write-reply
+         (concat "\n"
+                 (funcall (mk-shell-config-invalid-input
+                           mk-shell-config) input-string)
+                 "\n\n"))
+        (setq mk-shell--busy nil))
+       ((string-empty-p (string-trim input-string))
+        (comint-output-filter (mk-shell--process)
+                              (concat "\n" mk-shell--prompt-internal))
+        (setq mk-shell--busy nil))
+       (t
+        ;; For viewing prompt delimiter (used to handle multiline prompts).
+        ;; (comint-output-filter (mk-shell--process) "<gpt-end-of-prompt>")
+        (comint-output-filter (mk-shell--process)
+                              (propertize "<gpt-end-of-prompt>"
+                                          'invisible (not mk-shell--show-invisible-markers)))
+        (funcall (mk-shell-config-request-maker mk-shell-config)
                  (mk-shell-config-url mk-shell-config)
                  (funcall (mk-shell-config-request-data-maker mk-shell-config)
-                          (vconcat
-                           ;; FIXME: Move to chatgpt-shell.
-                           (last (chatgpt-shell--extract-commands-and-responses
-                                  (with-current-buffer buffer
-                                    (buffer-string))
-                                  (mk-shell-config-prompt mk-shell-config))
+                          (last (mk-shell--extract-commands-and-responses
+                                 (with-current-buffer buffer
+                                   (buffer-string))
+                                 (mk-shell-config-prompt mk-shell-config))
+                                ;; FIXME: Move to chatgpt-shell.
+                                (chatgpt-shell--unpaired-length
                                  ;; FIXME: Move to chatgpt-shell.
-                                 (chatgpt-shell--unpaired-length
-                                  ;; FIXME: Move to chatgpt-shell.
-                                  chatgpt-shell-transmitted-context-length))))
+                                 chatgpt-shell-transmitted-context-length)))
                  (mk-shell-config-response-extractor mk-shell-config)
                  (lambda (response partial)
                    (setq response-count (1+ response-count))
@@ -411,7 +409,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                                                              command))
                             (error
                              (with-current-buffer buffer
-                              (funcall error-callback (error-message-string err)))
+                               (funcall error-callback (error-message-string err)))
                              nil)))
          (preparsed)
          (remaining-text)
@@ -570,18 +568,16 @@ Used by `mk-shell--send-input's call."
       (cons parsed
             (string-trim remaining)))))
 
-;; FIXME: Use invisible markers to extract text.
-(defun chatgpt-shell--command-and-response-at-point ()
+(defun mk-shell--command-and-response-at-point ()
   "Extract the current command and response in buffer."
   (save-excursion
     (save-restriction
       (mk-shell-narrow-to-prompt)
-      (let ((items (chatgpt-shell--extract-commands-and-responses
+      (let ((items (mk-shell--extract-commands-and-responses
                     (buffer-string)
                     (mk-shell-config-prompt mk-shell-config))))
         (cl-assert (or (seq-empty-p items)
-                       (eq (length items) 1)
-                       (eq (length items) 2)))
+                       (eq (length items) 1)))
         items))))
 
 (defun mk-shell--write-output-to-log-buffer (output)
@@ -591,12 +587,12 @@ Used by `mk-shell--send-input's call."
     (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
                                  output)))
   (with-current-buffer (get-buffer-create (format "*%s-log*"
-                                           (mk-shell-config-process-name mk-shell-config)))
-      (let ((beginning-of-input (goto-char (point-max))))
-        (insert output)
-        (when (and (require 'json nil t)
-                   (ignore-errors (mk-shell--json-parse-string output)))
-          (json-pretty-print beginning-of-input (point))))))
+                                                  (mk-shell-config-process-name mk-shell-config)))
+    (let ((beginning-of-input (goto-char (point-max))))
+      (insert output)
+      (when (and (require 'json nil t)
+                 (ignore-errors (mk-shell--json-parse-string output)))
+        (json-pretty-print beginning-of-input (point))))))
 
 (defun mk-shell--process nil
   "Get shell buffer process."
@@ -622,5 +618,33 @@ Very much EXPERIMENTAL."
         (insert content)
         (write-file path t))
       (setq mk-shell--file path))))
+
+(defun mk-shell--extract-commands-and-responses (text prompt-regexp)
+  "Extract all commands and responses in TEXT with PROMPT-REGEXP.
+
+Returns a list of cons pairs."
+  (setq text (substring-no-properties text))
+  (let ((result))
+    (mapc (lambda (item)
+            (let* ((values (split-string item "<gpt-end-of-prompt>"))
+                   (lines (split-string item "\n"))
+                   (prompt (string-trim (nth 0 values)))
+                   (response (string-trim (progn
+                                            (if (> (length values) 1)
+                                                (nth 1 values)
+                                              (string-join
+                                               (cdr lines) "\n"))))))
+              (unless (string-match "<gpt-ignored-response>" response)
+                (when (or (not (string-empty-p prompt))
+                          (not (string-empty-p response)))
+                  (push (cons (if (string-empty-p prompt)
+                                  nil
+                                prompt)
+                              (if (string-empty-p response)
+                                  nil
+                                response))
+                        result)))))
+          (split-string text prompt-regexp))
+    (nreverse result)))
 
 (provide 'mk-shell)

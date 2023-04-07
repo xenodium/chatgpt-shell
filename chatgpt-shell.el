@@ -175,22 +175,7 @@ or
       response-extractor
       callback
       error-callback))
-   :request-data-maker
-   (lambda (commands-and-responses)
-     (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
-                           (messages . ,(if chatgpt-shell-chatgpt-system-prompt
-                                            (vconcat
-                                             (list
-                                              (list
-                                               (cons 'role "system")
-                                               (cons 'content chatgpt-shell-chatgpt-system-prompt)))
-                                             commands-and-responses)
-                                          commands-and-responses)))))
-       (when chatgpt-shell-model-temperature
-         (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
-       (when chatgpt-shell-chatgpt-streaming
-         (push `(stream . t) request-data))
-       request-data))
+   :request-data-maker #'chatgpt-shell--make-data
    :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
    (lambda (response)
@@ -491,6 +476,25 @@ For example:
                                "KEY-NOT-FOUND")))))
         "-d" (mk-shell--json-encode request-data)))
 
+(defun chatgpt-shell--make-data (commands-and-responses)
+  (setq commands-and-responses
+        (chatgpt-shell--user-assistant-messages
+         commands-and-responses))
+  (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
+                        (messages . ,(if chatgpt-shell-chatgpt-system-prompt
+                                         (vconcat
+                                          (list
+                                           (list
+                                            (cons 'role "system")
+                                            (cons 'content chatgpt-shell-chatgpt-system-prompt)))
+                                          commands-and-responses)
+                                       commands-and-responses)))))
+    (when chatgpt-shell-model-temperature
+      (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+    (when chatgpt-shell-chatgpt-streaming
+      (push `(stream . t) request-data))
+    request-data))
+
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
   (if (eq (type-of json) 'cons)
@@ -679,7 +683,8 @@ If no LENGTH set, use 2048."
         (goto-char prompt-pos)
         (forward-line -1)
         (end-of-line))
-      (let* ((items (chatgpt-shell--command-and-response-at-point))
+      (let* ((items (chatgpt-shell--user-assistant-messages
+                     (mk-shell--command-and-response-at-point)))
              (command (string-trim (or (map-elt (seq-first items) 'content) "")))
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
@@ -702,28 +707,33 @@ If no LENGTH set, use 2048."
     (switch-to-buffer buf)
     buf))
 
-;; FIXME: Move to chatgpt-shell or make generic.
 (defun chatgpt-shell--extract-commands-and-responses (text prompt-regexp)
   "Extract all command and responses in TEXT with PROMPT-REGEXP."
+  (chatgpt-shell--user-assistant-messages
+   (mk-shell--extract-commands-and-responses text prompt-regexp)))
+
+(defun chatgpt-shell--user-assistant-messages (commands-and-responses)
+  "Convert COMMANDS-AND-RESPONSES to ChatGPT format.
+
+Sequence must be a vector for json serialization.
+
+For example:
+
+ [
+   ((role . \"user\") (content . \"hello\"))
+   ((role . \"assistant\") (content . \"world\"))
+ ]"
   (let ((result))
-    (mapc (lambda (item)
-            (let* ((values (split-string item "<gpt-end-of-prompt>"))
-                   (lines (split-string item "\n"))
-                   (prompt (string-trim (nth 0 values)))
-                   (response (string-trim (progn
-                                            (if (> (length values) 1)
-                                                (nth 1 values)
-                                              (string-join
-                                               (cdr lines) "\n"))))))
-              (unless (string-match "<gpt-ignored-response>" response)
-                (when (not (string-empty-p prompt))
-                  (push (list (cons 'role "user")
-                              (cons 'content prompt)) result))
-                (when (not (string-empty-p response))
-                  (push (list (cons 'role "assistant")
-                              (cons 'content response)) result)))))
-          (split-string text prompt-regexp))
-    (nreverse result)))
+    (mapc
+     (lambda (item)
+       (when (car item)
+         (push (list (cons 'role "user")
+                     (cons 'content (car item))) result))
+       (when (cdr item)
+         (push (list (cons 'role "assistant")
+                     (cons 'content (cdr item))) result)))
+     commands-and-responses)
+    (vconcat (nreverse result))))
 
 (provide 'chatgpt-shell)
 
