@@ -483,8 +483,9 @@ For example:
 (defun chatgpt-shell--make-data (commands-and-responses)
   "Create the request payload from COMMANDS-AND-RESPONSES."
   (setq commands-and-responses
-        (chatgpt-shell--user-assistant-messages
-         commands-and-responses))
+        (vconcat
+         (chatgpt-shell--user-assistant-messages
+          commands-and-responses)))
   (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
                         (messages . ,(if chatgpt-shell-chatgpt-system-prompt
                                          (vconcat
@@ -738,7 +739,7 @@ For example:
          (push (list (cons 'role "assistant")
                      (cons 'content (cdr item))) result)))
      commands-and-responses)
-    (vconcat (nreverse result))))
+    (nreverse result)))
 
 (provide 'chatgpt-shell)
 
