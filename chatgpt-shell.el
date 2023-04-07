@@ -149,10 +149,11 @@ ChatGPT."
                  (const :tag "Not set" nil))
   :group 'chatgpt-shell)
 
+(defvar chatgpt-shell--url "https://api.openai.com/v1/chat/completions")
+
 (defvar chatgpt-shell--config
   (make-mk-shell-config
    :name "ChatGPT"
-   :url "https://api.openai.com/v1/chat/completions"
    :invalid-input
    (lambda (_input)
      (unless chatgpt-shell-openai-key
@@ -164,11 +165,9 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :request-maker
-   (lambda (url request-data response-extractor callback error-callback)
+   (lambda (request-data response-extractor callback error-callback)
      (mk-shell--async-shell-command
-      (chatgpt-shell--make-curl-request-command-list
-       chatgpt-shell-openai-key
-       url request-data)
+      (chatgpt-shell--make-curl-request-command-list request-data)
       chatgpt-shell-streaming
       response-extractor
       callback
@@ -404,8 +403,6 @@ For example:
                     chatgpt-shell--config)
         (mk-shell--async-shell-command
          (chatgpt-shell--make-curl-request-command-list
-          chatgpt-shell-openai-key
-          (mk-shell-config-url mk-shell-config)
           (let ((request-data `((model . ,(or version
                                               chatgpt-shell-model-version))
                                 (messages . ,(vconcat ;; Vector for json
@@ -423,8 +420,6 @@ For example:
       (let* ((buffer (current-buffer))
              (command
               (chatgpt-shell--make-curl-request-command-list
-               chatgpt-shell-openai-key
-               (mk-shell-config-url mk-shell-config)
                (let ((request-data `((model . ,(or version
                                                    chatgpt-shell-model-version))
                                      (messages . ,(vconcat ;; Vector for json
@@ -467,19 +462,19 @@ For example:
         (t
          nil)))
 
-(defun chatgpt-shell--make-curl-request-command-list (key url request-data)
-  "Build ChatGPT curl command list using KEY URL and REQUEST-DATA."
-  (list "curl" url
+(defun chatgpt-shell--make-curl-request-command-list (request-data)
+  "Build ChatGPT curl command list using REQUEST-DATA."
+  (list "curl" chatgpt-shell--url
         "--fail-with-body"
         "--no-progress-meter"
         "-m" (number-to-string chatgpt-shell-request-timeout)
         "-H" "Content-Type: application/json"
         "-H" (format "Authorization: Bearer %s"
-                     (cond ((stringp key)
-                            key)
-                           ((functionp key)
+                     (cond ((stringp chatgpt-shell-openai-key)
+                            chatgpt-shell-openai-key)
+                           ((functionp chatgpt-shell-openai-key)
                             (condition-case _err
-                                (funcall key)
+                                (funcall chatgpt-shell-openai-key)
                               (error
                                "KEY-NOT-FOUND")))))
         "-d" (mk-shell--json-encode request-data)))

@@ -72,7 +72,6 @@ Enable it for troubleshooting issues."
 (cl-defstruct
     mk-shell-config
   name
-  url
   invalid-input
   request-maker
   request-data-maker
@@ -378,7 +377,6 @@ Otherwise save current output at location."
                                  (propertize "<mk-shell-end-of-prompt>"
                                              'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
-                 (mk-shell-config-url mk-shell-config)
                  (funcall (mk-shell-config-request-data-maker mk-shell-config)
                           (mk-shell--extract-commands-and-responses
                            (with-current-buffer buffer

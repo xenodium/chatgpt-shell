@@ -59,10 +59,11 @@ For example: \"1024x1024\""
 ;; Aliasing enables editing as text in babel.
 (defalias 'dall-e-shell-mode #'text-mode)
 
+(defvar dall-e-shell--url "https://api.openai.com/v1/images/generations")
+
 (defvar dall-e-shell--config
   (make-mk-shell-config
    :name "DALL-E"
-   :url "https://api.openai.com/v1/images/generations"
    :invalid-input
    (lambda (_input)
      (unless dall-e-shell-openai-key
@@ -74,11 +75,9 @@ or
 
 (setq dall-e-shell-openai-key \"my-key\")"))
    :request-maker
-   (lambda (url request-data response-extractor callback error-callback)
+   (lambda (request-data response-extractor callback error-callback)
      (mk-shell--async-shell-command
-      (dall-e-shell--make-curl-request-command-list
-       dall-e-shell-openai-key
-       url request-data)
+      (dall-e-shell--make-curl-request-command-list request-data)
       nil ;; no streaming
       response-extractor
       callback
@@ -160,7 +159,7 @@ Optionally provide model VERSION or IMAGE-SIZE."
            (command
             (dall-e-shell--make-curl-request-command-list
              dall-e-shell-openai-key
-             (mk-shell-config-url mk-shell-config)
+             dall-e-shell--url
              (let ((request-data `((model . ,(or version
                                                  dall-e-shell-model-version))
                                    (prompt . ,prompt))))
@@ -238,19 +237,19 @@ ERROR-CALLBACK otherwise."
                                     (funcall error-callback output))
                                   (kill-buffer output-buffer)))))))))
 
-(defun dall-e-shell--make-curl-request-command-list (key url request-data)
-  "Build DALL-E curl command list using KEY URL and REQUEST-DATA."
-  (list "curl" url
+(defun dall-e-shell--make-curl-request-command-list (request-data)
+  "Build DALL-E curl command list using REQUEST-DATA."
+  (list "curl" dall-e-shell--url
         "--fail-with-body"
         "--no-progress-meter"
         "-m" (number-to-string dall-e-shell-request-timeout)
         "-H" "Content-Type: application/json"
         "-H" (format "Authorization: Bearer %s"
-                     (cond ((stringp key)
-                            key)
-                           ((functionp key)
+                     (cond ((stringp dall-e-shell-openai-key)
+                            dall-e-shell-openai-key)
+                           ((functionp dall-e-shell-openai-key)
                             (condition-case _err
-                                (funcall key)
+                                (funcall dall-e-shell-openai-key)
                               (error
                                "KEY-NOT-FOUND")))))
         "-d" (mk-shell--json-encode request-data)))
