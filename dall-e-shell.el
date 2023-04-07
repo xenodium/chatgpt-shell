@@ -97,8 +97,7 @@ or
 (defun dall-e-shell--make-data (commands-and-responses)
   "Create the request payload from COMMANDS-AND-RESPONSES."
   (let ((request-data `((model . ,dall-e-shell-model-version)
-                        (prompt . ,(car (aref commands-and-responses
-                                              (1- (length commands-and-responses))))))))
+                        (prompt . ,(car (car (last commands-and-responses)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
     request-data))
