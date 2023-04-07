@@ -1,5 +1,30 @@
 ;;; mk-shell.el --- Interaction mode for making comint shells  -*- lexical-binding: t -*-
 
+;; Copyright (C) 2023 Alvaro Ramirez
+
+;; Author: Alvaro Ramirez https://xenodium.com
+;; URL: https://github.com/xenodium/chatgpt-shell
+
+;; This package is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This package is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; This is a comint-based generic package used for building concrete
+;; shells.
+
+;;; Code:
+
 (require 'comint)
 (require 'goto-addr)
 (require 'json)
@@ -66,7 +91,7 @@ To use `completing-read', it can be done with something like:
     (define-key map "\C-x\C-s" 'mk-shell-save-session-transcript)
     (define-key map "\C-\M-h" 'mk-shell-mark-output)
     map)
-  "Keymap for mk-shell-mode.")
+  "Keymap for `mk-shell-mode'.")
 
 (define-derived-mode mk-shell-mode comint-mode "mk-shell"
   "Major mode for interactively evaluating mk-shell prompts.
@@ -78,6 +103,7 @@ Uses the interface provided by `comint-mode'"
   (get-buffer-create (mk-shell-config-buffer-name config)))
 
 (defun mk-start-shell (config)
+  "Start a shell with CONFIG."
   (let ((old-point)
         (buf-name (mk-shell-config-buffer-name config)))
     (unless (comint-check-proc buf-name)
@@ -169,7 +195,7 @@ Uses the interface provided by `comint-mode'"
           (nth 0 items))))))
 
 (defun mk-shell--output-at-point ()
-  "Output at point range returns a cons of start and end."
+  "Output at point range with cons of start and end."
   (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
   (let ((current-pos (point))
@@ -648,3 +674,7 @@ Returns a list of cons pairs."
     (nreverse result)))
 
 (provide 'mk-shell)
+
+(provide 'mk-shell)
+
+;;; mk-shell.el ends here

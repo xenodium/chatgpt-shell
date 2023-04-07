@@ -26,6 +26,8 @@
 
 (require 'mk-shell)
 
+;;; Code:
+
 (defcustom dall-e-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
   :type '(choice (function :tag "Function")
@@ -89,6 +91,7 @@ or
   (mk-start-shell dall-e--config))
 
 (defun dall-e-shell--make-data (commands-and-responses)
+  "Create the request payload from COMMANDS-AND-RESPONSES."
   (let ((request-data `((model . ,dall-e-model-version)
                         (prompt . ,(car (aref commands-and-responses
                                               (1- (length commands-and-responses))))))))

@@ -477,6 +477,7 @@ For example:
         "-d" (mk-shell--json-encode request-data)))
 
 (defun chatgpt-shell--make-data (commands-and-responses)
+  "Create the request payload from COMMANDS-AND-RESPONSES."
   (setq commands-and-responses
         (chatgpt-shell--user-assistant-messages
          commands-and-responses))
