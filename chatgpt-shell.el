@@ -171,7 +171,7 @@ or
       (chatgpt-shell--make-curl-request-command-list
        chatgpt-shell-openai-key
        url request-data)
-      t ;; streaming
+      chatgpt-shell-chatgpt-streaming
       response-extractor
       callback
       error-callback))
