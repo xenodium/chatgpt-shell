@@ -54,6 +54,13 @@ To use `completing-read', it can be done with something like:
   :type 'function
   :group 'mk-shell)
 
+(defcustom mk-shell-logging nil
+  "Logging disabled by default (slows things down).
+
+Enable it for troubleshooting issues."
+  :type 'boolean
+  :group 'mk-shell)
+
 (defvar mk-shell--input nil)
 
 (defvar mk-shell--current-request-id 0)
@@ -608,17 +615,18 @@ Used by `mk-shell--send-input's call."
 
 (defun mk-shell--write-output-to-log-buffer (output)
   "Write OUTPUT to log buffer."
-  ;; FIXME: Make redacting generic.
-  (when (chatgpt-shell-openai-key)
-    (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
-                                 output)))
-  (with-current-buffer (get-buffer-create (format "*%s-log*"
-                                                  (mk-shell-config-process-name mk-shell-config)))
-    (let ((beginning-of-input (goto-char (point-max))))
-      (insert output)
-      (when (and (require 'json nil t)
-                 (ignore-errors (mk-shell--json-parse-string output)))
-        (json-pretty-print beginning-of-input (point))))))
+  (when mk-shell-logging
+    ;; FIXME: Make redacting generic.
+    (when (chatgpt-shell-openai-key)
+      (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
+                                   output)))
+    (with-current-buffer (get-buffer-create (format "*%s-log*"
+                                                    (mk-shell-config-process-name mk-shell-config)))
+      (let ((beginning-of-input (goto-char (point-max))))
+        (insert output)
+        (when (and (require 'json nil t)
+                   (ignore-errors (mk-shell--json-parse-string output)))
+          (json-pretty-print beginning-of-input (point)))))))
 
 (defun mk-shell--process nil
   "Get shell buffer process."
