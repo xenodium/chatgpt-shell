@@ -61,9 +61,7 @@ For example: \"1024x1024\""
 
 (defvar dall-e-shell--config
   (make-mk-shell-config
-   :buffer-name "*dalle*"
-   :process-name "dalle"
-   :prompt "DALL-E> "
+   :name "DALL-E"
    :url "https://api.openai.com/v1/images/generations"
    :invalid-input
    (lambda (_input)
@@ -92,7 +90,7 @@ or
 (defun dall-e-shell ()
   "Start a DALL-E shell."
   (interactive)
-  (mk-start-shell dall-e-shell--config))
+  (mk-shell-start dall-e-shell--config))
 
 (defun dall-e-shell--make-data (commands-and-responses)
   "Create the request payload from COMMANDS-AND-RESPONSES."

@@ -151,9 +151,7 @@ ChatGPT."
 
 (defvar chatgpt-shell--config
   (make-mk-shell-config
-   :buffer-name "*chatgpt*"
-   :process-name "chatgpt" ;; FIXME consolidate with buffer-name
-   :prompt "ChatGPT> "
+   :name "ChatGPT"
    :url "https://api.openai.com/v1/chat/completions"
    :invalid-input
    (lambda (_input)
@@ -194,7 +192,7 @@ or
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
   (interactive)
-  (mk-start-shell chatgpt-shell--config))
+  (mk-shell-start chatgpt-shell--config))
 
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
@@ -239,7 +237,7 @@ If region is active, append to prompt."
                           (if (region-active-p)
                               "[appending region] "
                             "")
-                          (mk-shell-config-prompt
+                          (mk-shell-prompt
                            chatgpt-shell--config))
                          'chatgpt-shell--prompt-history)))
     (when (region-active-p)
@@ -529,7 +527,7 @@ Very much EXPERIMENTAL."
   (unless (eq major-mode 'mk-shell-mode)
     (user-error "Not in a shell"))
   (let* ((path (read-file-name "Restore from: " nil nil t))
-         (prompt (mk-shell-config-prompt mk-shell-config))
+         (prompt (mk-shell-prompt mk-shell-config))
          (commands-and-responses (with-temp-buffer
                                    (insert-file-contents path)
                                    (chatgpt-shell--extract-commands-and-responses
@@ -695,10 +693,10 @@ If no LENGTH set, use 2048."
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
                                            (concat
-                                            (mk-shell-config-prompt mk-shell-config)
+                                            (mk-shell-prompt mk-shell-config)
                                             ;; Only the first line of prompt.
                                             (seq-first (split-string command "\n")))
-                                         (concat (mk-shell-config-prompt mk-shell-config)
+                                         (concat (mk-shell-prompt mk-shell-config)
                                                  "(no prompt)"))))
         (when (seq-empty-p items)
           (user-error "Nothing to view"))

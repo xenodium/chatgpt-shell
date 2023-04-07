@@ -71,9 +71,7 @@ Enable it for troubleshooting issues."
 
 (cl-defstruct
     mk-shell-config
-  prompt
-  buffer-name
-  process-name
+  name
   url
   invalid-input
   request-maker
@@ -85,34 +83,27 @@ Enable it for troubleshooting issues."
 
 (defvar-local mk-shell-config nil)
 
-(defvaralias 'mk-shell-mode-map 'mk-shell-map)
-
 (defvar-local mk-shell--file nil)
 
 (defvar-local mk-shell--request-process nil)
 
-(defvar mk-shell-map
+(defun mk-shell-start (config)
+  "Start a shell with CONFIG."
+  (define-derived-mode mk-shell-mode comint-mode
+    (mk-shell-config-name config)
+    "Major mode for interactively evaluating mk-shell prompts.
+Uses the interface provided by `comint-mode'"
+    nil)
+
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\C-m" 'mk-shell-return)
     (define-key map "\C-c\C-c" 'mk-shell-interrupt)
     (define-key map "\C-x\C-s" 'mk-shell-save-session-transcript)
     (define-key map "\C-\M-h" 'mk-shell-mark-output)
-    map)
-  "Keymap for `mk-shell-mode'.")
+    (setq mk-shell-mode-map map))
 
-(define-derived-mode mk-shell-mode comint-mode "mk-shell"
-  "Major mode for interactively evaluating mk-shell prompts.
-Uses the interface provided by `comint-mode'"
-  nil)
-
-(defun mk-shell-buffer (config)
-  "Get buffer from CONFIG."
-  (get-buffer-create (mk-shell-config-buffer-name config)))
-
-(defun mk-start-shell (config)
-  "Start a shell with CONFIG."
   (let ((old-point)
-        (buf-name (mk-shell-config-buffer-name config)))
+        (buf-name (mk-shell-buffer-name config)))
     (unless (comint-check-proc buf-name)
       (with-current-buffer (get-buffer-create buf-name)
         (setq-local mk-shell--busy nil)
@@ -131,27 +122,27 @@ Uses the interface provided by `comint-mode'"
   (goto-address-mode +1)
   (setq comint-prompt-regexp
         (concat "^" (regexp-quote
-                     (mk-shell-config-prompt mk-shell-config))))
+                     (mk-shell-prompt mk-shell-config))))
   (setq-local paragraph-separate "\\'")
   (setq-local paragraph-start comint-prompt-regexp)
   (setq comint-input-sender 'mk-shell--input-sender)
   (setq comint-process-echoes nil)
   (setq-local mk-shell--prompt-internal
-              (mk-shell-config-prompt mk-shell-config))
+              (mk-shell-prompt mk-shell-config))
   (setq-local comint-prompt-read-only t)
   (setq comint-get-old-input 'mk-shell--get-old-input)
   (setq-local comint-completion-addsuffix nil)
   (setq-local imenu-generic-expression
               `(("Prompt" ,(concat "^" (regexp-quote
-                                        (mk-shell-config-prompt mk-shell-config))
+                                        (mk-shell-prompt mk-shell-config))
                                    "\\(.*\\)") 1)))
   (unless (or (comint-check-proc (mk-shell-buffer mk-shell-config))
               (get-buffer-process (mk-shell-buffer mk-shell-config)))
     (condition-case nil
-        (start-process (mk-shell-config-process-name mk-shell-config)
+        (start-process (mk-shell-process-name mk-shell-config)
                        (mk-shell-buffer mk-shell-config) "hexl")
       (file-error (start-process
-                   (mk-shell-config-process-name mk-shell-config)
+                   (mk-shell-process-name mk-shell-config)
                    (mk-shell-buffer mk-shell-config) "cat")))
     (set-process-query-on-exit-flag (mk-shell--process) nil)
     (goto-char (point-max))
@@ -224,7 +215,7 @@ Uses the interface provided by `comint-mode'"
             t)
            ((re-search-backward
              (concat "^"
-                     (mk-shell-config-prompt mk-shell-config)) nil t)
+                     (mk-shell-prompt mk-shell-config)) nil t)
             (if (re-search-forward "<gpt-end-of-prompt>" nil t)
                 t
               (end-of-line))
@@ -236,10 +227,10 @@ Uses the interface provided by `comint-mode'"
     (save-excursion
       (unless (re-search-forward
                (concat "^"
-                       (mk-shell-config-prompt mk-shell-config)) nil t)
+                       (mk-shell-prompt mk-shell-config)) nil t)
         (goto-char current-pos)
         (setq revert-pos t))
-      (backward-char (length (mk-shell-config-prompt mk-shell-config)))
+      (backward-char (length (mk-shell-prompt mk-shell-config)))
       (setq end (point)))
     (when revert-pos
       (goto-char current-pos)
@@ -254,7 +245,7 @@ Uses the interface provided by `comint-mode'"
      begin
      (save-excursion
        (goto-char (shell--prompt-end-position))
-       (re-search-forward (mk-shell-config-prompt mk-shell-config) nil t)
+       (re-search-forward (mk-shell-prompt mk-shell-config) nil t)
        (if (= begin (shell--prompt-begin-position))
            (point-max)
          (shell--prompt-begin-position))))))
@@ -287,7 +278,7 @@ Otherwise mark current output at location."
               t)
              ((re-search-backward
                (concat "^"
-                       (mk-shell-config-prompt mk-shell-config))nil t)
+                       (mk-shell-prompt mk-shell-config))nil t)
               (if (re-search-forward "<gpt-end-of-prompt>" nil t)
                   t
                 (end-of-line))
@@ -391,7 +382,7 @@ Otherwise save current output at location."
                           (last (mk-shell--extract-commands-and-responses
                                  (with-current-buffer buffer
                                    (buffer-string))
-                                 (mk-shell-config-prompt mk-shell-config))
+                                 (mk-shell-prompt mk-shell-config))
                                 ;; FIXME: Move to chatgpt-shell.
                                 (chatgpt-shell--unpaired-length
                                  ;; FIXME: Move to chatgpt-shell.
@@ -437,7 +428,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
          (output-buffer (generate-new-buffer " *temp*"))
          (request-process (condition-case err
                               (apply #'start-process (append (list
-                                                              (mk-shell-config-buffer-name mk-shell-config)
+                                                              (mk-shell-buffer-name mk-shell-config)
                                                               (buffer-name output-buffer))
                                                              command))
                             (error
@@ -608,7 +599,7 @@ Used by `mk-shell--send-input's call."
       (mk-shell-narrow-to-prompt)
       (let ((items (mk-shell--extract-commands-and-responses
                     (buffer-string)
-                    (mk-shell-config-prompt mk-shell-config))))
+                    (mk-shell-prompt mk-shell-config))))
         (cl-assert (or (seq-empty-p items)
                        (eq (length items) 1)))
         items))))
@@ -621,7 +612,7 @@ Used by `mk-shell--send-input's call."
       (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
                                    output)))
     (with-current-buffer (get-buffer-create (format "*%s-log*"
-                                                    (mk-shell-config-process-name mk-shell-config)))
+                                                    (mk-shell-process-name mk-shell-config)))
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
         (when (and (require 'json nil t)
@@ -730,6 +721,24 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 	    (add-text-properties prompt-start (point)
 	                         `(rear-nonsticky
 	                           ,comint--prompt-rear-nonsticky))))))))
+
+(defun mk-shell-buffer (config)
+  "Get buffer from CONFIG."
+  (get-buffer-create (mk-shell-buffer-name config)))
+
+(defun mk-shell-buffer-name (config)
+  "Get buffer name from CONFIG."
+  (concat "*"
+          (downcase (mk-shell-config-name config))
+          "*"))
+
+(defun mk-shell-process-name (config)
+  "Get process name from CONFIG."
+  (downcase (mk-shell-config-name config)))
+
+(defun mk-shell-prompt (config)
+  "Get prompt name from CONFIG."
+  (concat (mk-shell-config-name config) "> "))
 
 (provide 'mk-shell)
 
