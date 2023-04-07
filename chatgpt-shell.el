@@ -483,7 +483,9 @@ For example:
   (setq commands-and-responses
         (vconcat ;; Vector for json
          (chatgpt-shell--user-assistant-messages
-          commands-and-responses)))
+          (last commands-and-responses
+                (chatgpt-shell--unpaired-length
+                 chatgpt-shell-transmitted-context-length)))))
   (let ((request-data `((model . ,chatgpt-shell-model-version)
                         (messages . ,(if chatgpt-shell-system-prompt
                                          (vconcat ;; Vector for json

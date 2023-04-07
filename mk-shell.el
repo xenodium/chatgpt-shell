@@ -368,25 +368,21 @@ Otherwise save current output at location."
         (setq mk-shell--busy nil))
        ((string-empty-p (string-trim input-string))
         (mk-shell--output-filter (mk-shell--process)
-                              (concat "\n" mk-shell--prompt-internal))
+                                 (concat "\n" mk-shell--prompt-internal))
         (setq mk-shell--busy nil))
        (t
         ;; For viewing prompt delimiter (used to handle multiline prompts).
         ;; (mk-shell--output-filter (mk-shell--process) "<gpt-end-of-prompt>")
         (mk-shell--output-filter (mk-shell--process)
-                              (propertize "<gpt-end-of-prompt>"
-                                          'invisible (not mk-shell--show-invisible-markers)))
+                                 (propertize "<gpt-end-of-prompt>"
+                                             'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
                  (mk-shell-config-url mk-shell-config)
                  (funcall (mk-shell-config-request-data-maker mk-shell-config)
-                          (last (mk-shell--extract-commands-and-responses
-                                 (with-current-buffer buffer
-                                   (buffer-string))
-                                 (mk-shell-prompt mk-shell-config))
-                                ;; FIXME: Move to chatgpt-shell.
-                                (chatgpt-shell--unpaired-length
-                                 ;; FIXME: Move to chatgpt-shell.
-                                 chatgpt-shell-transmitted-context-length)))
+                          (mk-shell--extract-commands-and-responses
+                           (with-current-buffer buffer
+                             (buffer-string))
+                           (mk-shell-prompt mk-shell-config)))
                  (mk-shell-config-response-extractor mk-shell-config)
                  (lambda (response partial)
                    (setq response-count (1+ response-count))
