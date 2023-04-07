@@ -363,7 +363,6 @@ Set SAVE-EXCURSION to prevent point from moving."
      (prin1-to-string form))
    (chatgpt-shell-parse-elisp-code code)))
 
-;; FIXME: Delete?
 (defun chatgpt-shell--markdown-source-blocks (text)
   "Find Markdown code blocks with language labels in TEXT."
   (let (blocks)
