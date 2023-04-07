@@ -661,7 +661,6 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
      (car (map-elt block 'end))
      (cdr (map-elt block 'end)))))
 
-;; FIXME: Move to chatgpt-shell.
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
 
