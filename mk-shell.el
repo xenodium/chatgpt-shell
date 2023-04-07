@@ -77,7 +77,8 @@ Enable it for troubleshooting issues."
   request-maker
   request-data-maker
   response-extractor
-  response-post-processor)
+  response-post-processor
+  log-redactor)
 
 (defvar-local mk-shell--busy nil)
 
@@ -602,10 +603,9 @@ Used by `mk-shell--send-input's call."
 (defun mk-shell--write-output-to-log-buffer (output)
   "Write OUTPUT to log buffer."
   (when mk-shell-logging
-    ;; FIXME: Make redacting generic.
-    (when (chatgpt-shell-openai-key)
-      (setq output (string-replace (chatgpt-shell-openai-key) "SK-REDACTED-OPENAI-KEY"
-                                   output)))
+    (when (mk-shell-config-log-redactor mk-shell-config)
+      (setq output
+            (funcall (mk-shell-config-log-redactor mk-shell-config) output)))
     (with-current-buffer (get-buffer-create (format "*%s-log*"
                                                     (mk-shell-process-name mk-shell-config)))
       (let ((beginning-of-input (goto-char (point-max))))

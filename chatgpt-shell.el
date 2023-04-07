@@ -179,7 +179,14 @@ or
    (lambda (response)
      (chatgpt-shell--put-source-block-overlays)
      (when chatgpt-shell-on-response-function
-       (funcall chatgpt-shell-on-response-function response)))))
+       (funcall chatgpt-shell-on-response-function response)))
+   :log-redactor
+   (lambda (output)
+     (if (chatgpt-shell-openai-key)
+         (string-replace (chatgpt-shell-openai-key)
+                         "SK-REDACTED-OPENAI-KEY"
+                         output)
+       output))))
 
 (defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
 
