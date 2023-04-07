@@ -156,17 +156,17 @@ Uses the interface provided by `comint-mode'"
         (add-text-properties
          (point-min) (point-max)
          '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
-    (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
+    (mk-shell--output-filter (mk-shell--process) mk-shell--prompt-internal)
     (set-marker comint-last-input-start (mk-shell--pm))
     (set-process-filter (get-buffer-process
                          (mk-shell-buffer mk-shell-config))
-                        'comint-output-filter)))
+                        'mk-shell--output-filter)))
 
 (defun mk-shell--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
-    (comint-output-filter (mk-shell--process)
+    (mk-shell--output-filter (mk-shell--process)
                           (concat reply
                                   (if failed
                                       (propertize "<gpt-ignored-response>"
@@ -332,7 +332,7 @@ Otherwise save current output at location."
     (mk-shell--increment-request-id)
     (comint-send-input)
     (goto-char (point-max))
-    (comint-output-filter (mk-shell--process)
+    (mk-shell--output-filter (mk-shell--process)
                           (concat (propertize "<gpt-ignored-response>"
                                               'invisible (not mk-shell--show-invisible-markers))
                                   "\n"
@@ -353,7 +353,7 @@ Otherwise save current output at location."
       (cond
        ((string-equal "clear" (string-trim input-string))
         (call-interactively 'comint-clear-buffer)
-        (comint-output-filter (mk-shell--process) mk-shell--prompt-internal)
+        (mk-shell--output-filter (mk-shell--process) mk-shell--prompt-internal)
         (setq mk-shell--busy nil))
        ((not (mk-shell--curl-version-supported))
         (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
@@ -369,13 +369,13 @@ Otherwise save current output at location."
                  "\n\n"))
         (setq mk-shell--busy nil))
        ((string-empty-p (string-trim input-string))
-        (comint-output-filter (mk-shell--process)
+        (mk-shell--output-filter (mk-shell--process)
                               (concat "\n" mk-shell--prompt-internal))
         (setq mk-shell--busy nil))
        (t
         ;; For viewing prompt delimiter (used to handle multiline prompts).
-        ;; (comint-output-filter (mk-shell--process) "<gpt-end-of-prompt>")
-        (comint-output-filter (mk-shell--process)
+        ;; (mk-shell--output-filter (mk-shell--process) "<gpt-end-of-prompt>")
+        (mk-shell--output-filter (mk-shell--process)
                               (propertize "<gpt-end-of-prompt>"
                                           'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
@@ -573,7 +573,7 @@ Used by `mk-shell--send-input's call."
     (goto-char (point-max))
     (dolist (overlay (overlays-in (point-min) (point-max)))
       (delete-overlay overlay))
-    (comint-output-filter (mk-shell--process) reply)))
+    (mk-shell--output-filter (mk-shell--process) reply)))
 
 (defun mk-shell--preparse-json (json)
   "Preparse JSON and return a cons of parsed objects vs unparsed text."
@@ -673,7 +673,55 @@ Returns a list of cons pairs."
           (split-string text prompt-regexp))
     (nreverse result)))
 
-(provide 'mk-shell)
+(defun mk-shell--output-filter (process string)
+  "Copy of `comint-output-filter' but avoids fontifying non-prompt text.
+
+Uses PROCESS and STRING same as `comint-output-filter'."
+  (when-let ((oprocbuf (process-buffer process)))
+    (with-current-buffer oprocbuf
+      (let ((inhibit-read-only t))
+	(save-restriction
+	  (widen)
+	  (goto-char (process-mark process))
+	  (set-marker comint-last-output-start (point))
+	  (insert string)
+	  (set-marker (process-mark process) (point))
+	  (goto-char (process-mark process))
+	  (unless comint-use-prompt-regexp
+            (with-silent-modifications
+              (add-text-properties comint-last-output-start (point)
+                                   `(rear-nonsticky
+	        		     ,comint--prompt-rear-nonsticky
+	        		     front-sticky
+	        		     (field inhibit-line-move-field-capture)
+	        		     field output
+	        		     inhibit-line-move-field-capture t))))
+	  (when-let* ((prompt-start (save-excursion (forward-line 0) (point)))
+		      (inhibit-read-only t)
+                      (_prompt (string-match
+                                comint-prompt-regexp
+                                (buffer-substring prompt-start (point)))))
+	    (with-silent-modifications
+	      (or (= (point-min) prompt-start)
+		  (get-text-property (1- prompt-start) 'read-only)
+		  (put-text-property (1- prompt-start)
+				     prompt-start 'read-only 'fence))
+	      (add-text-properties prompt-start (point)
+				   '(read-only t front-sticky (read-only))))
+	    (when comint-last-prompt
+	      (font-lock--remove-face-from-text-property
+	       (car comint-last-prompt)
+	       (cdr comint-last-prompt)
+	       'font-lock-face
+	       'comint-highlight-prompt))
+	    (setq comint-last-prompt
+		  (cons (copy-marker prompt-start) (point-marker)))
+            (font-lock-append-text-property prompt-start (point)
+	        			    'font-lock-face
+	        			    'comint-highlight-prompt)
+	    (add-text-properties prompt-start (point)
+	                         `(rear-nonsticky
+	                           ,comint--prompt-rear-nonsticky))))))))
 
 (provide 'mk-shell)
 
