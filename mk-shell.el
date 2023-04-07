@@ -167,7 +167,7 @@ Uses the interface provided by `comint-mode'"
     (mk-shell--output-filter (mk-shell--process)
                           (concat reply
                                   (if failed
-                                      (propertize "<gpt-ignored-response>"
+                                      (propertize "<mk-shell-ignored-response>"
                                                   'invisible (not mk-shell--show-invisible-markers))
                                     "")
                                   mk-shell--prompt-internal))))
@@ -187,7 +187,7 @@ Uses the interface provided by `comint-mode'"
 			   (forward-line 0)
 			   (point-marker)))
              (output (buffer-substring comint-last-input-end pmark))
-             (items (split-string output "<gpt-end-of-prompt>")))
+             (items (split-string output "<mk-shell-end-of-prompt>")))
         (if (> (length items) 1)
             (nth 1 items)
           (nth 0 items))))))
@@ -210,13 +210,13 @@ Uses the interface provided by `comint-mode'"
     (save-excursion
       (unless
           (cond
-           ((re-search-backward "<gpt-end-of-prompt>" nil t)
-            (forward-char (length "<gpt-end-of-prompt>"))
+           ((re-search-backward "<mk-shell-end-of-prompt>" nil t)
+            (forward-char (length "<mk-shell-end-of-prompt>"))
             t)
            ((re-search-backward
              (concat "^"
                      (mk-shell-prompt mk-shell-config)) nil t)
-            (if (re-search-forward "<gpt-end-of-prompt>" nil t)
+            (if (re-search-forward "<mk-shell-end-of-prompt>" nil t)
                 t
               (end-of-line))
             t)
@@ -273,13 +273,13 @@ Otherwise mark current output at location."
         (mk-shell-narrow-to-prompt)
         (unless
             (cond
-             ((re-search-backward "<gpt-end-of-prompt>" nil t)
-              (forward-char (length "<gpt-end-of-prompt>"))
+             ((re-search-backward "<mk-shell-end-of-prompt>" nil t)
+              (forward-char (length "<mk-shell-end-of-prompt>"))
               t)
              ((re-search-backward
                (concat "^"
                        (mk-shell-prompt mk-shell-config))nil t)
-              (if (re-search-forward "<gpt-end-of-prompt>" nil t)
+              (if (re-search-forward "<mk-shell-end-of-prompt>" nil t)
                   t
                 (end-of-line))
               t)
@@ -331,7 +331,7 @@ Otherwise save current output at location."
     (comint-send-input)
     (goto-char (point-max))
     (mk-shell--output-filter (mk-shell--process)
-                          (concat (propertize "<gpt-ignored-response>"
+                          (concat (propertize "<mk-shell-ignored-response>"
                                               'invisible (not mk-shell--show-invisible-markers))
                                   "\n"
                                   mk-shell--prompt-internal))
@@ -372,9 +372,9 @@ Otherwise save current output at location."
         (setq mk-shell--busy nil))
        (t
         ;; For viewing prompt delimiter (used to handle multiline prompts).
-        ;; (mk-shell--output-filter (mk-shell--process) "<gpt-end-of-prompt>")
+        ;; (mk-shell--output-filter (mk-shell--process) "<mk-shell-end-of-prompt>")
         (mk-shell--output-filter (mk-shell--process)
-                                 (propertize "<gpt-end-of-prompt>"
+                                 (propertize "<mk-shell-end-of-prompt>"
                                              'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
                  (mk-shell-config-url mk-shell-config)
@@ -646,7 +646,7 @@ Returns a list of cons pairs."
   (setq text (substring-no-properties text))
   (let ((result))
     (mapc (lambda (item)
-            (let* ((values (split-string item "<gpt-end-of-prompt>"))
+            (let* ((values (split-string item "<mk-shell-end-of-prompt>"))
                    (lines (split-string item "\n"))
                    (prompt (string-trim (nth 0 values)))
                    (response (string-trim (progn
@@ -654,7 +654,7 @@ Returns a list of cons pairs."
                                                 (nth 1 values)
                                               (string-join
                                                (cdr lines) "\n"))))))
-              (unless (string-match "<gpt-ignored-response>" response)
+              (unless (string-match "<mk-shell-ignored-response>" response)
                 (when (or (not (string-empty-p prompt))
                           (not (string-empty-p response)))
                   (push (cons (if (string-empty-p prompt)
