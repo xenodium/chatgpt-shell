@@ -404,7 +404,7 @@ For example:
           (mk-shell-config-url mk-shell-config)
           (let ((request-data `((model . ,(or version
                                               chatgpt-shell-chatgpt-model-version))
-                                (messages . ,(vconcat
+                                (messages . ,(vconcat ;; Vector for json
                                               messages)))))
             (when chatgpt-shell-model-temperature
               (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
@@ -423,7 +423,7 @@ For example:
                (mk-shell-config-url mk-shell-config)
                (let ((request-data `((model . ,(or version
                                                    chatgpt-shell-chatgpt-model-version))
-                                     (messages . ,(vconcat
+                                     (messages . ,(vconcat ;; Vector for json
                                                    messages)))))
                  (when chatgpt-shell-model-temperature
                    (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
@@ -483,12 +483,12 @@ For example:
 (defun chatgpt-shell--make-data (commands-and-responses)
   "Create the request payload from COMMANDS-AND-RESPONSES."
   (setq commands-and-responses
-        (vconcat
+        (vconcat ;; Vector for json
          (chatgpt-shell--user-assistant-messages
           commands-and-responses)))
   (let ((request-data `((model . ,chatgpt-shell-chatgpt-model-version)
                         (messages . ,(if chatgpt-shell-chatgpt-system-prompt
-                                         (vconcat
+                                         (vconcat ;; Vector for json
                                           (list
                                            (list
                                             (cons 'role "system")
