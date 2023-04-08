@@ -549,7 +549,7 @@ Very much EXPERIMENTAL."
         (progn
           (setf (shell-maker-config-validate-command shell-maker-config) nil)
           (setf (shell-maker-config-execute-command shell-maker-config)
-                (lambda (_request-data callback _error-callback)
+                (lambda (_command _history callback _error-callback)
                   (setq response (car history))
                   (setq history (cdr history))
                   (when response
