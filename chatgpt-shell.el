@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.11.1
+;; Version: 0.12.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -65,7 +65,7 @@ post execution.
 
 For example:
 
-\(setq chatgpt-shell-on-command-finished-function
+\(setq `chatgpt-shell-on-command-finished-function'
    (lambda (command output)
      (message \"Command: %s\" command)
      (message \"Output: %s\" output)))"
@@ -206,6 +206,22 @@ or
   "Start a ChatGPT shell."
   (interactive)
   (shell-maker-start chatgpt-shell--config))
+
+(defun chatgpt-shell--inline-codes ()
+  "Get a list of all inline codess in buffer."
+  (let ((codes '())
+        (case-fold-search nil))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward
+              "`\\([^`\n]+\\)`"
+              nil t)
+        (when-let ((begin (match-beginning 0))
+                   (end (match-end 0)))
+          (push
+           (list
+            'body (cons (match-beginning 1) (match-end 1))) codes))))
+    (nreverse codes)))
 
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
@@ -636,15 +652,23 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
             (setq overlay (make-overlay (+ body-start pos)
                                         (+ body-start (1+ pos))
                                         buf))
-            ;; (set-text-properties (+ body-start pos)
-            ;;                      (+ body-start (1+ pos))
-            ;;                      props)
             (overlay-put overlay 'face (plist-get props 'face))
-            (setq pos (1+ pos)))
-          ;; (overlay-put (make-overlay body-start body-end buf)
-          )
-      (set-text-properties body-start body-end
-                           '(face 'font-lock-doc-markup-face)))))
+            (setq pos (1+ pos))))
+      (overlay-put (make-overlay body-start body-end buf)
+                   'face 'font-lock-doc-markup-face))))
+
+(defun chatgpt-shell--fontify-inline-code (body-start body-end)
+  "Fontify a source block.
+Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
+ BODY-END QUOTES2-START and QUOTES2-END."
+  ;; Hide ```
+  (overlay-put (make-overlay (1- body-start)
+                             body-start) 'invisible 'chatgpt-shell)
+  (overlay-put (make-overlay body-end
+                             (1+ body-end)) 'invisible 'chatgpt-shell)
+  (overlay-put (make-overlay body-start body-end
+                             (shell-maker-buffer shell-maker-config))
+               'face 'font-lock-doc-markup-face))
 
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
@@ -661,7 +685,11 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
      (car (map-elt block 'body))
      (cdr (map-elt block 'body))
      (car (map-elt block 'end))
-     (cdr (map-elt block 'end)))))
+     (cdr (map-elt block 'end))))
+  (dolist (block (chatgpt-shell--inline-codes))
+    (chatgpt-shell--fontify-inline-code
+     (car (map-elt block 'body))
+     (cdr (map-elt block 'body)))))
 
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
