@@ -72,18 +72,14 @@ Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-
 
 Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/restore.gif" width="70%" />
-
-* Streaming (experimental)
-=(setq chatgpt-shell-chatgpt-streaming t)= enables streaming.
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/stream.gif" width="70%" />
+* Streaming
+=(setq chatgpt-shell-chatgpt-streaming t)= enables/disables streaming.
 
 * Explain code in region
 
 =M-x chatgpt-shell-explain-code=
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/explain.gif" width="70%" />
+There are other functions to act on region. Browse all available via =M-x=.
 
 * ChatGPT org babel
 
@@ -129,6 +125,8 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 | dall-e-image-size                     | The default size of the requested image as a string.                      |
 | dall-e-model-version                  | The used DALL-E OpenAI model.                                             |
 
+There are more. Browse via =M-x set-variable=
+
 * Commands
 
 |----------------------------------------------------+--------------------------------------------------------|
@@ -143,3 +141,5 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 | chatgpt-shell-save-session-transcript              | Save shell transcript to file.                         |
 | chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.      |
 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                |
+
+There are more. Browse all available via =M-x=.
