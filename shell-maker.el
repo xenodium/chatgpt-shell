@@ -134,6 +134,7 @@ Uses the interface provided by `comint-mode'"
               `(("Prompt" ,(concat "^" (regexp-quote
                                         (shell-maker-prompt shell-maker-config))
                                    "\\(.*\\)") 1)))
+  (shell-maker--read-input-ring-history config)
   (unless (or (comint-check-proc (shell-maker-buffer shell-maker-config))
               (get-buffer-process (shell-maker-buffer shell-maker-config)))
     (condition-case nil
@@ -189,6 +190,22 @@ Uses the interface provided by `comint-mode'"
         (if (> (length items) 1)
             (nth 1 items)
           (nth 0 items))))))
+
+;; Thanks to https://www.n16f.net/blog/making-ielm-more-comfortable
+(defun shell-maker--read-input-ring-history (config)
+  "Read input ring history from file using CONFIG."
+  (let ((path (shell-maker-history-file-path config)))
+    (make-directory
+     (file-name-directory path) t)
+    (setq-local comint-input-ring-file-name path))
+  (setq-local comint-input-ring-size 10000)
+  (setq-local comint-input-ignoredups t)
+  (comint-read-input-ring t))
+
+(defun shell-maker--write-input-ring-history ()
+  "Write input ring history to file."
+  (with-file-modes #o600
+    (comint-write-input-ring)))
 
 (defun shell-maker--output-at-point ()
   "Output at point range with cons of start and end."
@@ -393,6 +410,7 @@ Otherwise save current output at location."
                          (shell-maker--write-reply (concat prefix-newline response suffix-newline))
                          (shell-maker--announce-response buffer)
                          (setq shell-maker--busy nil)
+                         (shell-maker--write-input-ring-history)
                          (when (shell-maker-config-on-command-finished shell-maker-config)
                            ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
                            (funcall (shell-maker-config-on-command-finished shell-maker-config)
@@ -726,6 +744,12 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 (defun shell-maker-process-name (config)
   "Get process name from CONFIG."
   (downcase (shell-maker-config-name config)))
+
+(defun shell-maker-history-file-path (config)
+  "Get process name from CONFIG."
+  (expand-file-name (file-name-concat
+                     (downcase (shell-maker-config-name config))
+                     "history")  user-emacs-directory))
 
 (defun shell-maker-prompt (config)
   "Get prompt name from CONFIG."
