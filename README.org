@@ -2,15 +2,13 @@
 
 * chatgpt-shell
 
-Minimal ChatGPT and DALL-E Emacs shells.
+ChatGPT and DALL-E Emacs shells + [[https://orgmode.org/worg/org-contrib/babel/intro.html][Org Babel]].
 
-A short intro in a [[https://xenodium.com/a-chatgpt-emacs-shell/][blog post]].
+Includes =shell-maker=, a way to create shells for any service (local or cloud).
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dalle-shell-demo.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dall-e-vs-chatgpt.gif" width="100%" />
 
 ** Note
 
@@ -19,12 +17,14 @@ This is very much an experimental proof of concept, possibly incomplete, or mayb
 * Install
 
 Load =(require 'chatgpt-shell)=
+Load =(require 'dall-e-shell)=
 
 * Set OpenAI key
 
 You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
 
-** As function
+** ChapGPT key
+*** As function
 #+begin_src emacs-lisp
   ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
@@ -42,13 +42,17 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
           (auth-source-pick-first-password :host "api.openai.com")))
 #+end_src
 
-** Manually
+*** Manually
 =M-x set-variable chatgpt-shell-openai-key=
 
-** As variable
+*** As variable
 #+begin_src emacs-lisp
   (setq chatgpt-shell-openai-key "my key")
 #+end_src
+
+** DALL-E key
+
+Same as ChapGPT, but use =dall-e-shell-openai-key= variable.
 
 * Launch
 
