@@ -1,4 +1,4 @@
-;;; mk-shell.el --- Interaction mode for making comint shells  -*- lexical-binding: t -*-
+;;; shell-maker.el --- Interaction mode for making comint shells  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
@@ -37,147 +37,147 @@
   (require 'cl-lib)
   (declare-function json-pretty-print "ext:json" (begin end &optional minimize)))
 
-(defcustom mk-shell-display-function #'pop-to-buffer-same-window
+(defcustom shell-maker-display-function #'pop-to-buffer-same-window
   "Function to display new shell.  Can be set to `display-buffer' or similar."
   :type 'function
-  :group 'mk-shell)
+  :group 'shell-maker)
 
-(defcustom mk-shell-read-string-function (lambda (prompt history)
+(defcustom shell-maker-read-string-function (lambda (prompt history)
                                            (read-string prompt nil history))
   "Function to read strings from user.
 
 To use `completing-read', it can be done with something like:
 
-\(setq `mk-shell-read-string-function'
+\(setq `shell-maker-read-string-function'
       (lambda (prompt history)
         (completing-read prompt (symbol-value history) nil nil nil history)))"
   :type 'function
-  :group 'mk-shell)
+  :group 'shell-maker)
 
-(defcustom mk-shell-logging nil
+(defcustom shell-maker-logging nil
   "Logging disabled by default (slows things down).
 
 Enable it for troubleshooting issues."
   :type 'boolean
-  :group 'mk-shell)
+  :group 'shell-maker)
 
-(defvar mk-shell--input nil)
+(defvar shell-maker--input nil)
 
-(defvar mk-shell--current-request-id 0)
+(defvar shell-maker--current-request-id 0)
 
-(defvar mk-shell--show-invisible-markers nil)
+(defvar shell-maker--show-invisible-markers nil)
 
-(defvar mk-shell--prompt-internal nil)
+(defvar shell-maker--prompt-internal nil)
 
 (cl-defstruct
-    mk-shell-config
+    shell-maker-config
   name
   validate-command
   execute-command
   on-command-finished
   redact-log-output)
 
-(defvar-local mk-shell--busy nil)
+(defvar-local shell-maker--busy nil)
 
-(defvar-local mk-shell-config nil)
+(defvar-local shell-maker-config nil)
 
-(defvar-local mk-shell--file nil)
+(defvar-local shell-maker--file nil)
 
-(defvar-local mk-shell--request-process nil)
+(defvar-local shell-maker--request-process nil)
 
-(defun mk-shell-start (config)
+(defun shell-maker-start (config)
   "Start a shell with CONFIG."
-  (define-derived-mode mk-shell-mode comint-mode
-    (mk-shell-config-name config)
-    "Major mode for interactively evaluating mk-shell prompts.
+  (define-derived-mode shell-maker-mode comint-mode
+    (shell-maker-config-name config)
+    "Major mode for interactively evaluating shell-maker prompts.
 Uses the interface provided by `comint-mode'"
     nil)
 
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map "\C-m" 'mk-shell-return)
-    (define-key map "\C-c\C-c" 'mk-shell-interrupt)
-    (define-key map "\C-x\C-s" 'mk-shell-save-session-transcript)
-    (define-key map "\C-\M-h" 'mk-shell-mark-output)
-    (setq mk-shell-mode-map map))
+    (define-key map "\C-m" 'shell-maker-return)
+    (define-key map "\C-c\C-c" 'shell-maker-interrupt)
+    (define-key map "\C-x\C-s" 'shell-maker-save-session-transcript)
+    (define-key map "\C-\M-h" 'shell-maker-mark-output)
+    (setq shell-maker-mode-map map))
 
   (let ((old-point)
-        (buf-name (mk-shell-buffer-name config)))
+        (buf-name (shell-maker-buffer-name config)))
     (unless (comint-check-proc buf-name)
       (with-current-buffer (get-buffer-create buf-name)
-        (setq-local mk-shell--busy nil)
+        (setq-local shell-maker--busy nil)
         (unless (zerop (buffer-size))
           (setq old-point (point)))
-        (mk-shell-mode)
-        (mk-shell--initialize config)))
-    (funcall mk-shell-display-function buf-name)
+        (shell-maker-mode)
+        (shell-maker--initialize config)))
+    (funcall shell-maker-display-function buf-name)
     (when old-point
       (push-mark old-point))))
 
-(defun mk-shell--initialize (config)
+(defun shell-maker--initialize (config)
   "Initialize shell using CONFIG."
-  (setq-local mk-shell-config config)
+  (setq-local shell-maker-config config)
   (visual-line-mode +1)
   (goto-address-mode +1)
   (setq comint-prompt-regexp
         (concat "^" (regexp-quote
-                     (mk-shell-prompt mk-shell-config))))
+                     (shell-maker-prompt shell-maker-config))))
   (setq-local paragraph-separate "\\'")
   (setq-local paragraph-start comint-prompt-regexp)
-  (setq comint-input-sender 'mk-shell--input-sender)
+  (setq comint-input-sender 'shell-maker--input-sender)
   (setq comint-process-echoes nil)
-  (setq-local mk-shell--prompt-internal
-              (mk-shell-prompt mk-shell-config))
+  (setq-local shell-maker--prompt-internal
+              (shell-maker-prompt shell-maker-config))
   (setq-local comint-prompt-read-only t)
-  (setq comint-get-old-input 'mk-shell--get-old-input)
+  (setq comint-get-old-input 'shell-maker--get-old-input)
   (setq-local comint-completion-addsuffix nil)
   (setq-local imenu-generic-expression
               `(("Prompt" ,(concat "^" (regexp-quote
-                                        (mk-shell-prompt mk-shell-config))
+                                        (shell-maker-prompt shell-maker-config))
                                    "\\(.*\\)") 1)))
-  (unless (or (comint-check-proc (mk-shell-buffer mk-shell-config))
-              (get-buffer-process (mk-shell-buffer mk-shell-config)))
+  (unless (or (comint-check-proc (shell-maker-buffer shell-maker-config))
+              (get-buffer-process (shell-maker-buffer shell-maker-config)))
     (condition-case nil
-        (start-process (mk-shell-process-name mk-shell-config)
-                       (mk-shell-buffer mk-shell-config) "hexl")
+        (start-process (shell-maker-process-name shell-maker-config)
+                       (shell-maker-buffer shell-maker-config) "hexl")
       (file-error (start-process
-                   (mk-shell-process-name mk-shell-config)
-                   (mk-shell-buffer mk-shell-config) "cat")))
-    (set-process-query-on-exit-flag (mk-shell--process) nil)
+                   (shell-maker-process-name shell-maker-config)
+                   (shell-maker-buffer shell-maker-config) "cat")))
+    (set-process-query-on-exit-flag (shell-maker--process) nil)
     (goto-char (point-max))
     (setq-local comint-inhibit-carriage-motion t)
 
-    (mk-shell--set-pm (point-max))
+    (shell-maker--set-pm (point-max))
     (unless comint-use-prompt-regexp
       (let ((inhibit-read-only t))
         (add-text-properties
          (point-min) (point-max)
          '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
-    (mk-shell--output-filter (mk-shell--process) mk-shell--prompt-internal)
-    (set-marker comint-last-input-start (mk-shell--pm))
+    (shell-maker--output-filter (shell-maker--process) shell-maker--prompt-internal)
+    (set-marker comint-last-input-start (shell-maker--pm))
     (set-process-filter (get-buffer-process
-                         (mk-shell-buffer mk-shell-config))
-                        'mk-shell--output-filter)))
+                         (shell-maker-buffer shell-maker-config))
+                        'shell-maker--output-filter)))
 
-(defun mk-shell--write-reply (reply &optional failed)
+(defun shell-maker--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
-    (mk-shell--output-filter (mk-shell--process)
+    (shell-maker--output-filter (shell-maker--process)
                           (concat reply
                                   (if failed
-                                      (propertize "<mk-shell-ignored-response>"
-                                                  'invisible (not mk-shell--show-invisible-markers))
+                                      (propertize "<shell-maker-ignored-response>"
+                                                  'invisible (not shell-maker--show-invisible-markers))
                                     "")
-                                  mk-shell--prompt-internal))))
+                                  shell-maker--prompt-internal))))
 
-(defun mk-shell-return ()
+(defun shell-maker-return ()
   "RET binding."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
-  (mk-shell--send-input))
+  (shell-maker--send-input))
 
-(defun mk-shell-last-output ()
+(defun shell-maker-last-output ()
   "Get the last command output from the shell."
   (let ((proc (get-buffer-process (current-buffer))))
     (save-excursion
@@ -185,14 +185,14 @@ Uses the interface provided by `comint-mode'"
 			   (forward-line 0)
 			   (point-marker)))
              (output (buffer-substring comint-last-input-end pmark))
-             (items (split-string output "<mk-shell-end-of-prompt>")))
+             (items (split-string output "<shell-maker-end-of-prompt>")))
         (if (> (length items) 1)
             (nth 1 items)
           (nth 0 items))))))
 
-(defun mk-shell--output-at-point ()
+(defun shell-maker--output-at-point ()
   "Output at point range with cons of start and end."
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
@@ -208,13 +208,13 @@ Uses the interface provided by `comint-mode'"
     (save-excursion
       (unless
           (cond
-           ((re-search-backward "<mk-shell-end-of-prompt>" nil t)
-            (forward-char (length "<mk-shell-end-of-prompt>"))
+           ((re-search-backward "<shell-maker-end-of-prompt>" nil t)
+            (forward-char (length "<shell-maker-end-of-prompt>"))
             t)
            ((re-search-backward
              (concat "^"
-                     (mk-shell-prompt mk-shell-config)) nil t)
-            (if (re-search-forward "<mk-shell-end-of-prompt>" nil t)
+                     (shell-maker-prompt shell-maker-config)) nil t)
+            (if (re-search-forward "<shell-maker-end-of-prompt>" nil t)
                 t
               (end-of-line))
             t)
@@ -225,17 +225,17 @@ Uses the interface provided by `comint-mode'"
     (save-excursion
       (unless (re-search-forward
                (concat "^"
-                       (mk-shell-prompt mk-shell-config)) nil t)
+                       (shell-maker-prompt shell-maker-config)) nil t)
         (goto-char current-pos)
         (setq revert-pos t))
-      (backward-char (length (mk-shell-prompt mk-shell-config)))
+      (backward-char (length (shell-maker-prompt shell-maker-config)))
       (setq end (point)))
     (when revert-pos
       (goto-char current-pos)
       (user-error "Not available"))
     (cons start end)))
 
-(defun mk-shell-narrow-to-prompt ()
+(defun shell-maker-narrow-to-prompt ()
   "Narrow buffer to the command line (and any following command output) at point."
   (interactive)
   (let ((begin (shell--prompt-begin-position)))
@@ -243,16 +243,16 @@ Uses the interface provided by `comint-mode'"
      begin
      (save-excursion
        (goto-char (shell--prompt-end-position))
-       (re-search-forward (mk-shell-prompt mk-shell-config) nil t)
+       (re-search-forward (shell-maker-prompt shell-maker-config) nil t)
        (if (= begin (shell--prompt-begin-position))
            (point-max)
          (shell--prompt-begin-position))))))
 
-(defun mk-shell-mark-output ()
+(defun shell-maker-mark-output ()
   "If at latest prompt, mark last output.
 Otherwise mark current output at location."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
@@ -268,16 +268,16 @@ Otherwise mark current output at location."
       (end-of-line))
     (save-excursion
       (save-restriction
-        (mk-shell-narrow-to-prompt)
+        (shell-maker-narrow-to-prompt)
         (unless
             (cond
-             ((re-search-backward "<mk-shell-end-of-prompt>" nil t)
-              (forward-char (length "<mk-shell-end-of-prompt>"))
+             ((re-search-backward "<shell-maker-end-of-prompt>" nil t)
+              (forward-char (length "<shell-maker-end-of-prompt>"))
               t)
              ((re-search-backward
                (concat "^"
-                       (mk-shell-prompt mk-shell-config))nil t)
-              (if (re-search-forward "<mk-shell-end-of-prompt>" nil t)
+                       (shell-maker-prompt shell-maker-config))nil t)
+              (if (re-search-forward "<shell-maker-end-of-prompt>" nil t)
                   t
                 (end-of-line))
               t)
@@ -295,11 +295,11 @@ Otherwise mark current output at location."
     (set-mark (1- end))
     (goto-char (1+ start))))
 
-(defun mk-shell-save-output ()
+(defun shell-maker-save-output ()
   "If at latest prompt, save last output.
 Otherwise save current output at location."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let ((orig-point (point))
         (orig-region-active (region-active-p))
@@ -307,7 +307,7 @@ Otherwise save current output at location."
         (orig-region-end (region-end)))
     (unwind-protect
         (progn
-          (mk-shell-mark-output)
+          (shell-maker-mark-output)
           (write-region (region-beginning)
                         (region-end)
                         (read-file-name "Write file: ")))
@@ -318,68 +318,68 @@ Otherwise save current output at location."
         (setq mark-active nil)
         (goto-char orig-point)))))
 
-(defun mk-shell-interrupt ()
+(defun shell-maker-interrupt ()
   "Interrupt current request."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
-  (with-current-buffer (mk-shell-buffer mk-shell-config)
+  (with-current-buffer (shell-maker-buffer shell-maker-config)
     ;; Increment id, so in-flight request is ignored.
-    (mk-shell--increment-request-id)
+    (shell-maker--increment-request-id)
     (comint-send-input)
     (goto-char (point-max))
-    (mk-shell--output-filter (mk-shell--process)
-                          (concat (propertize "<mk-shell-ignored-response>"
-                                              'invisible (not mk-shell--show-invisible-markers))
+    (shell-maker--output-filter (shell-maker--process)
+                          (concat (propertize "<shell-maker-ignored-response>"
+                                              'invisible (not shell-maker--show-invisible-markers))
                                   "\n"
-                                  mk-shell--prompt-internal))
-    (when (process-live-p mk-shell--request-process)
-      (kill-process mk-shell--request-process))
-    (setq mk-shell--busy nil)
+                                  shell-maker--prompt-internal))
+    (when (process-live-p shell-maker--request-process)
+      (kill-process shell-maker--request-process))
+    (setq shell-maker--busy nil)
     (message "interrupted!")))
 
-(defun mk-shell--eval-input (input-string)
+(defun shell-maker--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
-  (let ((buffer (mk-shell-buffer mk-shell-config))
+  (let ((buffer (shell-maker-buffer shell-maker-config))
         (prefix-newline "")
         (suffix-newline "\n\n")
         (response-count 0))
-    (unless mk-shell--busy
-      (setq mk-shell--busy t)
+    (unless shell-maker--busy
+      (setq shell-maker--busy t)
       (cond
        ((string-equal "clear" (string-trim input-string))
         (call-interactively 'comint-clear-buffer)
-        (mk-shell--output-filter (mk-shell--process) mk-shell--prompt-internal)
-        (setq mk-shell--busy nil))
-       ((not (mk-shell--curl-version-supported))
-        (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
-        (setq mk-shell--busy nil))
-       ((and (mk-shell-config-validate-command
-              mk-shell-config)
-             (funcall (mk-shell-config-validate-command
-                       mk-shell-config) input-string))
-        (mk-shell--write-reply
+        (shell-maker--output-filter (shell-maker--process) shell-maker--prompt-internal)
+        (setq shell-maker--busy nil))
+       ((not (shell-maker--curl-version-supported))
+        (shell-maker--write-reply "\nYou need curl version 7.76 or newer.\n\n")
+        (setq shell-maker--busy nil))
+       ((and (shell-maker-config-validate-command
+              shell-maker-config)
+             (funcall (shell-maker-config-validate-command
+                       shell-maker-config) input-string))
+        (shell-maker--write-reply
          (concat "\n"
-                 (funcall (mk-shell-config-validate-command
-                           mk-shell-config) input-string)
+                 (funcall (shell-maker-config-validate-command
+                           shell-maker-config) input-string)
                  "\n\n"))
-        (setq mk-shell--busy nil))
+        (setq shell-maker--busy nil))
        ((string-empty-p (string-trim input-string))
-        (mk-shell--output-filter (mk-shell--process)
-                                 (concat "\n" mk-shell--prompt-internal))
-        (setq mk-shell--busy nil))
+        (shell-maker--output-filter (shell-maker--process)
+                                 (concat "\n" shell-maker--prompt-internal))
+        (setq shell-maker--busy nil))
        (t
         ;; For viewing prompt delimiter (used to handle multiline prompts).
-        ;; (mk-shell--output-filter (mk-shell--process) "<mk-shell-end-of-prompt>")
-        (mk-shell--output-filter (mk-shell--process)
-                                 (propertize "<mk-shell-end-of-prompt>"
-                                             'invisible (not mk-shell--show-invisible-markers)))
-        (funcall (mk-shell-config-execute-command mk-shell-config)
+        ;; (shell-maker--output-filter (shell-maker--process) "<shell-maker-end-of-prompt>")
+        (shell-maker--output-filter (shell-maker--process)
+                                 (propertize "<shell-maker-end-of-prompt>"
+                                             'invisible (not shell-maker--show-invisible-markers)))
+        (funcall (shell-maker-config-execute-command shell-maker-config)
                  input-string
-                 (mk-shell--extract-history
+                 (shell-maker--extract-history
                   (with-current-buffer buffer
                     (buffer-string))
-                  (mk-shell-prompt mk-shell-config))
+                  (shell-maker-prompt shell-maker-config))
                  (lambda (response partial)
                    (setq response-count (1+ response-count))
                    (setq prefix-newline (if (> response-count 1)
@@ -388,39 +388,39 @@ Otherwise save current output at location."
                    (if response
                        (if partial
                            (progn
-                             (mk-shell--write-partial-reply (concat prefix-newline response))
-                             (setq mk-shell--busy partial))
-                         (mk-shell--write-reply (concat prefix-newline response suffix-newline))
-                         (mk-shell--announce-response buffer)
-                         (setq mk-shell--busy nil)
-                         (when (mk-shell-config-on-command-finished mk-shell-config)
+                             (shell-maker--write-partial-reply (concat prefix-newline response))
+                             (setq shell-maker--busy partial))
+                         (shell-maker--write-reply (concat prefix-newline response suffix-newline))
+                         (shell-maker--announce-response buffer)
+                         (setq shell-maker--busy nil)
+                         (when (shell-maker-config-on-command-finished shell-maker-config)
                            ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                           (funcall (mk-shell-config-on-command-finished mk-shell-config)
+                           (funcall (shell-maker-config-on-command-finished shell-maker-config)
                                     input-string
-                                    (mk-shell-last-output))))
-                     (mk-shell--write-reply "Error: that's all is known" t) ;; comeback
-                     (setq mk-shell--busy nil)
-                     (mk-shell--announce-response buffer)))
+                                    (shell-maker-last-output))))
+                     (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
+                     (setq shell-maker--busy nil)
+                     (shell-maker--announce-response buffer)))
                  (lambda (error)
-                   (mk-shell--write-reply (concat (string-trim error) suffix-newline) t)
-                   (setq mk-shell--busy nil)
-                   (mk-shell--announce-response buffer))))))))
+                   (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
+                   (setq shell-maker--busy nil)
+                   (shell-maker--announce-response buffer))))))))
 
-(defun mk-shell--announce-response (buffer)
+(defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
 
-(defun mk-shell-async-shell-command (command streaming response-extractor callback error-callback)
+(defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
-  (let* ((buffer (mk-shell-buffer mk-shell-config))
-         (request-id (mk-shell--increment-request-id))
+  (let* ((buffer (shell-maker-buffer shell-maker-config))
+         (request-id (shell-maker--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
          (request-process (condition-case err
                               (apply #'start-process (append (list
-                                                              (mk-shell-buffer-name mk-shell-config)
+                                                              (shell-maker-buffer-name shell-maker-config)
                                                               (buffer-name output-buffer))
                                                              command))
                             (error
@@ -431,19 +431,19 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
          (remaining-text)
          (process-connection-type nil))
     (when request-process
-      (setq mk-shell--request-process request-process)
-      (mk-shell--write-output-to-log-buffer "// Request\n\n")
-      (mk-shell--write-output-to-log-buffer (string-join command " "))
-      (mk-shell--write-output-to-log-buffer "\n\n")
+      (setq shell-maker--request-process request-process)
+      (shell-maker--write-output-to-log-buffer "// Request\n\n")
+      (shell-maker--write-output-to-log-buffer (string-join command " "))
+      (shell-maker--write-output-to-log-buffer "\n\n")
       (when streaming
         (set-process-filter
          request-process
          (lambda (_process output)
-           (when (eq request-id mk-shell--current-request-id)
-             (mk-shell--write-output-to-log-buffer
+           (when (eq request-id shell-maker--current-request-id)
+             (shell-maker--write-output-to-log-buffer
               (format "// Filter output\n\n%s\n\n" output))
              (setq remaining-text (concat remaining-text output))
-             (setq preparsed (mk-shell--preparse-json remaining-text))
+             (setq preparsed (shell-maker--preparse-json remaining-text))
              (if (car preparsed)
                  (mapc (lambda (obj)
                          (with-current-buffer buffer
@@ -455,16 +455,16 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (let ((active (eq request-id mk-shell--current-request-id))
+         (let ((active (eq request-id shell-maker--current-request-id))
                (output (with-current-buffer (process-buffer process)
                          (buffer-string)))
                (exit-status (process-exit-status process)))
-           (mk-shell--write-output-to-log-buffer
+           (shell-maker--write-output-to-log-buffer
             (format "// Response (%s)\n\n" (if active "active" "inactive")))
-           (mk-shell--write-output-to-log-buffer
+           (shell-maker--write-output-to-log-buffer
             (format "Exit status: %d\n\n" exit-status))
-           (mk-shell--write-output-to-log-buffer output)
-           (mk-shell--write-output-to-log-buffer "\n\n")
+           (shell-maker--write-output-to-log-buffer output)
+           (shell-maker--write-output-to-log-buffer "\n\n")
            (with-current-buffer buffer
              (when active
                (if (= exit-status 0)
@@ -480,7 +480,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                    (funcall error-callback output)))))
            (kill-buffer output-buffer)))))))
 
-(defun mk-shell--json-parse-string-filtering (json regexp)
+(defun shell-maker--json-parse-string-filtering (json regexp)
   "Attempt to parse JSON.  If unsuccessful, attempt after removing REGEXP."
   (let ((json-object nil)
         (curl-lines-removed-str json))
@@ -496,35 +496,35 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
         (error nil)))
     json-object))
 
-(defun mk-shell--increment-request-id ()
-  "Increment `mk-shell--current-request-id'."
-  (if (= mk-shell--current-request-id most-positive-fixnum)
-      (setq mk-shell--current-request-id 0)
-    (setq mk-shell--current-request-id (1+ mk-shell--current-request-id))))
+(defun shell-maker--increment-request-id ()
+  "Increment `shell-maker--current-request-id'."
+  (if (= shell-maker--current-request-id most-positive-fixnum)
+      (setq shell-maker--current-request-id 0)
+    (setq shell-maker--current-request-id (1+ shell-maker--current-request-id))))
 
-(defun mk-shell--set-pm (pos)
+(defun shell-maker--set-pm (pos)
   "Set the process mark in the current buffer to POS."
   (set-marker (process-mark
                (get-buffer-process
-                (mk-shell-buffer mk-shell-config))) pos))
+                (shell-maker-buffer shell-maker-config))) pos))
 
-(defun mk-shell--pm nil
+(defun shell-maker--pm nil
   "Return the process mark of the current buffer."
   (process-mark (get-buffer-process
-                 (mk-shell-buffer mk-shell-config))))
+                 (shell-maker-buffer shell-maker-config))))
 
-(defun mk-shell--input-sender (_proc input)
-  "Set the variable `mk-shell--input' to INPUT.
-Used by `mk-shell--send-input's call."
-  (setq mk-shell--input input))
+(defun shell-maker--input-sender (_proc input)
+  "Set the variable `shell-maker--input' to INPUT.
+Used by `shell-maker--send-input's call."
+  (setq shell-maker--input input))
 
-(defun mk-shell--send-input ()
+(defun shell-maker--send-input ()
   "Send text after the prompt."
-  (let (mk-shell--input)
+  (let (shell-maker--input)
     (comint-send-input)
-    (mk-shell--eval-input mk-shell--input)))
+    (shell-maker--eval-input shell-maker--input)))
 
-(defun mk-shell--get-old-input nil
+(defun shell-maker--get-old-input nil
   "Return the previous input surrounding point."
   (save-excursion
     (beginning-of-line)
@@ -533,13 +533,13 @@ Used by `mk-shell--send-input's call."
     (comint-skip-prompt)
     (buffer-substring (point) (progn (forward-sexp 1) (point)))))
 
-(defun mk-shell--json-encode (obj)
+(defun shell-maker--json-encode (obj)
   "Serialize OBJ to json.  Use fallback if `json-serialize' isn't available."
   (if (fboundp 'json-serialize)
       (json-serialize obj)
     (json-encode obj)))
 
-(defun mk-shell--curl-version-supported ()
+(defun shell-maker--curl-version-supported ()
   "Return t if curl version is 7.76 or newer, nil otherwise."
   (let* ((curl-error-redirect (if (eq system-type (or 'windows-nt 'ms-dos)) "2> NUL" "2>/dev/null"))
          (curl-version-string (shell-command-to-string (concat "curl --version " curl-error-redirect))))
@@ -547,7 +547,7 @@ Used by `mk-shell--send-input's call."
       (let ((version (match-string 1 curl-version-string)))
         (version<= "7.76" version)))))
 
-(defun mk-shell--json-parse-string (json)
+(defun shell-maker--json-parse-string (json)
   "Parse JSON and return the parsed data structure, nil otherwise."
   (if (fboundp 'json-parse-string)
       (condition-case nil
@@ -557,15 +557,15 @@ Used by `mk-shell--send-input's call."
         (json-read-from-string json)
       (error nil))))
 
-(defun mk-shell--write-partial-reply (reply)
+(defun shell-maker--write-partial-reply (reply)
   "Write partial REPLY to prompt."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
     (dolist (overlay (overlays-in (point-min) (point-max)))
       (delete-overlay overlay))
-    (mk-shell--output-filter (mk-shell--process) reply)))
+    (shell-maker--output-filter (shell-maker--process) reply)))
 
-(defun mk-shell--preparse-json (json)
+(defun shell-maker--preparse-json (json)
   "Preparse JSON and return a cons of parsed objects vs unparsed text."
   (let ((parsed)
         (remaining)
@@ -584,46 +584,46 @@ Used by `mk-shell--send-input's call."
       (cons parsed
             (string-trim remaining)))))
 
-(defun mk-shell--command-and-response-at-point ()
+(defun shell-maker--command-and-response-at-point ()
   "Extract the current command and response in buffer."
   (save-excursion
     (save-restriction
-      (mk-shell-narrow-to-prompt)
-      (let ((items (mk-shell--extract-history
+      (shell-maker-narrow-to-prompt)
+      (let ((items (shell-maker--extract-history
                     (buffer-string)
-                    (mk-shell-prompt mk-shell-config))))
+                    (shell-maker-prompt shell-maker-config))))
         (cl-assert (or (seq-empty-p items)
                        (eq (length items) 1)))
         items))))
 
-(defun mk-shell--write-output-to-log-buffer (output)
+(defun shell-maker--write-output-to-log-buffer (output)
   "Write OUTPUT to log buffer."
-  (when mk-shell-logging
-    (when (mk-shell-config-redact-log-output mk-shell-config)
+  (when shell-maker-logging
+    (when (shell-maker-config-redact-log-output shell-maker-config)
       (setq output
-            (funcall (mk-shell-config-redact-log-output mk-shell-config) output)))
+            (funcall (shell-maker-config-redact-log-output shell-maker-config) output)))
     (with-current-buffer (get-buffer-create (format "*%s-log*"
-                                                    (mk-shell-process-name mk-shell-config)))
+                                                    (shell-maker-process-name shell-maker-config)))
       (let ((beginning-of-input (goto-char (point-max))))
         (insert output)
         (when (and (require 'json nil t)
-                   (ignore-errors (mk-shell--json-parse-string output)))
+                   (ignore-errors (shell-maker--json-parse-string output)))
           (json-pretty-print beginning-of-input (point)))))))
 
-(defun mk-shell--process nil
+(defun shell-maker--process nil
   "Get shell buffer process."
-  (get-buffer-process (mk-shell-buffer mk-shell-config)))
+  (get-buffer-process (shell-maker-buffer shell-maker-config)))
 
-(defun mk-shell-save-session-transcript ()
+(defun shell-maker-save-session-transcript ()
   "Save shell transcript to file.
 
 Very much EXPERIMENTAL."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
-  (if mk-shell--file
+  (if shell-maker--file
       (let ((content (buffer-string))
-            (path mk-shell--file))
+            (path shell-maker--file))
         (with-temp-buffer
           (insert content)
           (write-file path nil)))
@@ -633,16 +633,16 @@ Very much EXPERIMENTAL."
       (with-temp-buffer
         (insert content)
         (write-file path t))
-      (setq mk-shell--file path))))
+      (setq shell-maker--file path))))
 
-(defun mk-shell--extract-history (text prompt-regexp)
+(defun shell-maker--extract-history (text prompt-regexp)
   "Extract all commands and respective output in TEXT with PROMPT-REGEXP.
 
 Returns a list of (command . output) cons."
   (setq text (substring-no-properties text))
   (let ((result))
     (mapc (lambda (item)
-            (let* ((values (split-string item "<mk-shell-end-of-prompt>"))
+            (let* ((values (split-string item "<shell-maker-end-of-prompt>"))
                    (lines (split-string item "\n"))
                    (prompt (string-trim (nth 0 values)))
                    (response (string-trim (progn
@@ -650,7 +650,7 @@ Returns a list of (command . output) cons."
                                                 (nth 1 values)
                                               (string-join
                                                (cdr lines) "\n"))))))
-              (unless (string-match "<mk-shell-ignored-response>" response)
+              (unless (string-match "<shell-maker-ignored-response>" response)
                 (when (or (not (string-empty-p prompt))
                           (not (string-empty-p response)))
                   (push (cons (if (string-empty-p prompt)
@@ -663,7 +663,7 @@ Returns a list of (command . output) cons."
           (split-string text prompt-regexp))
     (nreverse result)))
 
-(defun mk-shell--output-filter (process string)
+(defun shell-maker--output-filter (process string)
   "Copy of `comint-output-filter' but avoids fontifying non-prompt text.
 
 Uses PROCESS and STRING same as `comint-output-filter'."
@@ -713,24 +713,24 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 	                         `(rear-nonsticky
 	                           ,comint--prompt-rear-nonsticky))))))))
 
-(defun mk-shell-buffer (config)
+(defun shell-maker-buffer (config)
   "Get buffer from CONFIG."
-  (get-buffer-create (mk-shell-buffer-name config)))
+  (get-buffer-create (shell-maker-buffer-name config)))
 
-(defun mk-shell-buffer-name (config)
+(defun shell-maker-buffer-name (config)
   "Get buffer name from CONFIG."
   (concat "*"
-          (downcase (mk-shell-config-name config))
+          (downcase (shell-maker-config-name config))
           "*"))
 
-(defun mk-shell-process-name (config)
+(defun shell-maker-process-name (config)
   "Get process name from CONFIG."
-  (downcase (mk-shell-config-name config)))
+  (downcase (shell-maker-config-name config)))
 
-(defun mk-shell-prompt (config)
+(defun shell-maker-prompt (config)
   "Get prompt name from CONFIG."
-  (concat (mk-shell-config-name config) "> "))
+  (concat (shell-maker-config-name config) "> "))
 
-(provide 'mk-shell)
+(provide 'shell-maker)
 
-;;; mk-shell.el ends here
+;;; shell-maker.el ends here

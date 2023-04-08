@@ -25,7 +25,7 @@
 ;;
 ;; Run `chatgpt-shell' to get a ChatGPT shell.
 
-(require 'mk-shell)
+(require 'shell-maker)
 
 ;;; Code:
 
@@ -52,9 +52,9 @@ For example: \"1024x1024\""
   :type 'integer
   :group 'dall-e-shell)
 
-(defvaralias 'dall-e-shell-display-function 'mk-shell-display-function)
+(defvaralias 'dall-e-shell-display-function 'shell-maker-display-function)
 
-(defvaralias 'dall-e-shell-read-string-function 'mk-shell-read-string-function)
+(defvaralias 'dall-e-shell-read-string-function 'shell-maker-read-string-function)
 
 ;; Aliasing enables editing as text in babel.
 (defalias 'dall-e-shell-mode #'text-mode)
@@ -62,7 +62,7 @@ For example: \"1024x1024\""
 (defvar dall-e-shell--url "https://api.openai.com/v1/images/generations")
 
 (defvar dall-e-shell--config
-  (make-mk-shell-config
+  (make-shell-maker-config
    :name "DALL-E"
    :validate-command
    (lambda (_command)
@@ -76,7 +76,7 @@ or
 (setq dall-e-shell-openai-key \"my-key\")"))
    :execute-command
    (lambda (_command history callback error-callback)
-     (mk-shell-async-shell-command
+     (shell-maker-async-shell-command
       (dall-e-shell--make-curl-request-command-list
        (dall-e-shell--make-payload history))
       nil ;; no streaming
@@ -88,7 +88,7 @@ or
 (defun dall-e-shell ()
   "Start a DALL-E shell."
   (interactive)
-  (mk-shell-start dall-e-shell--config))
+  (shell-maker-start dall-e-shell--config))
 
 (defun dall-e-shell--make-payload (history)
   "Create the request payload from HISTORY."
@@ -101,9 +101,9 @@ or
 (defun dall-e-shell--extract-response (json &optional no-download)
   "Extract DALL-E response from JSON.
 Set NO-DOWNLOAD to skip automatic downloading."
-  (if-let ((parsed (mk-shell--json-parse-string-filtering
+  (if-let ((parsed (shell-maker--json-parse-string-filtering
                     json "^curl:.*\n?"))
-           (buffer (mk-shell-buffer mk-shell-config)))
+           (buffer (shell-maker-buffer shell-maker-config)))
       (if-let* ((url (let-alist parsed
                        (let-alist (seq-first .data)
                          .url)))
@@ -152,7 +152,7 @@ Set NO-DOWNLOAD to skip automatic downloading."
 
 Optionally provide model VERSION or IMAGE-SIZE."
   (with-temp-buffer
-    (setq-local mk-shell-config
+    (setq-local shell-maker-config
                 dall-e-shell--config)
     (let* ((api-buffer (current-buffer))
            (command
@@ -249,7 +249,7 @@ ERROR-CALLBACK otherwise."
                                 (funcall dall-e-shell-openai-key)
                               (error
                                "KEY-NOT-FOUND")))))
-        "-d" (mk-shell--json-encode request-data)))
+        "-d" (shell-maker--json-encode request-data)))
 
 (provide 'dall-e-shell)
 

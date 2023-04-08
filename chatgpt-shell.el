@@ -34,7 +34,7 @@
 (require 'esh-mode)
 (require 'eshell)
 (require 'ielm)
-(require 'mk-shell)
+(require 'shell-maker)
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
@@ -62,13 +62,13 @@
 
 This is useful if you'd like to automatically handle or suggest things."
   :type 'function
-  :group 'mk-shell)
+  :group 'shell-maker)
 
-(defvaralias 'chatgpt-shell-display-function 'mk-shell-display-function)
+(defvaralias 'chatgpt-shell-display-function 'shell-maker-display-function)
 
-(defvaralias 'chatgpt-shell-read-string-function 'mk-shell-read-string-function)
+(defvaralias 'chatgpt-shell-read-string-function 'shell-maker-read-string-function)
 
-(defalias 'chatgpt-shell-save-session-transcript 'mk-shell-save-session-transcript)
+(defalias 'chatgpt-shell-save-session-transcript 'shell-maker-save-session-transcript)
 
 (defvar chatgpt-shell--prompt-history nil)
 
@@ -152,7 +152,7 @@ ChatGPT."
 (defvar chatgpt-shell--url "https://api.openai.com/v1/chat/completions")
 
 (defvar chatgpt-shell--config
-  (make-mk-shell-config
+  (make-shell-maker-config
    :name "ChatGPT"
    :validate-command
    (lambda (_command)
@@ -166,7 +166,7 @@ or
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :execute-command
    (lambda (_command history callback error-callback)
-     (mk-shell-async-shell-command
+     (shell-maker-async-shell-command
       (chatgpt-shell--make-curl-request-command-list
        (chatgpt-shell--make-payload history))
       chatgpt-shell-streaming
@@ -197,7 +197,7 @@ or
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
   (interactive)
-  (mk-shell-start chatgpt-shell--config))
+  (shell-maker-start chatgpt-shell--config))
 
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
@@ -237,19 +237,19 @@ If region is active, append to prompt."
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
           chatgpt-shell-default-prompts))
-  (let ((prompt (funcall mk-shell-read-string-function
+  (let ((prompt (funcall shell-maker-read-string-function
                          (concat
                           (if (region-active-p)
                               "[appending region] "
                             "")
-                          (mk-shell-prompt
+                          (shell-maker-prompt
                            chatgpt-shell--config))
                          'chatgpt-shell--prompt-history)))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
     (chatgpt-shell-send-to-buffer prompt)
-    (mk-shell--send-input)))
+    (shell-maker--send-input)))
 
 (defun chatgpt-shell-describe-code ()
   "Describe code from region using ChatGPT."
@@ -259,7 +259,7 @@ If region is active, append to prompt."
   (chatgpt-shell-send-to-buffer
    (concat "What does the following code do?\n\n"
            (buffer-substring (region-beginning) (region-end))))
-  (mk-shell--send-input))
+  (shell-maker--send-input))
 
 (defun chatgpt-shell-send-region-with-header (header)
   "Send text with HEADER from region using ChatGPT."
@@ -291,7 +291,7 @@ If region is active, append to prompt."
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
            "\n\n"
            (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
-  (mk-shell--send-input))
+  (shell-maker--send-input))
 
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
@@ -301,7 +301,7 @@ If region is active, append to prompt."
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
            "\n\n"
            (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
-  (mk-shell--send-input))
+  (shell-maker--send-input))
 
 (defun chatgpt-shell-send-region (review)
   "Send region to ChatGPT.
@@ -326,14 +326,14 @@ Set SAVE-EXCURSION to prevent point from moving."
   (chatgpt-shell)
   (with-selected-window
       (get-buffer-window (get-buffer-create "*chatgpt*"))
-    (when mk-shell--busy
-      (mk-shell-interrupt))
+    (when shell-maker--busy
+      (shell-maker-interrupt))
     (goto-char (point-max))
     (if review
         (save-excursion
           (insert text))
       (insert text)
-      (mk-shell--send-input))))
+      (shell-maker--send-input))))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)
   "Send TEXT to *ielm* buffer.
@@ -398,9 +398,9 @@ For example:
    (message \"%s\" error)))"
   (if (and callback error-callback)
       (with-temp-buffer
-        (setq-local mk-shell-config
+        (setq-local shell-maker-config
                     chatgpt-shell--config)
-        (mk-shell-async-shell-command
+        (shell-maker-async-shell-command
          (chatgpt-shell--make-curl-request-command-list
           (let ((request-data `((model . ,(or version
                                               chatgpt-shell-model-version))
@@ -414,7 +414,7 @@ For example:
          callback
          error-callback))
     (with-temp-buffer
-      (setq-local mk-shell-config
+      (setq-local shell-maker-config
                   chatgpt-shell--config)
       (let* ((buffer (current-buffer))
              (command
@@ -476,7 +476,7 @@ For example:
                                 (funcall chatgpt-shell-openai-key)
                               (error
                                "KEY-NOT-FOUND")))))
-        "-d" (mk-shell--json-encode request-data)))
+        "-d" (shell-maker--json-encode request-data)))
 
 (defun chatgpt-shell--make-payload (history)
   "Create the request payload from HISTORY."
@@ -510,12 +510,12 @@ For example:
                   .message.content))
             .error.message
             ""))
-    (if-let (parsed (mk-shell--json-parse-string json))
+    (if-let (parsed (shell-maker--json-parse-string json))
         (string-trim
          (let-alist parsed
            (let-alist (seq-first .choices)
              .message.content)))
-      (if-let (parsed-error (mk-shell--json-parse-string-filtering
+      (if-let (parsed-error (shell-maker--json-parse-string-filtering
                              json "^curl:.*\n?"))
           (let-alist parsed-error
             .error.message)))))
@@ -526,19 +526,19 @@ For example:
 
 Very much EXPERIMENTAL."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let* ((path (read-file-name "Restore from: " nil nil t))
-         (prompt (mk-shell-prompt mk-shell-config))
+         (prompt (shell-maker-prompt shell-maker-config))
          (history (with-temp-buffer
                                    (insert-file-contents path)
                                    (chatgpt-shell--extract-history
                                     (buffer-string)
                                     prompt)))
-         (execute-command (mk-shell-config-execute-command
-                         mk-shell-config))
-         (validate-command (mk-shell-config-validate-command
-                         mk-shell-config))
+         (execute-command (shell-maker-config-execute-command
+                         shell-maker-config))
+         (validate-command (shell-maker-config-validate-command
+                         shell-maker-config))
          (command)
          (response)
          (failed))
@@ -547,8 +547,8 @@ Very much EXPERIMENTAL."
     ;; any other command.
     (unwind-protect
         (progn
-          (setf (mk-shell-config-validate-command mk-shell-config) nil)
-          (setf (mk-shell-config-execute-command mk-shell-config)
+          (setf (shell-maker-config-validate-command shell-maker-config) nil)
+          (setf (shell-maker-config-execute-command shell-maker-config)
                 (lambda (_request-data callback _error-callback)
                   (setq response (car history))
                   (setq history (cdr history))
@@ -562,7 +562,7 @@ Very much EXPERIMENTAL."
                     (setq history (cdr history))
                     (when command
                       (insert (map-elt command 'content))
-                      (mk-shell--send-input)))))
+                      (shell-maker--send-input)))))
           (goto-char (point-max))
           (comint-clear-buffer)
           (setq command (car history))
@@ -573,14 +573,14 @@ Very much EXPERIMENTAL."
               (setq failed t)
               (user-error "Invalid transcript"))
             (insert (map-elt command 'content))
-            (mk-shell--send-input)))
+            (shell-maker--send-input)))
       (if failed
-          (setq mk-shell--file nil)
-        (setq mk-shell--file path))
-      (setq mk-shell--busy nil)
-      (setf (mk-shell-config-validate-command mk-shell-config)
+          (setq shell-maker--file nil)
+        (setq shell-maker--file path))
+      (setq shell-maker--busy nil)
+      (setf (shell-maker-config-validate-command shell-maker-config)
             validate-command)
-      (setf (mk-shell-config-execute-command mk-shell-config)
+      (setf (shell-maker-config-execute-command shell-maker-config)
             execute-command))))
 
 (defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
@@ -604,7 +604,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties body-start body-end))
-        (buf (mk-shell-buffer mk-shell-config))
+        (buf (shell-maker-buffer shell-maker-config))
         (pos 0)
         (props)
         (overlay)
@@ -669,7 +669,7 @@ If no LENGTH set, use 2048."
 (defun chatgpt-shell-view-at-point ()
   "View prompt and putput at point in a separate buffer."
   (interactive)
-  (unless (eq major-mode 'mk-shell-mode)
+  (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (goto-char (process-mark
@@ -682,15 +682,15 @@ If no LENGTH set, use 2048."
         (forward-line -1)
         (end-of-line))
       (let* ((items (chatgpt-shell--user-assistant-messages
-                     (mk-shell--command-and-response-at-point)))
+                     (shell-maker--command-and-response-at-point)))
              (command (string-trim (or (map-elt (seq-first items) 'content) "")))
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
                                            (concat
-                                            (mk-shell-prompt mk-shell-config)
+                                            (shell-maker-prompt shell-maker-config)
                                             ;; Only the first line of prompt.
                                             (seq-first (split-string command "\n")))
-                                         (concat (mk-shell-prompt mk-shell-config)
+                                         (concat (shell-maker-prompt shell-maker-config)
                                                  "(no prompt)"))))
         (when (seq-empty-p items)
           (user-error "Nothing to view"))
@@ -708,7 +708,7 @@ If no LENGTH set, use 2048."
 (defun chatgpt-shell--extract-history (text prompt-regexp)
   "Extract all command and responses in TEXT with PROMPT-REGEXP."
   (chatgpt-shell--user-assistant-messages
-   (mk-shell--extract-history text prompt-regexp)))
+   (shell-maker--extract-history text prompt-regexp)))
 
 (defun chatgpt-shell--user-assistant-messages (history)
   "Convert HISTORY to ChatGPT format.
