@@ -60,7 +60,15 @@
 (defcustom chatgpt-shell-on-command-finished-function nil
   "Function to automatically execute after last command output.
 
-This is useful if you'd like to automatically handle or suggest things."
+This is useful if you'd like to automatically handle or suggest things
+post execution.
+
+For example:
+
+\(setq chatgpt-shell-on-command-finished-function
+   (lambda (command output)
+     (message \"Command: %s\" command)
+     (message \"Output: %s\" output)))"
   :type 'function
   :group 'shell-maker)
 
@@ -174,10 +182,10 @@ or
       callback
       error-callback))
    :on-command-finished
-   (lambda (_command output)
+   (lambda (command output)
      (chatgpt-shell--put-source-block-overlays)
      (when chatgpt-shell-on-command-finished-function
-       (funcall chatgpt-shell-on-command-finished-function output)))
+       (funcall chatgpt-shell-on-command-finished-function command output)))
    :redact-log-output
    (lambda (output)
      (if (chatgpt-shell-openai-key)
