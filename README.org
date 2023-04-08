@@ -143,3 +143,29 @@ There are more. Browse via =M-x set-variable=
 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                |
 
 There are more. Browse all available via =M-x=.
+
+* shell-maker
+
+There are currently two shell implementations (ChatGPT and DALL-E). Other services (local or cloud) can be brought to Emacs as shells. =shell-maker= should help with that. Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic shell implementation looks as follows:
+
+#+begin_src emacs-lisp :lexical no
+  (require 'shell-maker)
+
+  (defvar greeter-shell--config
+    (make-shell-maker-config
+     :name "Greeter"
+     :execute-command
+     (lambda (command _history callback error-callback)
+       (funcall callback
+                (format "Hello \"%s\"" command)
+                nil))))
+
+  (defun greeter-shell ()
+    "Start a Repeater shell."
+    (interactive)
+    (shell-maker-start greeter-shell--config))
+#+end_src
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/greeter.gif" width="50%" />
+
+👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
