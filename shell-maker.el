@@ -165,7 +165,7 @@ Uses the interface provided by `comint-mode'"
     (shell-maker--output-filter (shell-maker--process)
                           (concat reply
                                   (if failed
-                                      (propertize "<shell-maker-ignored-response>"
+                                      (propertize "<shell-maker-failed-command>"
                                                   'invisible (not shell-maker--show-invisible-markers))
                                     "")
                                   shell-maker--prompt-internal))))
@@ -329,7 +329,7 @@ Otherwise save current output at location."
     (comint-send-input)
     (goto-char (point-max))
     (shell-maker--output-filter (shell-maker--process)
-                          (concat (propertize "<shell-maker-ignored-response>"
+                          (concat (propertize "<shell-maker-failed-command>"
                                               'invisible (not shell-maker--show-invisible-markers))
                                   "\n"
                                   shell-maker--prompt-internal))
@@ -650,7 +650,7 @@ Returns a list of (command . output) cons."
                                                 (nth 1 values)
                                               (string-join
                                                (cdr lines) "\n"))))))
-              (unless (string-match "<shell-maker-ignored-response>" response)
+              (unless (string-match "<shell-maker-failed-command>" response)
                 (when (or (not (string-empty-p prompt))
                           (not (string-empty-p response)))
                   (push (cons (if (string-empty-p prompt)
