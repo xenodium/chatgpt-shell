@@ -64,8 +64,8 @@ For example: \"1024x1024\""
 (defvar dall-e-shell--config
   (make-mk-shell-config
    :name "DALL-E"
-   :invalid-input
-   (lambda (_input)
+   :validate-command
+   (lambda (_command)
      (unless dall-e-shell-openai-key
        "Variable `dall-e-shell-openai-key' needs to be set to your key.
 
@@ -74,11 +74,11 @@ Try M-x set-variable dall-e-shell-openai-key
 or
 
 (setq dall-e-shell-openai-key \"my-key\")"))
-   :request-maker
+   :execute-command
    (lambda (_command history callback error-callback)
      (mk-shell-async-shell-command
       (dall-e-shell--make-curl-request-command-list
-       (dall-e-shell--make-data history))
+       (dall-e-shell--make-payload history))
       nil ;; no streaming
       #'dall-e-shell--extract-response
       callback
@@ -90,10 +90,10 @@ or
   (interactive)
   (mk-shell-start dall-e-shell--config))
 
-(defun dall-e-shell--make-data (commands-and-responses)
-  "Create the request payload from COMMANDS-AND-RESPONSES."
+(defun dall-e-shell--make-payload (history)
+  "Create the request payload from HISTORY."
   (let ((request-data `((model . ,dall-e-shell-model-version)
-                        (prompt . ,(car (car (last commands-and-responses)))))))
+                        (prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
     request-data))

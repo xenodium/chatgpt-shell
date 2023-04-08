@@ -57,7 +57,7 @@
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-on-response-function nil
+(defcustom chatgpt-shell-on-command-finished-function nil
   "Function to automatically execute after last command output.
 
 This is useful if you'd like to automatically handle or suggest things."
@@ -154,8 +154,8 @@ ChatGPT."
 (defvar chatgpt-shell--config
   (make-mk-shell-config
    :name "ChatGPT"
-   :invalid-input
-   (lambda (_input)
+   :validate-command
+   (lambda (_command)
      (unless chatgpt-shell-openai-key
        "Variable `chatgpt-shell-openai-key' needs to be set to your key.
 
@@ -164,21 +164,21 @@ Try M-x set-variable chatgpt-shell-openai-key
 or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
-   :request-maker
+   :execute-command
    (lambda (_command history callback error-callback)
      (mk-shell-async-shell-command
       (chatgpt-shell--make-curl-request-command-list
-       (chatgpt-shell--make-data history))
+       (chatgpt-shell--make-payload history))
       chatgpt-shell-streaming
       #'chatgpt-shell--extract-chatgpt-response
       callback
       error-callback))
-   :response-post-processor
-   (lambda (response)
+   :on-command-finished
+   (lambda (_command output)
      (chatgpt-shell--put-source-block-overlays)
-     (when chatgpt-shell-on-response-function
-       (funcall chatgpt-shell-on-response-function response)))
-   :log-redactor
+     (when chatgpt-shell-on-command-finished-function
+       (funcall chatgpt-shell-on-command-finished-function output)))
+   :redact-log-output
    (lambda (output)
      (if (chatgpt-shell-openai-key)
          (string-replace (chatgpt-shell-openai-key)
@@ -478,12 +478,12 @@ For example:
                                "KEY-NOT-FOUND")))))
         "-d" (mk-shell--json-encode request-data)))
 
-(defun chatgpt-shell--make-data (commands-and-responses)
-  "Create the request payload from COMMANDS-AND-RESPONSES."
-  (setq commands-and-responses
+(defun chatgpt-shell--make-payload (history)
+  "Create the request payload from HISTORY."
+  (setq history
         (vconcat ;; Vector for json
          (chatgpt-shell--user-assistant-messages
-          (last commands-and-responses
+          (last history
                 (chatgpt-shell--unpaired-length
                  chatgpt-shell-transmitted-context-length)))))
   (let ((request-data `((model . ,chatgpt-shell-model-version)
@@ -493,8 +493,8 @@ For example:
                                            (list
                                             (cons 'role "system")
                                             (cons 'content chatgpt-shell-system-prompt)))
-                                          commands-and-responses)
-                                       commands-and-responses)))))
+                                          history)
+                                       history)))))
     (when chatgpt-shell-model-temperature
       (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
     (when chatgpt-shell-streaming
@@ -530,43 +530,43 @@ Very much EXPERIMENTAL."
     (user-error "Not in a shell"))
   (let* ((path (read-file-name "Restore from: " nil nil t))
          (prompt (mk-shell-prompt mk-shell-config))
-         (commands-and-responses (with-temp-buffer
+         (history (with-temp-buffer
                                    (insert-file-contents path)
-                                   (chatgpt-shell--extract-commands-and-responses
+                                   (chatgpt-shell--extract-history
                                     (buffer-string)
                                     prompt)))
-         (request-maker (mk-shell-config-request-maker
+         (execute-command (mk-shell-config-execute-command
                          mk-shell-config))
-         (invalid-input (mk-shell-config-invalid-input
+         (validate-command (mk-shell-config-validate-command
                          mk-shell-config))
          (command)
          (response)
          (failed))
     ;; Momentarily overrides request handling to replay all commands
-    ;; read from file so comint treats all commands/responses like
+    ;; read from file so comint treats all commands/outputs like
     ;; any other command.
     (unwind-protect
         (progn
-          (setf (mk-shell-config-invalid-input mk-shell-config) nil)
-          (setf (mk-shell-config-request-maker mk-shell-config)
+          (setf (mk-shell-config-validate-command mk-shell-config) nil)
+          (setf (mk-shell-config-execute-command mk-shell-config)
                 (lambda (_request-data callback _error-callback)
-                  (setq response (car commands-and-responses))
-                  (setq commands-and-responses (cdr commands-and-responses))
+                  (setq response (car history))
+                  (setq history (cdr history))
                   (when response
                     (unless (string-equal (map-elt response 'role)
                                           "assistant")
                       (setq failed t)
                       (user-error "Invalid transcript"))
                     (funcall callback (map-elt response 'content) nil)
-                    (setq command (car commands-and-responses))
-                    (setq commands-and-responses (cdr commands-and-responses))
+                    (setq command (car history))
+                    (setq history (cdr history))
                     (when command
                       (insert (map-elt command 'content))
                       (mk-shell--send-input)))))
           (goto-char (point-max))
           (comint-clear-buffer)
-          (setq command (car commands-and-responses))
-          (setq commands-and-responses (cdr commands-and-responses))
+          (setq command (car history))
+          (setq history (cdr history))
           (when command
             (unless (string-equal (map-elt command 'role)
                                   "user")
@@ -578,10 +578,10 @@ Very much EXPERIMENTAL."
           (setq mk-shell--file nil)
         (setq mk-shell--file path))
       (setq mk-shell--busy nil)
-      (setf (mk-shell-config-invalid-input mk-shell-config)
-            invalid-input)
-      (setf (mk-shell-config-request-maker mk-shell-config)
-            request-maker))))
+      (setf (mk-shell-config-validate-command mk-shell-config)
+            validate-command)
+      (setf (mk-shell-config-execute-command mk-shell-config)
+            execute-command))))
 
 (defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
 lang-start lang-end body-start body-end quotes2-start quotes2-end)
@@ -705,13 +705,13 @@ If no LENGTH set, use 2048."
     (switch-to-buffer buf)
     buf))
 
-(defun chatgpt-shell--extract-commands-and-responses (text prompt-regexp)
+(defun chatgpt-shell--extract-history (text prompt-regexp)
   "Extract all command and responses in TEXT with PROMPT-REGEXP."
   (chatgpt-shell--user-assistant-messages
-   (mk-shell--extract-commands-and-responses text prompt-regexp)))
+   (mk-shell--extract-history text prompt-regexp)))
 
-(defun chatgpt-shell--user-assistant-messages (commands-and-responses)
-  "Convert COMMANDS-AND-RESPONSES to ChatGPT format.
+(defun chatgpt-shell--user-assistant-messages (history)
+  "Convert HISTORY to ChatGPT format.
 
 Sequence must be a vector for json serialization.
 
@@ -730,7 +730,7 @@ For example:
        (when (cdr item)
          (push (list (cons 'role "assistant")
                      (cons 'content (cdr item))) result)))
-     commands-and-responses)
+     history)
     (nreverse result)))
 
 (provide 'chatgpt-shell)

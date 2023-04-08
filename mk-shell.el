@@ -72,10 +72,10 @@ Enable it for troubleshooting issues."
 (cl-defstruct
     mk-shell-config
   name
-  invalid-input
-  request-maker
-  response-post-processor
-  log-redactor)
+  validate-command
+  execute-command
+  on-command-finished
+  redact-log-output)
 
 (defvar-local mk-shell--busy nil)
 
@@ -354,13 +354,13 @@ Otherwise save current output at location."
        ((not (mk-shell--curl-version-supported))
         (mk-shell--write-reply "\nYou need curl version 7.76 or newer.\n\n")
         (setq mk-shell--busy nil))
-       ((and (mk-shell-config-invalid-input
+       ((and (mk-shell-config-validate-command
               mk-shell-config)
-             (funcall (mk-shell-config-invalid-input
+             (funcall (mk-shell-config-validate-command
                        mk-shell-config) input-string))
         (mk-shell--write-reply
          (concat "\n"
-                 (funcall (mk-shell-config-invalid-input
+                 (funcall (mk-shell-config-validate-command
                            mk-shell-config) input-string)
                  "\n\n"))
         (setq mk-shell--busy nil))
@@ -374,9 +374,9 @@ Otherwise save current output at location."
         (mk-shell--output-filter (mk-shell--process)
                                  (propertize "<mk-shell-end-of-prompt>"
                                              'invisible (not mk-shell--show-invisible-markers)))
-        (funcall (mk-shell-config-request-maker mk-shell-config)
+        (funcall (mk-shell-config-execute-command mk-shell-config)
                  input-string
-                 (mk-shell--extract-commands-and-responses
+                 (mk-shell--extract-history
                   (with-current-buffer buffer
                     (buffer-string))
                   (mk-shell-prompt mk-shell-config))
@@ -393,9 +393,10 @@ Otherwise save current output at location."
                          (mk-shell--write-reply (concat prefix-newline response suffix-newline))
                          (mk-shell--announce-response buffer)
                          (setq mk-shell--busy nil)
-                         (when (mk-shell-config-response-post-processor mk-shell-config)
+                         (when (mk-shell-config-on-command-finished mk-shell-config)
                            ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                           (funcall (mk-shell-config-response-post-processor mk-shell-config)
+                           (funcall (mk-shell-config-on-command-finished mk-shell-config)
+                                    input-string
                                     (mk-shell-last-output))))
                      (mk-shell--write-reply "Error: that's all is known" t) ;; comeback
                      (setq mk-shell--busy nil)
@@ -588,7 +589,7 @@ Used by `mk-shell--send-input's call."
   (save-excursion
     (save-restriction
       (mk-shell-narrow-to-prompt)
-      (let ((items (mk-shell--extract-commands-and-responses
+      (let ((items (mk-shell--extract-history
                     (buffer-string)
                     (mk-shell-prompt mk-shell-config))))
         (cl-assert (or (seq-empty-p items)
@@ -598,9 +599,9 @@ Used by `mk-shell--send-input's call."
 (defun mk-shell--write-output-to-log-buffer (output)
   "Write OUTPUT to log buffer."
   (when mk-shell-logging
-    (when (mk-shell-config-log-redactor mk-shell-config)
+    (when (mk-shell-config-redact-log-output mk-shell-config)
       (setq output
-            (funcall (mk-shell-config-log-redactor mk-shell-config) output)))
+            (funcall (mk-shell-config-redact-log-output mk-shell-config) output)))
     (with-current-buffer (get-buffer-create (format "*%s-log*"
                                                     (mk-shell-process-name mk-shell-config)))
       (let ((beginning-of-input (goto-char (point-max))))
@@ -634,10 +635,10 @@ Very much EXPERIMENTAL."
         (write-file path t))
       (setq mk-shell--file path))))
 
-(defun mk-shell--extract-commands-and-responses (text prompt-regexp)
-  "Extract all commands and responses in TEXT with PROMPT-REGEXP.
+(defun mk-shell--extract-history (text prompt-regexp)
+  "Extract all commands and respective output in TEXT with PROMPT-REGEXP.
 
-Returns a list of cons pairs."
+Returns a list of (command . output) cons."
   (setq text (substring-no-properties text))
   (let ((result))
     (mapc (lambda (item)
