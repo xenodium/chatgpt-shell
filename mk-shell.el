@@ -410,7 +410,7 @@ Otherwise save current output at location."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
 
-(defun mk-shell--async-shell-command (command streaming response-extractor callback error-callback)
+(defun mk-shell-async-shell-command (command streaming response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."

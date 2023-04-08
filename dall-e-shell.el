@@ -76,7 +76,7 @@ or
 (setq dall-e-shell-openai-key \"my-key\")"))
    :request-maker
    (lambda (_command history callback error-callback)
-     (mk-shell--async-shell-command
+     (mk-shell-async-shell-command
       (dall-e-shell--make-curl-request-command-list
        (dall-e-shell--make-data history))
       nil ;; no streaming

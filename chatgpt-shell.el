@@ -166,7 +166,7 @@ or
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :request-maker
    (lambda (_command history callback error-callback)
-     (mk-shell--async-shell-command
+     (mk-shell-async-shell-command
       (chatgpt-shell--make-curl-request-command-list
        (chatgpt-shell--make-data history))
       chatgpt-shell-streaming
@@ -400,7 +400,7 @@ For example:
       (with-temp-buffer
         (setq-local mk-shell-config
                     chatgpt-shell--config)
-        (mk-shell--async-shell-command
+        (mk-shell-async-shell-command
          (chatgpt-shell--make-curl-request-command-list
           (let ((request-data `((model . ,(or version
                                               chatgpt-shell-model-version))
