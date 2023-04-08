@@ -121,7 +121,7 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   :type 'string
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-streaming nil
+(defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (experimental)."
   :type 'boolean
   :group 'chatgpt-shell)
