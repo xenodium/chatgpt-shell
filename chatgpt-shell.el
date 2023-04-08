@@ -165,15 +165,14 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :request-maker
-   (lambda (request-data response-extractor callback error-callback)
+   (lambda (commands callback error-callback)
      (mk-shell--async-shell-command
-      (chatgpt-shell--make-curl-request-command-list request-data)
+      (chatgpt-shell--make-curl-request-command-list
+       (chatgpt-shell--make-data commands))
       chatgpt-shell-streaming
-      response-extractor
+      #'chatgpt-shell--extract-chatgpt-response
       callback
       error-callback))
-   :request-data-maker #'chatgpt-shell--make-data
-   :response-extractor #'chatgpt-shell--extract-chatgpt-response
    :response-post-processor
    (lambda (response)
      (chatgpt-shell--put-source-block-overlays)
@@ -411,7 +410,7 @@ For example:
               (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
             request-data))
          nil ;; streaming
-         (mk-shell-config-response-extractor mk-shell-config)
+         #'chatgpt-shell--extract-chatgpt-response
          callback
          error-callback))
     (with-temp-buffer
@@ -536,8 +535,6 @@ Very much EXPERIMENTAL."
                                    (chatgpt-shell--extract-commands-and-responses
                                     (buffer-string)
                                     prompt)))
-         (response-extractor (mk-shell-config-response-extractor
-                              mk-shell-config))
          (request-maker (mk-shell-config-request-maker
                          mk-shell-config))
          (invalid-input (mk-shell-config-invalid-input
@@ -550,12 +547,9 @@ Very much EXPERIMENTAL."
     ;; any other command.
     (unwind-protect
         (progn
-          (setf (mk-shell-config-response-extractor mk-shell-config)
-                (lambda (json)
-                  json))
           (setf (mk-shell-config-invalid-input mk-shell-config) nil)
           (setf (mk-shell-config-request-maker mk-shell-config)
-                (lambda (_url _request-data _response-extractor callback _error-callback)
+                (lambda (_request-data callback _error-callback)
                   (setq response (car commands-and-responses))
                   (setq commands-and-responses (cdr commands-and-responses))
                   (when response
@@ -584,8 +578,6 @@ Very much EXPERIMENTAL."
           (setq mk-shell--file nil)
         (setq mk-shell--file path))
       (setq mk-shell--busy nil)
-      (setf (mk-shell-config-response-extractor mk-shell-config)
-            response-extractor)
       (setf (mk-shell-config-invalid-input mk-shell-config)
             invalid-input)
       (setf (mk-shell-config-request-maker mk-shell-config)

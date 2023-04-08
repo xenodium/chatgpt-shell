@@ -74,8 +74,6 @@ Enable it for troubleshooting issues."
   name
   invalid-input
   request-maker
-  request-data-maker
-  response-extractor
   response-post-processor
   log-redactor)
 
@@ -377,12 +375,10 @@ Otherwise save current output at location."
                                  (propertize "<mk-shell-end-of-prompt>"
                                              'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
-                 (funcall (mk-shell-config-request-data-maker mk-shell-config)
-                          (mk-shell--extract-commands-and-responses
-                           (with-current-buffer buffer
-                             (buffer-string))
-                           (mk-shell-prompt mk-shell-config)))
-                 (mk-shell-config-response-extractor mk-shell-config)
+                 (mk-shell--extract-commands-and-responses
+                  (with-current-buffer buffer
+                    (buffer-string))
+                  (mk-shell-prompt mk-shell-config))
                  (lambda (response partial)
                    (setq response-count (1+ response-count))
                    (setq prefix-newline (if (> response-count 1)
