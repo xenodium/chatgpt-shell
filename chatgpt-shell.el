@@ -616,13 +616,10 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
                     (get-buffer-create
                      (format " *chatgpt-shell-fontification:%s*" lang-mode))
                   (let ((inhibit-modification-hooks nil)
-                        (inhibit-message t)
-                        (filename (make-temp-file "fontify_")))
+                        (inhibit-message t))
                     (erase-buffer)
                     ;; Additional space ensures property change.
                     (insert string " ")
-                    (setq buffer-file-name filename)
-                    (setq buffer-file-truename (file-truename filename))
                     (funcall lang-mode)
                     (font-lock-ensure))
                   (buffer-string)))
