@@ -146,7 +146,11 @@ There are more. Browse all available via =M-x=.
 
 * shell-maker
 
-There are currently two shell implementations (ChatGPT and DALL-E). Other services (local or cloud) can be brought to Emacs as shells. =shell-maker= should help with that. Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic shell implementation looks as follows:
+There are currently two shell implementations (ChatGPT and DALL-E). Other services (local or cloud) can be brought to Emacs as shells. =shell-maker= can help with that.
+
+=shell-maker= is a convenience wrapper around [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint mode]].
+
+Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implementation of a new shell looks as follows:
 
 #+begin_src emacs-lisp :lexical no
   (require 'shell-maker)
