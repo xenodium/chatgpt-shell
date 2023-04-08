@@ -165,10 +165,10 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :request-maker
-   (lambda (commands callback error-callback)
+   (lambda (_command history callback error-callback)
      (mk-shell--async-shell-command
       (chatgpt-shell--make-curl-request-command-list
-       (chatgpt-shell--make-data commands))
+       (chatgpt-shell--make-data history))
       chatgpt-shell-streaming
       #'chatgpt-shell--extract-chatgpt-response
       callback

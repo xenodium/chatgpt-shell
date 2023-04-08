@@ -375,6 +375,7 @@ Otherwise save current output at location."
                                  (propertize "<mk-shell-end-of-prompt>"
                                              'invisible (not mk-shell--show-invisible-markers)))
         (funcall (mk-shell-config-request-maker mk-shell-config)
+                 input-string
                  (mk-shell--extract-commands-and-responses
                   (with-current-buffer buffer
                     (buffer-string))
