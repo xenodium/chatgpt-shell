@@ -98,6 +98,7 @@ Uses the interface provided by `comint-mode'"
     (define-key map "\C-c\C-c" 'shell-maker-interrupt)
     (define-key map "\C-x\C-s" 'shell-maker-save-session-transcript)
     (define-key map "\C-\M-h" 'shell-maker-mark-output)
+    (define-key map "\M-r" 'shell-maker-search-history)
     (setq shell-maker-mode-map map))
 
   (let ((old-point)
@@ -177,6 +178,21 @@ Uses the interface provided by `comint-mode'"
   (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (shell-maker--send-input))
+
+(defun shell-maker-search-history ()
+  "Search comint input ring."
+  (interactive)
+  (unless (eq major-mode 'shell-maker-mode)
+    (user-error "Not in a shell"))
+  (let ((candidate (completing-read
+               "History: "
+               (delete-dups
+                (seq-filter
+                 (lambda (item)
+                   (not (string-empty-p item)))
+                 (ring-elements comint-input-ring))) nil t)))
+    (delete-region (comint-line-beginning-position) (point-max))
+    (insert candidate)))
 
 (defun shell-maker-last-output ()
   "Get the last command output from the shell."
