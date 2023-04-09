@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.12.1
+;; Version: 0.13.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -205,7 +205,38 @@ or
 (defun chatgpt-shell ()
   "Start a ChatGPT shell."
   (interactive)
-  (shell-maker-start chatgpt-shell--config))
+  (shell-maker-start chatgpt-shell--config)
+  (define-key shell-maker-mode-map "\C-\M-h"
+    #'chatgpt-shell-mark-at-point-dwim))
+
+(defun chatgpt-shell-mark-at-point-dwim ()
+  "Mark source block if at point.  Mark all output otherwise."
+  (interactive)
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (progn
+        (set-mark (cdr block))
+        (goto-char (car block)))
+    (shell-maker-mark-output)))
+
+(defun chatgpt-shell-markdown-block-at-point ()
+  "Markdown start/end cons if point at block.  nil otherwise."
+  (save-excursion
+    (save-restriction
+      (shell-maker-narrow-to-prompt)
+      (let ((start (save-excursion
+                     (when (re-search-backward "^```" nil t)
+                       (end-of-line)
+                       (forward-char)
+                       (point))))
+            (end (save-excursion
+                   (when (re-search-forward "^```" nil t)
+                     (forward-line 0)
+                     (backward-char)
+                     (point)))))
+        (when (and start end
+                   (> (point) start)
+                   (< (point) end))
+          (cons start end))))))
 
 (defun chatgpt-shell--inline-codes ()
   "Get a list of all inline codess in buffer."
