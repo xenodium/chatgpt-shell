@@ -165,7 +165,7 @@ Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implement
                 nil))))
 
   (defun greeter-shell ()
-    "Start a Repeater shell."
+    "Start a Greeter shell."
     (interactive)
     (shell-maker-start greeter-shell--config))
 #+end_src
