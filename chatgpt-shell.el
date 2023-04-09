@@ -226,12 +226,10 @@ or
       (let ((start (save-excursion
                      (when (re-search-backward "^```" nil t)
                        (end-of-line)
-                       (forward-char)
                        (point))))
             (end (save-excursion
                    (when (re-search-forward "^```" nil t)
                      (forward-line 0)
-                     (backward-char)
                      (point)))))
         (when (and start end
                    (> (point) start)
