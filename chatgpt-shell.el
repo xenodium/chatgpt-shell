@@ -120,7 +120,7 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-system-prompt nil
+(defcustom chatgpt-shell-system-prompt "Always show code snippets in markdown blocks with language labels."
   "The system message helps set the behavior of the assistant.
 
 For example: You are a helpful assistant that translates English to French.
