@@ -98,6 +98,8 @@ Enable it for troubleshooting issues."
     map)
   "Keymap for `shell-maker' shells.")
 
+(declare-function shell-maker-mode "shell-maker" ())
+
 (defun shell-maker-start (config)
   "Start a shell with CONFIG."
   (define-derived-mode shell-maker-mode comint-mode
