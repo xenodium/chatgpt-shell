@@ -278,15 +278,22 @@ Uses the interface provided by `comint-mode'"
 (defun shell-maker-narrow-to-prompt ()
   "Narrow buffer to the command line (and any following command output) at point."
   (interactive)
-  (let ((begin (shell--prompt-begin-position)))
+  (let ((begin (shell-maker--prompt-begin-position)))
     (narrow-to-region
      begin
      (save-excursion
-       (goto-char (shell--prompt-end-position))
+       (goto-char (shell-maker--prompt-end-position))
        (re-search-forward (shell-maker-prompt shell-maker-config) nil t)
-       (if (= begin (shell--prompt-begin-position))
+       (if (= begin (shell-maker--prompt-begin-position))
            (point-max)
-         (shell--prompt-begin-position))))))
+         (shell-maker--prompt-begin-position))))))
+
+(defun shell-maker--prompt-end-position ()
+  "Based on `shell--prompt-end-position'."
+  (save-excursion
+    (goto-char (shell-maker--prompt-begin-position))
+    (comint-next-prompt 1)
+    (point)))
 
 (defun shell-maker-mark-output ()
   "If at latest prompt, mark last output.
@@ -327,13 +334,32 @@ Otherwise mark current output at location."
         (setq start (point))))
     (save-excursion
       (save-restriction
-        (shell-narrow-to-prompt)
+        (shell-maker-narrow-to-prompt)
         (setq end (point-max))))
     (when revert-pos
       (goto-char current-pos)
       (user-error "Not available"))
     (set-mark (1- end))
     (goto-char (1+ start))))
+
+(defun shell-maker--prompt-begin-position ()
+  "Based on `shell--prompt-begin-position'."
+  (save-excursion
+    (let ((old-point (point)))
+      (max
+       (save-excursion
+         (call-interactively #'comint-previous-prompt)
+         (re-search-backward comint-prompt-regexp)
+         (point))
+       (save-excursion
+         (re-search-backward comint-prompt-regexp)
+         (point))
+       (save-excursion
+         (call-interactively #'comint-next-prompt)
+         (re-search-backward comint-prompt-regexp)
+         (if (<= (point) old-point)
+             (point)
+           (point-min)))))))
 
 (defun shell-maker-save-output ()
   "If at latest prompt, save last output.
