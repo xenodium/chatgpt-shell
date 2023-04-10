@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -769,8 +770,9 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 
 (defun shell-maker-history-file-path (config)
   "Get process name from CONFIG."
-  (expand-file-name (file-name-concat
-                     (downcase (shell-maker-config-name config))
+  (expand-file-name (concat
+                     (file-name-as-directory
+                      (downcase (shell-maker-config-name config)))
                      "history")  user-emacs-directory))
 
 (defun shell-maker-prompt (config)
