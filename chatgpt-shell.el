@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.13.1
+;; Version: 0.14.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -57,19 +57,19 @@
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-on-command-finished-function nil
-  "Function to automatically execute after last command output.
+(defcustom chatgpt-shell-after-command-functions nil
+  "Abnormal hook (i.e. with parameters) invoked after each command.
 
 This is useful if you'd like to automatically handle or suggest things
 post execution.
 
 For example:
 
-\(setq `chatgpt-shell-on-command-finished-function'
+\(add-hook `chatgpt-shell-after-command-functions'
    (lambda (command output)
      (message \"Command: %s\" command)
      (message \"Output: %s\" output)))"
-  :type 'function
+  :type 'hook
   :group 'shell-maker)
 
 (defvaralias 'chatgpt-shell-display-function 'shell-maker-display-function)
@@ -184,8 +184,8 @@ or
    :on-command-finished
    (lambda (command output)
      (chatgpt-shell--put-source-block-overlays)
-     (when chatgpt-shell-on-command-finished-function
-       (funcall chatgpt-shell-on-command-finished-function command output)))
+     (run-hook-with-args 'chatgpt-shell-after-command-functions
+                         command output))
    :redact-log-output
    (lambda (output)
      (if (chatgpt-shell-openai-key)
