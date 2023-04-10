@@ -16,8 +16,8 @@ This is very much an experimental proof of concept, possibly incomplete, or mayb
 
 * Install
 
-Load =(require 'chatgpt-shell)=
-Load =(require 'dall-e-shell)=
+- Load =(require 'chatgpt-shell)=
+- Load =(require 'dall-e-shell)=
 
 * Set OpenAI key
 
