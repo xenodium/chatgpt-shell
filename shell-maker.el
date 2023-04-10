@@ -85,6 +85,18 @@ Enable it for troubleshooting issues."
 
 (defvar-local shell-maker--request-process nil)
 
+(defvaralias 'shell-maker-mode-map 'shell-maker-map)
+
+(defvar shell-maker-map
+  (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
+    (define-key map "\C-m" 'shell-maker-return)
+    (define-key map "\C-c\C-c" 'shell-maker-interrupt)
+    (define-key map "\C-x\C-s" 'shell-maker-save-session-transcript)
+    (define-key map "\C-\M-h" 'shell-maker-mark-output)
+    (define-key map "\M-r" 'shell-maker-search-history)
+    map)
+  "Keymap for `shell-maker' shells.")
+
 (defun shell-maker-start (config)
   "Start a shell with CONFIG."
   (define-derived-mode shell-maker-mode comint-mode
@@ -93,13 +105,7 @@ Enable it for troubleshooting issues."
 Uses the interface provided by `comint-mode'"
     nil)
 
-  (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map "\C-m" 'shell-maker-return)
-    (define-key map "\C-c\C-c" 'shell-maker-interrupt)
-    (define-key map "\C-x\C-s" 'shell-maker-save-session-transcript)
-    (define-key map "\C-\M-h" 'shell-maker-mark-output)
-    (define-key map "\M-r" 'shell-maker-search-history)
-    (setq shell-maker-mode-map map))
+  (make-local-variable 'shell-maker-map)
 
   (let ((old-point)
         (buf-name (shell-maker-buffer-name config)))
@@ -722,9 +728,9 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 	        		     inhibit-line-move-field-capture t))))
 	  (when-let* ((prompt-start (save-excursion (forward-line 0) (point)))
 		      (inhibit-read-only t)
-                      (_prompt (string-match
-                                comint-prompt-regexp
-                                (buffer-substring prompt-start (point)))))
+                      (prompt (string-match
+                               comint-prompt-regexp
+                               (buffer-substring prompt-start (point)))))
 	    (with-silent-modifications
 	      (or (= (point-min) prompt-start)
 		  (get-text-property (1- prompt-start) 'read-only)
