@@ -189,9 +189,9 @@ or
    :redact-log-output
    (lambda (output)
      (if (chatgpt-shell-openai-key)
-         (string-replace (chatgpt-shell-openai-key)
-                         "SK-REDACTED-OPENAI-KEY"
-                         output)
+         (replace-regexp-in-string (regexp-quote (chatgpt-shell-openai-key))
+                                   "SK-REDACTED-OPENAI-KEY"
+                                   output)
        output))))
 
 (defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
