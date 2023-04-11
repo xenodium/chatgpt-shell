@@ -630,8 +630,6 @@ Used by `shell-maker--send-input's call."
   "Write partial REPLY to prompt."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
-    (dolist (overlay (overlays-in (point-min) (point-max)))
-      (delete-overlay overlay))
     (shell-maker--output-filter (shell-maker--process) reply)))
 
 (defun shell-maker--preparse-json (json)

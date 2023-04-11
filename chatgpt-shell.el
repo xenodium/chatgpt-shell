@@ -701,24 +701,24 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
 
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
-  (dolist (overlay (overlays-in (point-min) (point-max)))
-    (delete-overlay overlay))
   (dolist (block (chatgpt-shell--source-blocks))
-    (chatgpt-shell--fontify-source-block
-     (car (map-elt block 'start))
-     (cdr (map-elt block 'start))
-     (buffer-substring-no-properties (car (map-elt block 'language))
-                                     (cdr (map-elt block 'language)))
-     (car (map-elt block 'language))
-     (cdr (map-elt block 'language))
-     (car (map-elt block 'body))
-     (cdr (map-elt block 'body))
-     (car (map-elt block 'end))
-     (cdr (map-elt block 'end))))
+    (unless (overlays-at (car (map-elt block 'body)))
+      (chatgpt-shell--fontify-source-block
+       (car (map-elt block 'start))
+       (cdr (map-elt block 'start))
+       (buffer-substring-no-properties (car (map-elt block 'language))
+                                       (cdr (map-elt block 'language)))
+       (car (map-elt block 'language))
+       (cdr (map-elt block 'language))
+       (car (map-elt block 'body))
+       (cdr (map-elt block 'body))
+       (car (map-elt block 'end))
+       (cdr (map-elt block 'end)))))
   (dolist (block (chatgpt-shell--inline-codes))
-    (chatgpt-shell--fontify-inline-code
-     (car (map-elt block 'body))
-     (cdr (map-elt block 'body)))))
+    (unless (overlays-at (car (map-elt block 'body)))
+      (chatgpt-shell--fontify-inline-code
+       (car (map-elt block 'body))
+       (cdr (map-elt block 'body))))))
 
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
