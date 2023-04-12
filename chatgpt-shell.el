@@ -334,7 +334,7 @@ If region is active, append to prompt."
 (defun chatgpt-shell-proofreading-doc ()
   "Proofread English from region using ChatGPT."
   (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me proofread the following paragraph with English:"))
+  (chatgpt-shell-send-region-with-header "Please help me proofread the following text with English:"))
 
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
