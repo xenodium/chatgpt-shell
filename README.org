@@ -32,7 +32,7 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
           (nth 0 (process-lines "pass" "show" "openai-key"))))
 
   ;; or if using auth-sources, e.g., so the file ~/.authinfo has this line:
-  ;;  machine openai.com password OPENAI_KEY
+  ;;  machine api.openai.com password OPENAI_KEY
   (setq chatgpt-shell-openai-key
         (auth-source-pick-first-password :host "api.openai.com"))
 
