@@ -100,8 +100,10 @@ Enable it for troubleshooting issues."
 
 (declare-function shell-maker-mode "shell-maker" ())
 
-(defun shell-maker-start (config)
-  "Start a shell with CONFIG."
+(defun shell-maker-start (config &optional no-focus)
+  "Start a shell with CONFIG.
+
+Specify NO-FOCUS if started shell should not be focused."
   (define-derived-mode shell-maker-mode comint-mode
     (shell-maker-config-name config)
     "Major mode for interactively evaluating shell-maker prompts.
@@ -119,7 +121,8 @@ Uses the interface provided by `comint-mode'"
           (setq old-point (point)))
         (shell-maker-mode)
         (shell-maker--initialize config)))
-    (funcall shell-maker-display-function buf-name)
+    (unless no-focus
+      (funcall shell-maker-display-function buf-name))
     (when old-point
       (push-mark old-point))))
 
