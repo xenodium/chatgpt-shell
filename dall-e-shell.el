@@ -53,6 +53,11 @@ For example: \"1024x1024\""
   :type 'integer
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-image-output-directory temporary-file-directory
+  "Output directory for the generated image."
+  :type 'directory
+  :group 'dall-e-shell)
+
 (defvaralias 'dall-e-shell-display-function 'shell-maker-display-function)
 
 (defvaralias 'dall-e-shell-read-string-function 'shell-maker-read-string-function)
@@ -110,7 +115,8 @@ Set NO-DOWNLOAD to skip automatic downloading."
                          .url)))
                 (created (number-to-string (let-alist parsed
                                              .created)))
-                (path (expand-file-name (concat created ".png") temporary-file-directory)))
+                (path (expand-file-name (concat created ".png")
+                                        dall-e-shell-image-output-directory)))
           (if no-download
               `((url . ,url)
                 (created . ,created)
