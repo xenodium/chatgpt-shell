@@ -341,18 +341,27 @@ If region is active, append to prompt."
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
-    (chatgpt-shell-send-to-buffer prompt)
-    (shell-maker--send-input)))
+    (chatgpt-shell-send-to-buffer prompt)))
 
 (defun chatgpt-shell-describe-code ()
   "Describe code from region using ChatGPT."
   (interactive)
   (unless (region-active-p)
     (user-error "No region active"))
-  (chatgpt-shell-send-to-buffer
-   (concat "What does the following code do?\n\n"
-           (buffer-substring (region-beginning) (region-end))))
-  (shell-maker--send-input))
+  (let ((overlay-blocks (derived-mode-p 'prog-mode)))
+    (chatgpt-shell-send-to-buffer
+     (concat "What does the following code do?\n\n"
+             (if overlay-blocks
+                 (format "``` %s\n"
+                         (string-remove-suffix "-mode" (format "%s" major-mode)))
+               "")
+             (buffer-substring (region-beginning) (region-end))
+             (if overlay-blocks
+                 "\n```"
+               "")))
+    (when overlay-blocks
+      (with-current-buffer (get-buffer-create "*chatgpt*")
+        (chatgpt-shell--put-source-block-overlays)))))
 
 (defun chatgpt-shell-send-region-with-header (header)
   "Send text with HEADER from region using ChatGPT."
@@ -383,8 +392,7 @@ If region is active, append to prompt."
    (concat "What's wrong with this command?\n\n"
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
            "\n\n"
-           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
-  (shell-maker--send-input))
+           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output)))))
 
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
@@ -393,8 +401,7 @@ If region is active, append to prompt."
    (concat "Summarize the output of the following command: \n\n"
            (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
            "\n\n"
-           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))
-  (shell-maker--send-input))
+           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output)))))
 
 (defun chatgpt-shell-send-region (review)
   "Send region to ChatGPT.
