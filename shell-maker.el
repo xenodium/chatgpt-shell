@@ -406,8 +406,9 @@ Otherwise save current output at location."
                                   shell-maker--prompt-internal))
     (when (process-live-p shell-maker--request-process)
       (kill-process shell-maker--request-process))
-    (setq shell-maker--busy nil)
-    (message "interrupted!")))
+    (when shell-maker--busy
+      (message "interrupted!"))
+    (setq shell-maker--busy nil)))
 
 (defun shell-maker--eval-input (input-string)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
