@@ -95,12 +95,19 @@ Objective-C -> (\"objective-c\" . \"objc\")"
   :type '(repeat (cons string string))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-languages-primary-actions
-  (list (cons "swift" #'chatgpt-shell-compile-swift-block))
-  "Primary action to perform on blocks of this known languages.
+(defcustom chatgpt-shell-source-block-actions
+  (list (cons "swift"
+              (list (cons 'primary-action-confirmation "Compile?")
+                    (cons 'primary-action #'chatgpt-shell-compile-swift-block)))
+        (cons "emacs-lisp"
+              (list (cons 'primary-action-confirmation "Run?")
+                    (cons 'primary-action #'chatgpt-shell-eval-elisp-block-in-ielm))))
+  "Block actions for known languages.
 
 Can be used compile or run source block at point."
-  :type '(repeat (cons string function))
+  :type '(list (cons string
+		     (list (cons 'primary-action-confirmation string)
+			   (cons 'primary-action function))))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
@@ -231,7 +238,7 @@ Otherwise interrupt if busy."
   (cond ((chatgpt-shell-primary-block-action-at-point)
          (chatgpt-shell-execute-primary-block-action-at-point))
         ((chatgpt-shell-markdown-block-at-point)
-         (user-error "No primary action"))
+         (user-error "No action available"))
         ((and shell-maker--busy
               (eq (line-number-at-pos (point-max))
                   (line-number-at-pos (point))))
@@ -853,13 +860,32 @@ CALLBACK can be like:
                   (buffer-string))
          (kill-buffer buffer))))))
 
+(defun chatgpt-shell--resolve-internal-language (language)
+  "Resolve external LANGUAGE to internal.
+
+For example \"elisp\" -> \"emacs-lisp\"."
+  (or (map-elt chatgpt-shell-language-mapping
+               (downcase (string-trim language)))
+      (when (intern (concat (downcase (string-trim language))
+                            "-mode"))
+        language)))
+
 (defun chatgpt-shell-primary-block-action-at-point ()
   "Return t if block at point has primary action.  nil otherwise."
-  (when-let* ((block (chatgpt-shell-markdown-block-at-point))
-              (language (map-elt block 'language))
-              (primary-action (map-elt chatgpt-shell-languages-primary-actions
-                                       language)))
-    block))
+  (when-let* ((source-block (chatgpt-shell-markdown-block-at-point))
+              (language (map-elt source-block 'language))
+              (actions (chatgpt-shell--get-block-actions language))
+              (primary-action
+               (map-elt actions 'primary-action))
+              (primary-action-confirmation
+               (map-elt actions 'primary-action-confirmation)))
+    actions))
+
+(defun chatgpt-shell--get-block-actions (language)
+  "Get block actions for LANGUAGE."
+  (map-elt chatgpt-shell-source-block-actions
+           (chatgpt-shell--resolve-internal-language
+            language)))
 
 (defun chatgpt-shell-execute-primary-block-action-at-point ()
   "Execute primary action for known block.
@@ -867,14 +893,20 @@ CALLBACK can be like:
 Actions are defined in `chatgpt-shell-languages-primary-action'.s"
   (interactive)
   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
-      (if-let ((primary-action (map-elt chatgpt-shell-languages-primary-actions
-                                        (map-elt block 'language)))
+      (if-let ((actions (chatgpt-shell--get-block-actions (map-elt block 'language)))
+               (action (map-elt actions 'primary-action))
+               (confirmation (map-elt actions 'primary-action-confirmation))
                (default-directory "/tmp"))
-          (funcall primary-action (buffer-substring-no-properties
-                                   (map-elt block 'start)
-                                   (map-elt block 'end)))
+          (when (y-or-n-p confirmation)
+            (funcall action (buffer-substring-no-properties
+                             (map-elt block 'start)
+                             (map-elt block 'end))))
         (user-error "No primary action for %s blocks" (map-elt block 'language)))
     (user-error "No block at point")))
+
+(defun chatgpt-shell-eval-elisp-block-in-ielm (text)
+  "Run elisp source in TEXT."
+  (chatgpt-shell-send-to-ielm-buffer text t))
 
 (defun chatgpt-shell-compile-swift-block (text)
   "Compile Swift source in TEXT."
@@ -912,7 +944,7 @@ Return the file path."
     (with-temp-file temp-file
       (insert content)
       (let ((inhibit-message t))
-       (write-file temp-file)))
+        (write-file temp-file)))
     temp-file))
 
 (defun chatgpt-shell--remove-compiled-file-names (filename text)
