@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.15.1
+;; Version: 0.16.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -93,6 +93,14 @@ For example:
                   lowercase      Emacs mode (without -mode)
 Objective-C -> (\"objective-c\" . \"objc\")"
   :type '(repeat (cons string string))
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-languages-primary-actions
+  (list (cons "swift" #'chatgpt-shell-compile-swift-block))
+  "Primary action to perform on blocks of this known languages.
+
+Can be used compile or run source block at point."
+  :type '(repeat (cons string function))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
@@ -202,39 +210,71 @@ or
 (defalias 'chatgpt-shell-mode #'text-mode)
 
 ;;;###autoload
-(defun chatgpt-shell ()
-  "Start a ChatGPT shell."
+(defun chatgpt-shell (&optional no-focus)
+  "Start a ChatGPT shell.
+
+With NO-FOCUS, start the shell without focus."
   (interactive)
-  (shell-maker-start chatgpt-shell--config)
+  (shell-maker-start chatgpt-shell--config no-focus)
   (define-key shell-maker-mode-map "\C-\M-h"
-    #'chatgpt-shell-mark-at-point-dwim))
+    #'chatgpt-shell-mark-at-point-dwim)
+  (define-key shell-maker-mode-map "\C-c\C-c"
+    #'chatgpt-shell-ctrl-c-ctrl-c))
+
+(defun chatgpt-shell-ctrl-c-ctrl-c ()
+  "Ctrl-C Ctrl-C DWIM binding.
+
+If on a block with primary action, execute it.
+
+Otherwise interrupt if busy."
+  (interactive)
+  (cond ((chatgpt-shell-primary-block-action-at-point)
+         (chatgpt-shell-execute-primary-block-action-at-point))
+        ((chatgpt-shell-markdown-block-at-point)
+         (user-error "No primary action"))
+        ((and shell-maker--busy
+              (eq (line-number-at-pos (point-max))
+                  (line-number-at-pos (point))))
+         (shell-maker-interrupt)
+         (chatgpt-shell--put-source-block-overlays))
+        (t
+         (shell-maker-interrupt))))
 
 (defun chatgpt-shell-mark-at-point-dwim ()
   "Mark source block if at point.  Mark all output otherwise."
   (interactive)
   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
       (progn
-        (set-mark (cdr block))
-        (goto-char (car block)))
+        (set-mark (map-elt block 'end))
+        (goto-char (map-elt block 'start)))
     (shell-maker-mark-output)))
+
+(defun chatgpt-shell-markdown-block-language (text)
+  "Get the language label of a Markdown TEXT code block."
+  (when (string-match (rx bol "```" (0+ space) (group (+ (not (any "\n"))))) text)
+    (match-string 1 text)))
 
 (defun chatgpt-shell-markdown-block-at-point ()
   "Markdown start/end cons if point at block.  nil otherwise."
   (save-excursion
     (save-restriction
       (shell-maker-narrow-to-prompt)
-      (let ((start (save-excursion
-                     (when (re-search-backward "^```" nil t)
-                       (end-of-line)
-                       (point))))
-            (end (save-excursion
-                   (when (re-search-forward "^```" nil t)
-                     (forward-line 0)
-                     (point)))))
+      (let* ((language)
+             (start (save-excursion
+                      (when (re-search-backward "^```" nil t)
+                        (setq language (chatgpt-shell-markdown-block-language (thing-at-point 'line)))
+                        (end-of-line)
+                        (point))))
+             (end (save-excursion
+                    (when (re-search-forward "^```" nil t)
+                      (forward-line 0)
+                      (point)))))
         (when (and start end
                    (> (point) start)
                    (< (point) end))
-          (cons start end))))))
+          (list (cons 'language language)
+                (cons 'start start)
+                (cons 'end end)))))))
 
 (defun chatgpt-shell--inline-codes ()
   "Get a list of all inline codess in buffer."
@@ -420,18 +460,6 @@ Set SAVE-EXCURSION to prevent point from moving."
    (lambda (form)
      (prin1-to-string form))
    (chatgpt-shell-parse-elisp-code code)))
-
-(defun chatgpt-shell--markdown-source-blocks (text)
-  "Find Markdown code blocks with language labels in TEXT."
-  (let (blocks)
-    (while (string-match
-            (rx bol "```" (zero-or-more space) (group (one-or-more (or alpha "-")))
-                (group (*? anything))
-                "```") text)
-      (setq blocks (cons (cons (match-string 1 text)
-                               (match-string 2 text)) blocks))
-      (setq text (substring text (match-end 0))))
-    (reverse blocks)))
 
 (defun chatgpt-shell-post-messages (messages &optional version callback error-callback)
   "Make a single ChatGPT request with MESSAGES.
@@ -798,6 +826,96 @@ For example:
                      (cons 'content (cdr item))) result)))
      history)
     (nreverse result)))
+
+(defun chatgpt-shell-run-command (command callback)
+  "Run COMMAND list asynchronously and call CALLBACK function.
+
+CALLBACK can be like:
+
+\(lambda (success output)
+  (message \"%s\" output))"
+  (let* ((buffer (generate-new-buffer "*run command*"))
+         (proc (apply 'start-process
+                      (append `("exec" ,buffer) command))))
+    (set-process-sentinel
+     proc
+     (lambda (proc _)
+       (with-current-buffer buffer
+         (funcall callback
+                  (equal (process-exit-status proc) 0)
+                  (buffer-string))
+         (kill-buffer buffer))))))
+
+(defun chatgpt-shell-primary-block-action-at-point ()
+  "Return t if block at point has primary action.  nil otherwise."
+  (when-let* ((block (chatgpt-shell-markdown-block-at-point))
+              (language (map-elt block 'language))
+              (primary-action (map-elt chatgpt-shell-languages-primary-actions
+                                       language)))
+    block))
+
+(defun chatgpt-shell-execute-primary-block-action-at-point ()
+  "Execute primary action for known block.
+
+Actions are defined in `chatgpt-shell-languages-primary-action'.s"
+  (interactive)
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (if-let ((primary-action (map-elt chatgpt-shell-languages-primary-actions
+                                        (map-elt block 'language)))
+               (default-directory "/tmp"))
+          (funcall primary-action (buffer-substring-no-properties
+                                   (map-elt block 'start)
+                                   (map-elt block 'end)))
+        (user-error "No primary action for %s blocks" (map-elt block 'language)))
+    (user-error "No block at point")))
+
+(defun chatgpt-shell-compile-swift-block (text)
+  "Compile Swift source in TEXT."
+  (when-let* ((source-file (chatgpt-shell-write-temp-file text ".swift"))
+              (default-directory (file-name-directory source-file)))
+    (chatgpt-shell-run-command
+     `("swiftc" ,(file-name-nondirectory source-file))
+     (lambda (success output)
+       (if success
+           (message
+            (concat (propertize "Compiles cleanly" 'face '(:foreground "green"))
+                    " :)"))
+         (let ((buffer (generate-new-buffer "*block error*")))
+           (with-current-buffer buffer
+             (save-excursion
+               (insert
+                (chatgpt-shell--remove-compiled-file-names
+                 (file-name-nondirectory source-file)
+                 (ansi-color-apply output))))
+             (compilation-mode)
+             (view-mode +1)
+             (setq view-exit-action 'kill-buffer))
+           (select-window (display-buffer buffer)))
+         (message
+          (concat (propertize "Compilation failed" 'face '(:foreground "orange"))
+                  " :(")))))))
+
+(defun chatgpt-shell-write-temp-file (content extension)
+  "Create a temporary file with EXTENSION and write CONTENT to it.
+
+Return the file path."
+  (let* ((temp-dir (file-name-as-directory
+                    (make-temp-file "chatgpt-shell-" t)))
+         (temp-file (concat temp-dir "source-block" extension)))
+    (with-temp-file temp-file
+      (insert content)
+      (let ((inhibit-message t))
+       (write-file temp-file)))
+    temp-file))
+
+(defun chatgpt-shell--remove-compiled-file-names (filename text)
+  "Remove lines starting with FILENAME in TEXT.
+
+Useful to remove temp file names from compilation output when
+compiling source blocks."
+  (replace-regexp-in-string
+   (rx-to-string `(: bol ,filename (one-or-more (not (any " "))) " ") " ")
+   "" text))
 
 (provide 'chatgpt-shell)
 
