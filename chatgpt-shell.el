@@ -626,14 +626,14 @@ Very much EXPERIMENTAL."
   (let* ((path (read-file-name "Restore from: " nil nil t))
          (prompt (shell-maker-prompt shell-maker-config))
          (history (with-temp-buffer
-                                   (insert-file-contents path)
-                                   (chatgpt-shell--extract-history
-                                    (buffer-string)
-                                    prompt)))
+                    (insert-file-contents path)
+                    (chatgpt-shell--extract-history
+                     (buffer-string)
+                     prompt)))
          (execute-command (shell-maker-config-execute-command
-                         shell-maker-config))
+                           shell-maker-config))
          (validate-command (shell-maker-config-validate-command
-                         shell-maker-config))
+                            shell-maker-config))
          (command)
          (response)
          (failed))
