@@ -511,7 +511,8 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
         (set-process-filter
          request-process
          (lambda (_process output)
-           (when (eq request-id shell-maker--current-request-id)
+           (when (and (eq request-id shell-maker--current-request-id)
+                      (buffer-live-p buffer))
              (shell-maker--write-output-to-log-buffer
               (format "// Filter output\n\n%s\n\n" output))
              (setq remaining-text (concat remaining-text output))
@@ -527,10 +528,11 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (let ((active (eq request-id shell-maker--current-request-id))
-               (output (with-current-buffer (process-buffer process)
-                         (buffer-string)))
-               (exit-status (process-exit-status process)))
+         (when-let ((active (and (eq request-id shell-maker--current-request-id)
+                                 (buffer-live-p buffer)))
+                    (output (with-current-buffer (process-buffer process)
+                              (buffer-string)))
+                    (exit-status (process-exit-status process)))
            (shell-maker--write-output-to-log-buffer
             (format "// Response (%s)\n\n" (if active "active" "inactive")))
            (shell-maker--write-output-to-log-buffer
@@ -549,8 +551,8 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                                      output
                                    (funcall response-extractor output))))
                      (funcall error-callback error)
-                   (funcall error-callback output)))))
-           (kill-buffer output-buffer)))))))
+                   (funcall error-callback output))))))
+         (kill-buffer output-buffer))))))
 
 (defun shell-maker--json-parse-string-filtering (json regexp)
   "Attempt to parse JSON.  If unsuccessful, attempt after removing REGEXP."
