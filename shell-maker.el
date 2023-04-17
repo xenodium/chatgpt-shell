@@ -70,6 +70,10 @@ Enable it for troubleshooting issues."
 
 (defvar shell-maker--prompt-internal nil)
 
+(defconst shell-maker--prompt-rear-nonsticky
+  '(field inhibit-line-move-field-capture read-only font-lock-face)
+  "Text properties set on the prompt and don't want to leak past it.")
+
 (cl-defstruct
     shell-maker-config
   name
@@ -754,7 +758,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
             (with-silent-modifications
               (add-text-properties comint-last-output-start (point)
                                    `(rear-nonsticky
-	        		     ,comint--prompt-rear-nonsticky
+	        		     ,shell-maker--prompt-rear-nonsticky
 	        		     front-sticky
 	        		     (field inhibit-line-move-field-capture)
 	        		     field output
@@ -784,7 +788,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 	        			    'comint-highlight-prompt)
 	    (add-text-properties prompt-start (point)
 	                         `(rear-nonsticky
-	                           ,comint--prompt-rear-nonsticky))))))))
+	                           ,shell-maker--prompt-rear-nonsticky))))))))
 
 (defun shell-maker-buffer (config)
   "Get buffer from CONFIG."
