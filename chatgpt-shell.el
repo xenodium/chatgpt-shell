@@ -96,9 +96,7 @@ Objective-C -> (\"objective-c\" . \"objc\")"
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-source-block-actions
-  (list (cons "swift"
-              (list (cons 'primary-action-confirmation "Compile?")
-                    (cons 'primary-action #'chatgpt-shell-compile-swift-block))))
+  nil
   "Block actions for known languages.
 
 Can be used compile or run source block at point."
@@ -875,13 +873,23 @@ For example \"elisp\" -> \"emacs-lisp\"."
     actions
     (if actions
         actions
-      (intern (concat "org-babel-execute:" language)))))
+      (chatgpt-shell--org-babel-command language))))
 
 (defun chatgpt-shell--get-block-actions (language)
   "Get block actions for LANGUAGE."
   (map-elt chatgpt-shell-source-block-actions
            (chatgpt-shell--resolve-internal-language
             language)))
+
+(defun chatgpt-shell--org-babel-command (language)
+  "Resolve LANGUAGE to org babel command."
+  (require 'ob)
+  (let ((f (intern (concat "org-babel-execute:" language)))
+        (f-cap (intern (concat "org-babel-execute:" (capitalize language)))))
+    (if (fboundp f)
+        f
+      (if (fboundp f-cap)
+          f-cap))))
 
 (defun chatgpt-shell-execute-primary-block-action-at-point ()
   "Execute primary action for known block.
@@ -898,7 +906,7 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                              (map-elt block 'start)
                              (map-elt block 'end))))
         (if (and (map-elt block 'language)
-                 (intern (concat "org-babel-execute:" (map-elt block 'language))))
+                 (chatgpt-shell--org-babel-command (map-elt block 'language)))
        (chatgpt-shell-execute-babel-block-action-at-point)
             (user-error "No primary action for %s blocks" (map-elt block 'language))))
     (user-error "No block at point")))
@@ -908,22 +916,22 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
   (interactive)
   (require 'ob)
   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
-      (if-let ((language (chatgpt-shell--resolve-internal-language
-                          (map-elt block 'language)))
-               (babel-command (intern (concat "org-babel-execute:" language)))
-               (lang-headers (intern
-			      (concat "org-babel-default-header-args:" language)))
-               (bound (fboundp babel-command))
-               (default-directory "/tmp"))
+      (if-let* ((language (chatgpt-shell--resolve-internal-language
+                           (map-elt block 'language)))
+                (babel-command (chatgpt-shell--org-babel-command language))
+                (lang-headers (intern
+			       (concat "org-babel-default-header-args:" language)))
+                (bound (fboundp babel-command))
+                (default-directory "/tmp"))
           (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
             (message (format "Executing %s block..." (capitalize language)))
             (let ((output (funcall babel-command
-                                  (buffer-substring-no-properties
-                                   (map-elt block 'start)
-                                   (map-elt block 'end))
-                                  (append '((:result-params . ("replace" "raw")))
-                                          (and (boundp lang-headers) (eval lang-headers t))
-                                          (eval (intern "org-babel-default-header-args")))))
+                                   (buffer-substring-no-properties
+                                    (map-elt block 'start)
+                                    (map-elt block 'end))
+                                   (append '((:result-params . ("replace" "raw")))
+                                           (and (boundp lang-headers) (eval lang-headers t))
+                                           (eval (intern "org-babel-default-header-args")))))
                   (buffer (get-buffer-create (format "*%s block output*" (capitalize language)))))
               (with-current-buffer buffer
                 (save-excursion
