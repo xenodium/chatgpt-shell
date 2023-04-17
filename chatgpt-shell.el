@@ -923,7 +923,7 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                                    (map-elt block 'end))
                                   (append '((:result-params . ("replace" "raw")))
                                           (and (boundp lang-headers) (eval lang-headers t))
-                                          org-babel-default-header-args)))
+                                          (eval (intern "org-babel-default-header-args")))))
                   (buffer (get-buffer-create (format "*%s block output*" (capitalize language)))))
               (with-current-buffer buffer
                 (save-excursion
