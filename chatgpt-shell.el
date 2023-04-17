@@ -98,10 +98,7 @@ Objective-C -> (\"objective-c\" . \"objc\")"
 (defcustom chatgpt-shell-source-block-actions
   (list (cons "swift"
               (list (cons 'primary-action-confirmation "Compile?")
-                    (cons 'primary-action #'chatgpt-shell-compile-swift-block)))
-        (cons "emacs-lisp"
-              (list (cons 'primary-action-confirmation "Run?")
-                    (cons 'primary-action #'chatgpt-shell-eval-elisp-block-in-ielm))))
+                    (cons 'primary-action #'chatgpt-shell-compile-swift-block))))
   "Block actions for known languages.
 
 Can be used compile or run source block at point."
@@ -872,14 +869,13 @@ For example \"elisp\" -> \"emacs-lisp\"."
 
 (defun chatgpt-shell-primary-block-action-at-point ()
   "Return t if block at point has primary action.  nil otherwise."
-  (when-let* ((source-block (chatgpt-shell-markdown-block-at-point))
-              (language (map-elt source-block 'language))
-              (actions (chatgpt-shell--get-block-actions language))
-              (primary-action
-               (map-elt actions 'primary-action))
-              (primary-action-confirmation
-               (map-elt actions 'primary-action-confirmation)))
-    actions))
+  (let* ((source-block (chatgpt-shell-markdown-block-at-point))
+         (language (map-elt source-block 'language))
+         (actions (chatgpt-shell--get-block-actions language)))
+    actions
+    (if actions
+        actions
+      (intern (concat "org-babel-execute:" language)))))
 
 (defun chatgpt-shell--get-block-actions (language)
   "Get block actions for LANGUAGE."
@@ -901,6 +897,44 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
             (funcall action (buffer-substring-no-properties
                              (map-elt block 'start)
                              (map-elt block 'end))))
+        (if (and (map-elt block 'language)
+                 (intern (concat "org-babel-execute:" (map-elt block 'language))))
+       (chatgpt-shell-execute-babel-block-action-at-point)
+            (user-error "No primary action for %s blocks" (map-elt block 'language))))
+    (user-error "No block at point")))
+
+(defun chatgpt-shell-execute-babel-block-action-at-point ()
+  "Execute block as org babel."
+  (interactive)
+  (require 'ob)
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (if-let ((language (chatgpt-shell--resolve-internal-language
+                          (map-elt block 'language)))
+               (babel-command (intern (concat "org-babel-execute:" language)))
+               (lang-headers (intern
+			      (concat "org-babel-default-header-args:" language)))
+               (bound (fboundp babel-command))
+               (default-directory "/tmp"))
+          (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
+            (message (format "Executing %s block..." (capitalize language)))
+            (let ((output (funcall babel-command
+                                  (buffer-substring-no-properties
+                                   (map-elt block 'start)
+                                   (map-elt block 'end))
+                                  (append '((:result-params . ("replace" "raw")))
+                                          (and (boundp lang-headers) (eval lang-headers t))
+                                          org-babel-default-header-args)))
+                  (buffer (get-buffer-create (format "*%s block output*" (capitalize language)))))
+              (with-current-buffer buffer
+                (save-excursion
+                  (erase-buffer)
+                  (if output
+                      (insert output)
+                    (insert (format "No output. Double check babel %s blocks are working in .org files" language))))
+                (view-mode +1)
+                (setq view-exit-action 'kill-buffer))
+              (message "")
+              (select-window (display-buffer buffer))))
         (user-error "No primary action for %s blocks" (map-elt block 'language)))
     (user-error "No block at point")))
 
