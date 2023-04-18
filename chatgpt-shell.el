@@ -859,11 +859,12 @@ CALLBACK can be like:
   "Resolve external LANGUAGE to internal.
 
 For example \"elisp\" -> \"emacs-lisp\"."
-  (or (map-elt chatgpt-shell-language-mapping
-               (downcase (string-trim language)))
-      (when (intern (concat (downcase (string-trim language))
-                            "-mode"))
-        language)))
+  (when language
+    (or (map-elt chatgpt-shell-language-mapping
+                 (downcase (string-trim language)))
+        (when (intern (concat (downcase (string-trim language))
+                              "-mode"))
+          language))))
 
 (defun chatgpt-shell-primary-block-action-at-point ()
   "Return t if block at point has primary action.  nil otherwise."
@@ -884,12 +885,14 @@ For example \"elisp\" -> \"emacs-lisp\"."
 (defun chatgpt-shell--org-babel-command (language)
   "Resolve LANGUAGE to org babel command."
   (require 'ob)
-  (let ((f (intern (concat "org-babel-execute:" language)))
-        (f-cap (intern (concat "org-babel-execute:" (capitalize language)))))
-    (if (fboundp f)
-        f
-      (if (fboundp f-cap)
-          f-cap))))
+  (when language
+    (require (intern (concat "ob-" language)) nil t)
+    (let ((f (intern (concat "org-babel-execute:" language)))
+          (f-cap (intern (concat "org-babel-execute:" (capitalize language)))))
+      (if (fboundp f)
+          f
+        (if (fboundp f-cap)
+            f-cap)))))
 
 (defun chatgpt-shell-execute-primary-block-action-at-point ()
   "Execute primary action for known block.
@@ -925,24 +928,60 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                 (default-directory "/tmp"))
           (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
             (message (format "Executing %s block..." (capitalize language)))
-            (let ((output (funcall babel-command
-                                   (buffer-substring-no-properties
-                                    (map-elt block 'start)
-                                    (map-elt block 'end))
-                                   (append '((:result-params . ("replace" "raw")))
-                                           (and (boundp lang-headers) (eval lang-headers t))
-                                           (eval (intern "org-babel-default-header-args")))))
-                  (buffer (get-buffer-create (format "*%s block output*" (capitalize language)))))
-              (with-current-buffer buffer
-                (save-excursion
-                  (erase-buffer)
-                  (if output
-                      (insert output)
-                    (insert (format "No output. Double check babel %s blocks are working in .org files" language))))
-                (view-mode +1)
-                (setq view-exit-action 'kill-buffer))
-              (message "")
-              (select-window (display-buffer buffer))))
+            (let* ((params (org-babel-merge-params
+	                    org-babel-default-header-args
+	                    (and (boundp
+                                  (intern
+	                           (concat "org-babel-default-header-args:" language)))
+                                 (eval (intern
+		                        (concat "org-babel-default-header-args:" language)) t))))
+                   (output (progn
+                             (when (get-buffer org-babel-error-buffer-name)
+                               (kill-buffer (get-buffer org-babel-error-buffer-name)))
+                             (funcall babel-command
+                                      (buffer-substring-no-properties
+                                       (map-elt block 'start)
+                                       (map-elt block 'end))
+                                      (org-babel-process-params params))))
+                   (buffer))
+              (when (and output (not (stringp output)))
+                (setq output (format "%s" output)))
+              (if (and output (not (string-empty-p output)))
+                  (progn
+                    (setq buffer (get-buffer-create (format "*%s block output*" (capitalize language))))
+                    (with-current-buffer buffer
+                      (save-excursion
+                        (let ((inhibit-read-only t))
+                          (erase-buffer)
+                          (setq output (when output (string-trim output)))
+                          (if (file-exists-p output) ;; Output was a file.
+                              ;; Image? insert image.
+                              (if (member (downcase (file-name-extension output))
+                                          '("jpg" "jpeg" "png" "gif" "bmp" "webp"))
+                                  (progn
+                                    (insert "\n")
+                                    (insert-image (create-image output)))
+                                ;; Insert content of all other file types.
+                                (insert-file-contents output))
+                            ;; Just text output, insert that.
+                            (insert output))))
+                    (view-mode +1)
+                    (setq view-exit-action 'kill-buffer))
+                    (message "")
+                    (select-window (display-buffer buffer)))
+                (if (get-buffer org-babel-error-buffer-name)
+                    (select-window (display-buffer org-babel-error-buffer-name))
+                  (setq buffer (get-buffer-create (format "*%s block output*" (capitalize language))))
+                  (with-current-buffer buffer
+                    (save-excursion
+                      (let ((inhibit-read-only t))
+                        (erase-buffer)
+                        (insert (message "No output. Check %s blocks work in your .org files."
+                                         language))
+                        (message "")
+                        (view-mode +1)
+                        (setq view-exit-action 'kill-buffer)
+                        (select-window (display-buffer buffer)))))))))
         (user-error "No primary action for %s blocks" (map-elt block 'language)))
     (user-error "No block at point")))
 
