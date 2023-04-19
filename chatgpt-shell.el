@@ -939,8 +939,11 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                          (replace-regexp-in-string (regexp-quote "<temp-file>")
                                                    temp-file
                                                    (cdr (assq :file overrides)))))
+                  (assq-delete-all :file overrides)
                   params)
-        params)
+        (append
+         overrides
+         params))
     params))
 
 (defun chatgpt-shell-execute-babel-block-action-at-point ()
