@@ -689,8 +689,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
     (overlay-put (make-overlay lang-end
                                (1+ lang-end)) 'display "\n\n"))
   (let ((lang-mode (intern (concat (or
-                                    (map-elt chatgpt-shell-language-mapping
-                                             (downcase (string-trim lang)))
+                                    (chatgpt-shell--resolve-internal-language lang)
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties body-start body-end))
@@ -869,7 +868,8 @@ For example \"elisp\" -> \"emacs-lisp\"."
 (defun chatgpt-shell-primary-block-action-at-point ()
   "Return t if block at point has primary action.  nil otherwise."
   (let* ((source-block (chatgpt-shell-markdown-block-at-point))
-         (language (map-elt source-block 'language))
+         (language (chatgpt-shell--resolve-internal-language
+                    (map-elt source-block 'language)))
          (actions (chatgpt-shell--get-block-actions language)))
     actions
     (if actions
@@ -909,7 +909,9 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                              (map-elt block 'start)
                              (map-elt block 'end))))
         (if (and (map-elt block 'language)
-                 (chatgpt-shell--org-babel-command (map-elt block 'language)))
+                 (chatgpt-shell--org-babel-command
+                  (chatgpt-shell--resolve-internal-language
+                    (map-elt block 'language))))
        (chatgpt-shell-execute-babel-block-action-at-point)
             (user-error "No primary action for %s blocks" (map-elt block 'language))))
     (user-error "No block at point")))
