@@ -896,7 +896,7 @@ For example \"elisp\" -> \"emacs-lisp\"."
   "Resolve LANGUAGE to org babel command."
   (require 'ob)
   (when language
-    (require (intern (concat "ob-" language)) nil t)
+    (require (intern (concat "ob-" (downcase language))) nil t)
     (let ((f (intern (concat "org-babel-execute:" language)))
           (f-cap (intern (concat "org-babel-execute:" (capitalize language)))))
       (if (fboundp f)
