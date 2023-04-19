@@ -76,7 +76,7 @@ For example:
 
 (defvaralias 'chatgpt-shell-read-string-function 'shell-maker-read-string-function)
 
-(defalias 'chatgpt-shell-save-session-transcript 'shell-maker-save-session-transcript)
+(defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 
 (defvar chatgpt-shell--prompt-history nil)
 
@@ -204,9 +204,9 @@ or
                                    output)
        output))))
 
-(defalias 'chatgpt-shell-clear-buffer 'comint-clear-buffer)
+(defalias 'chatgpt-shell-clear-buffer #'comint-clear-buffer)
 
-(defalias 'chatgpt-shell-explain-code 'chatgpt-shell-describe-code)
+(defalias 'chatgpt-shell-explain-code #'chatgpt-shell-describe-code)
 
 ;; Aliasing enables editing as text in babel.
 (defalias 'chatgpt-shell-mode #'text-mode)
@@ -844,7 +844,7 @@ CALLBACK can be like:
 \(lambda (success output)
   (message \"%s\" output))"
   (let* ((buffer (generate-new-buffer "*run command*"))
-         (proc (apply 'start-process
+         (proc (apply #'start-process
                       (append `("exec" ,buffer) command))))
     (set-process-sentinel
      proc
@@ -927,7 +927,7 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                 (bound (fboundp babel-command))
                 (default-directory "/tmp"))
           (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
-            (message (format "Executing %s block..." (capitalize language)))
+            (message "Executing %s block..." (capitalize language))
             (let* ((params (org-babel-merge-params
 	                    org-babel-default-header-args
 	                    (and (boundp

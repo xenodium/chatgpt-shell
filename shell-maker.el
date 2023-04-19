@@ -425,7 +425,7 @@ Otherwise save current output at location."
       (setq shell-maker--busy t)
       (cond
        ((string-equal "clear" (string-trim input-string))
-        (call-interactively 'comint-clear-buffer)
+        (call-interactively #'comint-clear-buffer)
         (shell-maker--output-filter (shell-maker--process) shell-maker--prompt-internal)
         (setq shell-maker--busy nil))
        ((not (shell-maker--curl-version-supported))
