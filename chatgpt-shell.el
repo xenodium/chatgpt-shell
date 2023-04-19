@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.17.1
+;; Version: 0.18.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -92,6 +92,14 @@ For example:
 
                   lowercase      Emacs mode (without -mode)
 Objective-C -> (\"objective-c\" . \"objc\")"
+  :type '(repeat (cons string string))
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-babel-headers '(("dot" . ((:file . "<temp-file>.png")))
+                                         ("ditaa" . ((:file . "<temp-file>.png"))))
+  "Additional headers to make babel blocks work.
+
+Please submit contributions so more things work out of the box."
   :type '(repeat (cons string string))
   :group 'chatgpt-shell)
 
@@ -911,10 +919,27 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
         (if (and (map-elt block 'language)
                  (chatgpt-shell--org-babel-command
                   (chatgpt-shell--resolve-internal-language
-                    (map-elt block 'language))))
-       (chatgpt-shell-execute-babel-block-action-at-point)
-            (user-error "No primary action for %s blocks" (map-elt block 'language))))
+                   (map-elt block 'language))))
+            (chatgpt-shell-execute-babel-block-action-at-point)
+          (user-error "No primary action for %s blocks" (map-elt block 'language))))
     (user-error "No block at point")))
+
+(defun chatgpt-shell--override-language-params (language params)
+  "Override PARAMS for LANGUAGE if found in `chatgpt-shell-babel-headers'."
+  (if-let* ((overrides (map-elt chatgpt-shell-babel-headers
+                                language))
+            (temp-dir (file-name-as-directory
+                       (make-temp-file "chatgpt-shell-" t)))
+            (temp-file (concat temp-dir "source-block-" language)))
+      (if (cdr (assq :file overrides))
+          (append (list
+                   (cons :file
+                         (replace-regexp-in-string (regexp-quote "<temp-file>")
+                                                   temp-file
+                                                   (cdr (assq :file overrides)))))
+                  params)
+        params)
+    params))
 
 (defun chatgpt-shell-execute-babel-block-action-at-point ()
   "Execute block as org babel."
@@ -930,24 +955,29 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                 (default-directory "/tmp"))
           (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
             (message "Executing %s block..." (capitalize language))
-            (let* ((params (org-babel-merge-params
-	                    org-babel-default-header-args
-	                    (and (boundp
-                                  (intern
-	                           (concat "org-babel-default-header-args:" language)))
-                                 (eval (intern
-		                        (concat "org-babel-default-header-args:" language)) t))))
+            (let* ((params (org-babel-process-params
+                            (chatgpt-shell--override-language-params
+                             language
+                             (org-babel-merge-params
+	                      org-babel-default-header-args
+	                      (and (boundp
+                                    (intern
+	                             (concat "org-babel-default-header-args:" language)))
+                                   (eval (intern
+		                          (concat "org-babel-default-header-args:" language)) t))))))
                    (output (progn
                              (when (get-buffer org-babel-error-buffer-name)
                                (kill-buffer (get-buffer org-babel-error-buffer-name)))
                              (funcall babel-command
                                       (buffer-substring-no-properties
                                        (map-elt block 'start)
-                                       (map-elt block 'end))
-                                      (org-babel-process-params params))))
+                                       (map-elt block 'end)) params)))
                    (buffer))
-              (when (and output (not (stringp output)))
-                (setq output (format "%s" output)))
+              (if (and output (not (stringp output)))
+                  (setq output (format "%s" output))
+                (when (and (cdr (assq :file params))
+                           (file-exists-p (cdr (assq :file params))))
+                  (setq output (cdr (assq :file params)))))
               (if (and output (not (string-empty-p output)))
                   (progn
                     (setq buffer (get-buffer-create (format "*%s block output*" (capitalize language))))
@@ -967,8 +997,8 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                                 (insert-file-contents output))
                             ;; Just text output, insert that.
                             (insert output))))
-                    (view-mode +1)
-                    (setq view-exit-action 'kill-buffer))
+                      (view-mode +1)
+                      (setq view-exit-action 'kill-buffer))
                     (message "")
                     (select-window (display-buffer buffer)))
                 (if (get-buffer org-babel-error-buffer-name)
