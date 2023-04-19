@@ -873,7 +873,7 @@ For example \"elisp\" -> \"emacs-lisp\"."
                  (downcase (string-trim language)))
         (when (intern (concat (downcase (string-trim language))
                               "-mode"))
-          language))))
+          (downcase (string-trim language))))))
 
 (defun chatgpt-shell-primary-block-action-at-point ()
   "Return t if block at point has primary action.  nil otherwise."
