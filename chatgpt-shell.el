@@ -281,11 +281,8 @@ Otherwise interrupt if busy."
                           (forward-char 3) ; ```
                           (setq language-start (point))
                           (end-of-line)
-                          (if (eq language-start (point))
-                              (setq language-end language-start)
-                            (setq language-end (point))))
-                        (end-of-line)
-                        (point))))
+                          (setq language-end (point)))
+                        language-end)))
              (end (save-excursion
                     (when (re-search-forward "^```" nil t)
                       (forward-line 0)
