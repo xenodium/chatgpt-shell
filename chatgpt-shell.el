@@ -272,9 +272,18 @@ Otherwise interrupt if busy."
     (save-restriction
       (shell-maker-narrow-to-prompt)
       (let* ((language)
+             (language-start)
+             (language-end)
              (start (save-excursion
                       (when (re-search-backward "^```" nil t)
                         (setq language (chatgpt-shell-markdown-block-language (thing-at-point 'line)))
+                        (save-excursion
+                          (forward-char 3) ; ```
+                          (setq language-start (point))
+                          (end-of-line)
+                          (if (eq language-start (point))
+                              (setq language-end language-start)
+                            (setq language-end (point))))
                         (end-of-line)
                         (point))))
              (end (save-excursion
@@ -285,6 +294,8 @@ Otherwise interrupt if busy."
                    (> (point) start)
                    (< (point) end))
           (list (cons 'language language)
+                (cons 'language-start language-start)
+                (cons 'language-end language-end)
                 (cons 'start start)
                 (cons 'end end)))))))
 
@@ -744,6 +755,26 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (overlay-put (make-overlay body-start body-end
                              (shell-maker-buffer shell-maker-config))
                'face 'font-lock-doc-markup-face))
+
+(defun chatgpt-shell-rename-block-at-point ()
+  "Rename block at point (perhaps a different language)."
+  (interactive)
+  (save-excursion
+   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+       (if (map-elt block 'language)
+           (perform-replace (map-elt block 'language)
+                            (read-string "Name: " nil nil "") nil nil nil nil nil
+                            (map-elt block 'language-start) (map-elt block 'language-end))
+         (let ((new-name (read-string "Name: " nil nil "")))
+           (goto-char (map-elt block 'language-start))
+           (insert new-name)))
+    (user-error "No block at point"))))
+
+(defun chatgpt-shell-remove-block-overlays ()
+  "Remove block overlays.  Handy for renaming blocks."
+  (interactive)
+  (dolist (overlay (overlays-in (point-min) (point-max)))
+    (delete-overlay overlay)))
 
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
