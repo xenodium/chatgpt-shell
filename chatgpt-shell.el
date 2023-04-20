@@ -98,7 +98,8 @@ Objective-C -> (\"objective-c\" . \"objc\")"
 (defcustom chatgpt-shell-babel-headers '(("dot" . ((:file . "<temp-file>.png")))
                                          ("ditaa" . ((:file . "<temp-file>.png")))
                                          ("objc" . ((:results . "output")))
-                                         ("python" . ((:python . "python3"))))
+                                         ("python" . ((:python . "python3")))
+                                         ("swiftui" . ((:results . "file"))))
   "Additional headers to make babel blocks work.
 
 Please submit contributions so more things work out of the box."
