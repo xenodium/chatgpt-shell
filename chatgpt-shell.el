@@ -1037,16 +1037,7 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                 (if (get-buffer org-babel-error-buffer-name)
                     (select-window (display-buffer org-babel-error-buffer-name))
                   (setq buffer (get-buffer-create (format "*%s block output*" (capitalize language))))
-                  (with-current-buffer buffer
-                    (save-excursion
-                      (let ((inhibit-read-only t))
-                        (erase-buffer)
-                        (insert (message "No output. Check %s blocks work in your .org files."
-                                         language))
-                        (message "")
-                        (view-mode +1)
-                        (setq view-exit-action 'kill-buffer)
-                        (select-window (display-buffer buffer)))))))))
+                  (message "No output. Check %s blocks work in your .org files." language)))))
         (user-error "No primary action for %s blocks" (map-elt block 'language)))
     (user-error "No block at point")))
 
