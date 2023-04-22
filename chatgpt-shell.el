@@ -232,7 +232,11 @@ With NO-FOCUS, start the shell without focus."
   (define-key shell-maker-mode-map "\C-\M-h"
     #'chatgpt-shell-mark-at-point-dwim)
   (define-key shell-maker-mode-map "\C-c\C-c"
-    #'chatgpt-shell-ctrl-c-ctrl-c))
+    #'chatgpt-shell-ctrl-c-ctrl-c)
+  (define-key shell-maker-mode-map (kbd "C-c C-p")
+    #'chatgpt-shell-previous-item)
+  (define-key shell-maker-mode-map (kbd "C-c C-n")
+    #'chatgpt-shell-next-item))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c ()
   "Ctrl-C Ctrl-C DWIM binding.
@@ -313,6 +317,92 @@ Otherwise interrupt if busy."
             'body (cons (match-beginning 1) (match-end 1))) codes))))
     (nreverse codes)))
 
+(defvar chatgpt-shell--source-block-regexp
+  (rx  bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
+       (group (zero-or-more (or alphanumeric "-"))) ;; language
+       (zero-or-more whitespace)
+       (one-or-more "\n")
+       (group (*? anychar)) ;; body
+       (one-or-more "\n")
+       (group "```") (or "\n" eol)))
+
+(defun chatgpt-shell-next-source-block ()
+    "Move point to previous source block."
+  (interactive)
+  (when-let
+      ((next-block
+        (save-excursion
+          (when-let ((current (chatgpt-shell-markdown-block-at-point)))
+            (goto-char (map-elt current 'end))
+            (end-of-line))
+          (when (re-search-forward chatgpt-shell--source-block-regexp nil t)
+            (chatgpt-shell--match-source-block)))))
+    (goto-char (car (map-elt next-block 'body)))))
+
+(defun chatgpt-shell-previous-item ()
+  "Go to previous item.
+
+Could be a prompt or a source block."
+  (interactive)
+  (let ((prompt-pos (save-excursion
+                      (when (comint-next-prompt (- 1))
+                        (point))))
+        (block-pos (save-excursion
+                     (when (chatgpt-shell-previous-source-block)
+                       (point)))))
+    (cond ((and block-pos prompt-pos)
+           (goto-char (max prompt-pos
+                           block-pos)))
+          (block-pos
+           (goto-char block-pos))
+          (prompt-pos
+           (goto-char prompt-pos)))))
+
+(defun chatgpt-shell-next-item ()
+  "Go to next item.
+
+Could be a prompt or a source block."
+  (interactive)
+  (let ((prompt-pos (save-excursion
+                      (when (comint-next-prompt 1)
+                        (point))))
+        (block-pos (save-excursion
+                     (when (chatgpt-shell-next-source-block)
+                       (point)))))
+    (cond ((and block-pos prompt-pos)
+           (goto-char (min prompt-pos
+                           block-pos)))
+          (block-pos
+           (goto-char block-pos))
+          (prompt-pos
+           (goto-char prompt-pos)))))
+
+(defun chatgpt-shell-previous-source-block ()
+  "Move point to previous source block."
+  (interactive)
+  (when-let
+      ((previous-block
+        (save-excursion
+          (when-let ((current (chatgpt-shell-markdown-block-at-point)))
+            (goto-char (map-elt current 'start))
+            (forward-line 0))
+          (when (re-search-backward chatgpt-shell--source-block-regexp nil t)
+            (chatgpt-shell--match-source-block)))))
+    (goto-char (car (map-elt previous-block 'body)))))
+
+(defun chatgpt-shell--match-source-block ()
+  "Return a matched source block by the previous search/regexp operation."
+  (list
+   'start (cons (match-beginning 1)
+                (match-end 1))
+   'end (cons (match-beginning 4)
+              (match-end 4))
+   'language (when (and (match-beginning 2)
+                        (match-end 2))
+               (cons (match-beginning 2)
+                     (match-end 2)))
+   'body (cons (match-beginning 3) (match-end 3))))
+
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
   (let ((markdown-blocks '())
@@ -320,27 +410,12 @@ Otherwise interrupt if busy."
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward
-              (rx bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
-                  (group (zero-or-more (or alphanumeric "-"))) ;; language
-                  (zero-or-more whitespace)
-                  (one-or-more "\n")
-                  (group (*? anychar)) ;; body
-                  (one-or-more "\n")
-                  (group "```"))
+              chatgpt-shell--source-block-regexp
               nil t)
         (when-let ((begin (match-beginning 0))
                    (end (match-end 0)))
-          (push
-           (list
-            'start (cons (match-beginning 1)
-                         (match-end 1))
-            'end (cons (match-beginning 4)
-                       (match-end 4))
-            'language (when (and (match-beginning 2)
-                                 (match-end 2))
-                        (cons (match-beginning 2)
-                              (match-end 2)))
-            'body (cons (match-beginning 3) (match-end 3))) markdown-blocks))))
+          (push (chatgpt-shell--match-source-block)
+                markdown-blocks))))
     (nreverse markdown-blocks)))
 
 (defun chatgpt-shell-prompt ()
