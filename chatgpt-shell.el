@@ -99,7 +99,9 @@ Objective-C -> (\"objective-c\" . \"objc\")"
                                          ("ditaa" . ((:file . "<temp-file>.png")))
                                          ("objc" . ((:results . "output")))
                                          ("python" . ((:python . "python3")))
-                                         ("swiftui" . ((:results . "file"))))
+                                         ("swiftui" . ((:results . "file")))
+                                         ("c++" . ((:results . "raw")))
+                                         ("c" . ((:results . "raw"))))
   "Additional headers to make babel blocks work.
 
 Please submit contributions so more things work out of the box."
@@ -319,7 +321,7 @@ Otherwise interrupt if busy."
 
 (defvar chatgpt-shell--source-block-regexp
   (rx  bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
-       (group (zero-or-more (or alphanumeric "-"))) ;; language
+       (group (zero-or-more (or alphanumeric "-" "+"))) ;; language
        (zero-or-more whitespace)
        (one-or-more "\n")
        (group (*? anychar)) ;; body
@@ -1000,7 +1002,9 @@ For example \"elisp\" -> \"emacs-lisp\"."
   "Resolve LANGUAGE to org babel command."
   (require 'ob)
   (when language
-    (require (intern (concat "ob-" (downcase language))) nil t)
+    (ignore-errors
+      (or (require (intern (concat "ob-" (capitalize language))) nil t)
+          (require (intern (concat "ob-" (downcase language))) nil t)))
     (let ((f (intern (concat "org-babel-execute:" language)))
           (f-cap (intern (concat "org-babel-execute:" (capitalize language)))))
       (if (fboundp f)
