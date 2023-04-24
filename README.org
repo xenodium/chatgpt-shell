@@ -29,6 +29,7 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
   ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
         (lambda ()
+          ;; (auth-source-pass-get 'secret "openai-key") ; alternative using pass support in auth-sources
           (nth 0 (process-lines "pass" "show" "openai-key"))))
 
   ;; or if using auth-sources, e.g., so the file ~/.authinfo has this line:
