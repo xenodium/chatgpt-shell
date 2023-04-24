@@ -8,7 +8,7 @@ Includes =shell-maker=, a way to create shells for any service (local or cloud).
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/dalle-shell-demo.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/blocks.gif" width="80%" />
 
 ** Note
 
