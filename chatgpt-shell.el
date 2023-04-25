@@ -348,6 +348,8 @@ Otherwise interrupt if busy."
 
 Could be a prompt or a source block."
   (interactive)
+  (unless (eq major-mode 'shell-maker-mode)
+    (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (when (comint-next-prompt (- 1))
                         (point))))
@@ -367,6 +369,8 @@ Could be a prompt or a source block."
 
 Could be a prompt or a source block."
   (interactive)
+  (unless (eq major-mode 'shell-maker-mode)
+    (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (when (comint-next-prompt 1)
                         (point))))
