@@ -22,12 +22,14 @@
 
 ;;; Commentary:
 
-;; Note: This is very much a proof of concept (and very rough!).  Much
-;; of the code is based on `ielm'.
+;; `chatgpt-shell' is a comint-based ChatGPT shell for Emacs.
 ;;
 ;; You must set `chatgpt-shell-openai-key' to your key before using.
 ;;
 ;; Run `chatgpt-shell' to get a ChatGPT shell.
+;;
+;; Note: This is young package still.  Please report issues or send
+;; patches to https://github.com/xenodium/chatgpt-shell
 
 ;;; Code:
 
