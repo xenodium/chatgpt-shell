@@ -24,6 +24,9 @@
 
 ;; This is a comint-based generic package used for building concrete
 ;; shells.
+;;
+;; Much inspiration comes from IELM
+;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Lisp-Interaction.html
 
 ;;; Code:
 
@@ -359,14 +362,14 @@ Otherwise mark current output at location."
       (max
        (save-excursion
          (call-interactively #'comint-previous-prompt)
-         (re-search-backward comint-prompt-regexp)
+         (re-search-backward comint-prompt-regexp nil t)
          (point))
        (save-excursion
-         (re-search-backward comint-prompt-regexp)
+         (re-search-backward comint-prompt-regexp nil t)
          (point))
        (save-excursion
          (call-interactively #'comint-next-prompt)
-         (re-search-backward comint-prompt-regexp)
+         (re-search-backward comint-prompt-regexp nil t)
          (if (<= (point) old-point)
              (point)
            (point-min)))))))
