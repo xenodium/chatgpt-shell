@@ -474,8 +474,8 @@ If region is active, append to prompt."
            "\n\n"
            (buffer-substring (region-beginning) (region-end)))))
 
-(defun chatgpt-shell-refactory-code ()
-  "Refactoring code from region using ChatGPT."
+(defun chatgpt-shell-refactor-code ()
+  "Refactor code from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'."))
 
@@ -484,7 +484,7 @@ If region is active, append to prompt."
   (interactive)
   (chatgpt-shell-send-region-with-header "Please help me generate unit-test following function:"))
 
-(defun chatgpt-shell-proofreading-doc ()
+(defun chatgpt-shell-proofread-doc ()
   "Proofread English from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header "Please help me proofread the following text with English:"))
