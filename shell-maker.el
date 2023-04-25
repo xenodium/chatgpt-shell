@@ -66,6 +66,11 @@ Enable it for troubleshooting issues."
   :type 'boolean
   :group 'shell-maker)
 
+(defcustom shell-maker-history-path user-emacs-directory
+  "Root path to the location for storing history files."
+  :type 'directory
+  :group 'shell-maker)
+
 (defvar shell-maker--input nil)
 
 (defvar shell-maker--current-request-id 0)
@@ -813,7 +818,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   (expand-file-name (concat
                      (file-name-as-directory
                       (downcase (shell-maker-config-name config)))
-                     "history")  user-emacs-directory))
+                     "history") shell-maker-history-path))
 
 (defun shell-maker-prompt (config)
   "Get prompt name from CONFIG."
