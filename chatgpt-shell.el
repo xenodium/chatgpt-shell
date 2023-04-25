@@ -848,7 +848,8 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
                             (map-elt block 'language-start) (map-elt block 'language-end))
          (let ((new-name (read-string "Name: " nil nil "")))
            (goto-char (map-elt block 'language-start))
-           (insert new-name)))
+           (insert new-name)
+           (chatgpt-shell--put-source-block-overlays)))
     (user-error "No block at point"))))
 
 (defun chatgpt-shell-remove-block-overlays ()
