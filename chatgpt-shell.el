@@ -30,6 +30,8 @@
 ;;
 ;; Note: This is young package still.  Please report issues or send
 ;; patches to https://github.com/xenodium/chatgpt-shell
+;;
+;; Support the work https://github.com/sponsors/xenodium
 
 ;;; Code:
 
