@@ -527,8 +527,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
 (defun chatgpt-shell-send-to-buffer (text &optional review)
   "Send TEXT to *chatgpt* buffer.
-Set REVIEW to make changes before submitting to ChatGPT.
-Set SAVE-EXCURSION to prevent point from moving."
+Set REVIEW to make changes before submitting to ChatGPT."
   (chatgpt-shell)
   (with-selected-window
       (get-buffer-window (get-buffer-create "*chatgpt*"))
