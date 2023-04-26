@@ -428,11 +428,13 @@ Could be a prompt or a source block."
                 markdown-blocks))))
     (nreverse markdown-blocks)))
 
-(defun chatgpt-shell-prompt ()
+(defun chatgpt-shell-prompt (prefix)
   "Make a ChatGPT request from the minibuffer.
 
-If region is active, append to prompt."
-  (interactive)
+If region is active, append to prompt.
+
+With PREFIX insert result in current buffer."
+  (interactive "P")
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
           chatgpt-shell-default-prompts))
@@ -447,7 +449,7 @@ If region is active, append to prompt."
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (buffer-substring (region-beginning) (region-end)))))
-    (chatgpt-shell-send-to-buffer prompt)))
+    (chatgpt-shell-send-to-buffer prompt nil prefix)))
 
 (defun chatgpt-shell-describe-code ()
   "Describe code from region using ChatGPT."
@@ -525,20 +527,50 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive)
   (chatgpt-shell-send-region t))
 
-(defun chatgpt-shell-send-to-buffer (text &optional review)
+(defun chatgpt-shell-send-to-buffer (text &optional review insert-inline)
   "Send TEXT to *chatgpt* buffer.
-Set REVIEW to make changes before submitting to ChatGPT."
-  (chatgpt-shell)
-  (with-selected-window
-      (get-buffer-window (get-buffer-create "*chatgpt*"))
-    (when shell-maker--busy
-      (shell-maker-interrupt))
-    (goto-char (point-max))
-    (if review
-        (save-excursion
-          (insert text))
-      (insert text)
-      (shell-maker--send-input))))
+Set REVIEW to make changes before submitting to ChatGPT.
+
+When INSERT-INLINE, send to shell and insert response inline."
+  (chatgpt-shell insert-inline)
+  (let* ((buffer (current-buffer))
+         (orig-point (point))
+         (orig-region-active (region-active-p))
+         (orig-region-start (when orig-region-active
+                              (region-beginning)))
+         (orig-region-end (when orig-region-active
+                            (region-end))))
+    (cl-flet ((send ()
+                    (when shell-maker--busy
+                      (shell-maker-interrupt))
+                    (goto-char (point-max))
+                    (if review
+                        (save-excursion
+                          (insert text))
+                      (insert text)
+                      (shell-maker--send-input (if insert-inline
+                                                   (lambda (_command output error)
+                                                     (setq output (string-trim (or output "")))
+                                                     (with-current-buffer buffer
+                                                       (if error
+                                                           (error "%s" error)
+                                                         (save-excursion
+                                                           (if orig-region-active
+                                                               (progn
+                                                                 (goto-char (max orig-region-start
+                                                                                 orig-region-end))
+                                                                 (insert "\n\n")
+                                                                 (insert output))
+                                                             (goto-char orig-point)
+                                                             (insert output))))))
+                                                 (lambda (_command _output _error)))))))
+      (if insert-inline
+          (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
+            (goto-char (point-max))
+            (send))
+        (with-selected-window
+            (get-buffer-window (get-buffer-create "*chatgpt*"))
+          (send))))))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)
   "Send TEXT to *ielm* buffer.

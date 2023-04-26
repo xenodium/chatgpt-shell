@@ -423,8 +423,17 @@ Otherwise save current output at location."
       (message "interrupted!"))
     (setq shell-maker--busy nil)))
 
-(defun shell-maker--eval-input (input-string)
-  "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result."
+(defun shell-maker--eval-input (input-string &optional on-completion)
+  "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result.
+
+Use ON-COMPLETION function to handle outcome.
+
+For example:
+
+\(lambda (command output error)
+   (message \"Command: %s\" command)
+   (message \"Output: %s\" output)
+   (message \"Has error: %s\" output))"
   (let ((buffer (shell-maker-buffer shell-maker-config))
         (prefix-newline "")
         (suffix-newline "\n\n")
@@ -481,16 +490,25 @@ Otherwise save current output at location."
                          (shell-maker--write-input-ring-history)
                          (when (shell-maker-config-on-command-finished shell-maker-config)
                            ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
+                           (when on-completion
+                             (funcall on-completion
+                                      input-string (shell-maker-last-output) nil))
                            (funcall (shell-maker-config-on-command-finished shell-maker-config)
                                     input-string
                                     (shell-maker-last-output))))
                      (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
                      (setq shell-maker--busy nil)
-                     (shell-maker--announce-response buffer)))
+                     (shell-maker--announce-response buffer)
+                     (when on-completion
+                       (funcall on-completion
+                                input-string (shell-maker-last-output) t))))
                  (lambda (error)
                    (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
                    (setq shell-maker--busy nil)
-                   (shell-maker--announce-response buffer))))))))
+                   (shell-maker--announce-response buffer)
+                   (when on-completion
+                     (funcall on-completion
+                              input-string (shell-maker-last-output) t)))))))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
@@ -606,11 +624,20 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
 Used by `shell-maker--send-input's call."
   (setq shell-maker--input input))
 
-(defun shell-maker--send-input ()
-  "Send text after the prompt."
+(defun shell-maker--send-input (&optional on-completion)
+  "Send text after the prompt.
+
+Use ON-COMPLETION function to handle outcome.
+
+For example:
+
+\(lambda (command output error)
+   (message \"Command: %s\" command)
+   (message \"Output: %s\" output)
+   (message \"Has error: %s\" output))"
   (let (shell-maker--input)
     (comint-send-input)
-    (shell-maker--eval-input shell-maker--input)))
+    (shell-maker--eval-input shell-maker--input on-completion)))
 
 (defun shell-maker--get-old-input nil
   "Return the previous input surrounding point."
