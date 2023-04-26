@@ -23,7 +23,7 @@ This is very much an experimental proof of concept, possibly incomplete, or mayb
 
 You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
 
-** ChapGPT key
+** ChatGPT key
 *** As function
 #+begin_src emacs-lisp
   ;; if you are using the "pass" password manager
@@ -53,7 +53,7 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
 
 ** DALL-E key
 
-Same as ChapGPT, but use =dall-e-shell-openai-key= variable.
+Same as ChatGPT, but use =dall-e-shell-openai-key= variable.
 
 * Launch
 
