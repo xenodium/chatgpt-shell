@@ -189,7 +189,7 @@ Uses the interface provided by `comint-mode'"
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
     (goto-char (point-max))
-    (shell-maker--output-filter (shell-maker--process)
+    (comint-output-filter (shell-maker--process)
                           (concat reply
                                   (if failed
                                       (propertize "<shell-maker-failed-command>"
@@ -440,7 +440,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   (let ((buffer (shell-maker-buffer shell-maker-config))
         (prefix-newline "")
         (suffix-newline "\n\n")
-        (response-count 0))
+        (response-count 0)
+        (errored))
     (unless shell-maker--busy
       (setq shell-maker--busy t)
       (cond
@@ -511,7 +512,9 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                        (funcall on-output
                                 input-string (shell-maker-last-output) t t))))
                  (lambda (error)
-                   (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
+                   (unless errored
+                     (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
+                     (setq errored t))
                    (setq shell-maker--busy nil)
                    (unless no-announcement
                     (shell-maker--announce-response buffer))
@@ -569,9 +572,13 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                            (funcall callback (funcall response-extractor obj) t)))
                        (car preparsed))
                (with-current-buffer buffer
-                 (if (eq 0 (shell-maker--curl-exit-status-from-error-string (cdr preparsed)))
-                     (funcall callback (cdr preparsed) t)
-                   (funcall error-callback (cdr preparsed)))))
+                 (let ((curl-exit-code (shell-maker--curl-exit-status-from-error-string (cdr preparsed))))
+                   (cond ((eq 0 curl-exit-code)
+                          (funcall callback (cdr preparsed) t))
+                         ((numberp curl-exit-code)
+                          (funcall error-callback (string-trim (cdr preparsed))))
+                         (t
+                          (funcall callback (cdr preparsed) t))))))
              (setq remaining-text (cdr preparsed))))))
       (set-process-sentinel
        request-process
