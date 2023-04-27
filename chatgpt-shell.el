@@ -556,7 +556,8 @@ When INSERT-INLINE, send to shell and insert response inline."
                              (setq output (or output ""))
                              (with-current-buffer buffer
                                (if error
-                                   (message "%s" error)
+                                   (unless (string-empty-p (string-trim output))
+                                    (message "%s" output))
                                  (save-excursion
                                    (if orig-region-active
                                        (progn
@@ -578,7 +579,8 @@ When INSERT-INLINE, send to shell and insert response inline."
                                      (setq output-length
                                                (+ output-length
                                                   (length output))))))))
-                         (lambda (_command _output _error _finished)))))))
+                         (lambda (_command _output _error _finished)))
+                       t))))
       (if insert-inline
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
             (goto-char (point-max))

@@ -423,7 +423,7 @@ Otherwise save current output at location."
       (message "interrupted!"))
     (setq shell-maker--busy nil)))
 
-(defun shell-maker--eval-input (input-string &optional on-output)
+(defun shell-maker--eval-input (input-string &optional on-output no-announcement)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result.
 
 Use ON-OUTPUT function to handle outcome.
@@ -434,7 +434,9 @@ For example:
    (message \"Command: %s\" command)
    (message \"Output: %s\" output)
    (message \"Has error: %s\" output)
-   (message \"Is finished: %s\" finished))"
+   (message \"Is finished: %s\" finished))
+
+NO-ANNOUNCEMENT skips announcing response when in background."
   (let ((buffer (shell-maker-buffer shell-maker-config))
         (prefix-newline "")
         (suffix-newline "\n\n")
@@ -489,7 +491,8 @@ For example:
                                (funcall on-output
                                         input-string response nil partial)))
                          (shell-maker--write-reply (concat prefix-newline response suffix-newline))
-                         (shell-maker--announce-response buffer)
+                         (unless no-announcement
+                           (shell-maker--announce-response buffer))
                          (setq shell-maker--busy nil)
                          (shell-maker--write-input-ring-history)
                          (when (shell-maker-config-on-command-finished shell-maker-config)
@@ -502,22 +505,30 @@ For example:
                                     (shell-maker-last-output))))
                      (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
                      (setq shell-maker--busy nil)
-                     (shell-maker--announce-response buffer)
+                     (unless no-announcement
+                      (shell-maker--announce-response buffer))
                      (when on-output
                        (funcall on-output
                                 input-string (shell-maker-last-output) t t))))
                  (lambda (error)
                    (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
                    (setq shell-maker--busy nil)
-                   (shell-maker--announce-response buffer)
+                   (unless no-announcement
+                    (shell-maker--announce-response buffer))
                    (when on-output
                      (funcall on-output
-                              input-string (shell-maker-last-output) t t)))))))))
+                              input-string error t t)))))))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
+
+
+(defun shell-maker--curl-exit-status-from-error-string (string)
+  "Extract exit status from curl error STRING."
+  (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
+    (string-to-number (match-string 1 string))))
 
 (defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback)
   "Run shell COMMAND asynchronously.
@@ -559,7 +570,9 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                            (funcall callback (funcall response-extractor obj) t)))
                        (car preparsed))
                (with-current-buffer buffer
-                 (funcall callback (cdr preparsed) t)))
+                 (if (eq 0 (shell-maker--curl-exit-status-from-error-string (cdr preparsed)))
+                     (funcall callback (cdr preparsed) t)
+                   (funcall error-callback (cdr preparsed)))))
              (setq remaining-text (cdr preparsed))))))
       (set-process-sentinel
        request-process
@@ -628,7 +641,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
 Used by `shell-maker--send-input's call."
   (setq shell-maker--input input))
 
-(defun shell-maker--send-input (&optional on-output)
+(defun shell-maker--send-input (&optional on-output no-announcement)
   "Send text after the prompt.
 
 Use ON-OUTPUT function to handle outcome.
@@ -639,10 +652,12 @@ For example:
    (message \"Command: %s\" command)
    (message \"Output: %s\" output)
    (message \"Has error: %s\" output)
-   (message \"Is finished: %s\" finished))"
+   (message \"Is finished: %s\" finished))
+
+NO-ANNOUNCEMENT skips announcing response when in background."
   (let (shell-maker--input)
     (comint-send-input)
-    (shell-maker--eval-input shell-maker--input on-output)))
+    (shell-maker--eval-input shell-maker--input on-output no-announcement)))
 
 (defun shell-maker--get-old-input nil
   "Return the previous input surrounding point."
