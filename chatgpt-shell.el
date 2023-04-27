@@ -539,7 +539,8 @@ When INSERT-INLINE, send to shell and insert response inline."
          (orig-region-start (when orig-region-active
                               (region-beginning)))
          (orig-region-end (when orig-region-active
-                            (region-end))))
+                            (region-end)))
+         (output-length 0))
     (cl-flet ((send ()
                     (when shell-maker--busy
                       (shell-maker-interrupt))
@@ -548,22 +549,36 @@ When INSERT-INLINE, send to shell and insert response inline."
                         (save-excursion
                           (insert text))
                       (insert text)
-                      (shell-maker--send-input (if insert-inline
-                                                   (lambda (_command output error)
-                                                     (setq output (string-trim (or output "")))
-                                                     (with-current-buffer buffer
-                                                       (if error
-                                                           (error "%s" error)
-                                                         (save-excursion
-                                                           (if orig-region-active
-                                                               (progn
-                                                                 (goto-char (max orig-region-start
-                                                                                 orig-region-end))
-                                                                 (insert "\n\n")
-                                                                 (insert output))
-                                                             (goto-char orig-point)
-                                                             (insert output))))))
-                                                 (lambda (_command _output _error)))))))
+                      (shell-maker--send-input
+                       (if insert-inline
+                           (lambda (_command output error _finished)
+                             ;; (setq output (string-trim (or output "")))
+                             (setq output (or output ""))
+                             (with-current-buffer buffer
+                               (if error
+                                   (message "%s" error)
+                                 (save-excursion
+                                   (if orig-region-active
+                                       (progn
+                                         (goto-char (+ (max orig-region-start
+                                                            orig-region-end)
+                                                       output-length))
+                                         (when (zerop output-length)
+                                           (insert "\n\n")
+                                           (setq output-length
+                                                 (+ output-length
+                                                    2)))
+                                         (insert output)
+                                         (setq output-length
+                                               (+ output-length
+                                                  (length output))))
+                                     (goto-char (+ orig-point
+                                                   output-length))
+                                     (insert output)
+                                     (setq output-length
+                                               (+ output-length
+                                                  (length output))))))))
+                         (lambda (_command _output _error _finished)))))))
       (if insert-inline
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
             (goto-char (point-max))
