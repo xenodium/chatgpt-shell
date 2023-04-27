@@ -534,12 +534,12 @@ Set REVIEW to make changes before submitting to ChatGPT.
 When INSERT-INLINE, send to shell and insert response inline."
   (chatgpt-shell insert-inline)
   (let* ((buffer (current-buffer))
-         (orig-point (point))
+         (orig-point (copy-marker (point)))
          (orig-region-active (region-active-p))
          (orig-region-start (when orig-region-active
-                              (region-beginning)))
+                              (copy-marker (region-beginning))))
          (orig-region-end (when orig-region-active
-                            (region-end)))
+                            (copy-marker (region-end))))
          (output-length 0))
     (cl-flet ((send ()
                     (when shell-maker--busy
