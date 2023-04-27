@@ -524,7 +524,6 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
 
-
 (defun shell-maker--curl-exit-status-from-error-string (string)
   "Extract exit status from curl error STRING."
   (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
