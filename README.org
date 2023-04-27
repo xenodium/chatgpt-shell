@@ -74,7 +74,10 @@ Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-
 Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
 
 * Streaming
-=(setq chatgpt-shell-streaming t)= enables/disables streaming.
+
+=chatgpt-shell= can either wait until the entire response is received before displaying, or it can progressively display as chunks arrive (streaming).
+
+=(setq chatgpt-shell-chatgpt-streaming nil)= to disable streaming. Streaming is enabled by default.
 
 * Explain code in region
 
