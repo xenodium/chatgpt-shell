@@ -113,23 +113,48 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 
 * Customizations
 
-|------------------------------------+---------------------------------------------------------------------------|
-| chatgpt-shell-default-prompts      | List of prompts to choose from in the minibuffer.                         |
-| chatgpt-shell-model-version        | The used ChatGPT OpenAI model.                                            |
-| chatgpt-shell-streaming            | Whether or not to stream ChatGPT responses (experimental).                |
-| chatgpt-shell-system-prompt        | The system message helps set the behavior of the assistant.               |
-| chatgpt-shell-language-mapping     | Maps external language names to Emacs names.                              |
-| chatgpt-shell-model-temperature    | What sampling temperature to use, between 0 and 2, or nil.                |
-| chatgpt-shell-openai-key           | OpenAI key as a string or a function that loads and returns it.           |
-| chatgpt-shell-request-timeout      | How long to wait for a request to time out.                               |
-| chatgpt-shell-display-function     | Function to display new shell. Can be set to `display-buffer' or similar. |
-| chatgpt-shell-read-string-function | Function to read strings from user.                                       |
-| chatgpt-shell-on-response-function | Function to automatically execute after last command output.              |
-| dall-e-shell-openai-key            | OpenAI key as a string or a function that loads and returns it.           |
-| dall-e-image-size                  | The default size of the requested image as a string.                      |
-| dall-e-model-version               | The used DALL-E OpenAI model.                                             |
+|------------------------------------+-----------------------------------------------------------------------------------|
+| chatgpt-shell-default-prompts      | List of prompts to choose from in the minibuffer.                                 |
+| chatgpt-shell-model-version        | The used ChatGPT OpenAI model.                                                    |
+| chatgpt-shell-streaming            | Whether or not to stream ChatGPT responses (experimental).                        |
+| chatgpt-shell-system-prompt        | The system message helps set the behavior of the assistant.                       |
+| chatgpt-shell-language-mapping     | Maps external language names to Emacs names.                                      |
+| chatgpt-shell-model-temperature    | What sampling temperature to use, between 0 and 2, or nil.                        |
+| chatgpt-shell-openai-key           | OpenAI key as a string or a function that loads and returns it.                   |
+| chatgpt-shell-request-timeout      | How long to wait for a request to time out.                                       |
+| chatgpt-shell-display-function     | Function to display new shell. Can be set to `display-buffer' or custom function. |
+| chatgpt-shell-read-string-function | Function to read strings from user.                                               |
+| chatgpt-shell-on-response-function | Function to automatically execute after last command output.                      |
+| dall-e-shell-openai-key            | OpenAI key as a string or a function that loads and returns it.                   |
+| dall-e-image-size                  | The default size of the requested image as a string.                              |
+| dall-e-model-version               | The used DALL-E OpenAI model.                                                     |
 
 There are more. Browse via =M-x set-variable=
+
+** =chatgpt-shell-display-function= (with custom function)
+
+If you'd prefer your own custom display function,
+
+#+begin_src emacs-lisp :lexical no
+  (setq chatgpt-shell-display-function #'my/chatgpt-shell-frame)
+
+  (defun my/chatgpt-shell-frame (bname)
+    (let ((cur-f (selected-frame))
+          (f (my/find-or-make-frame "chatgpt")))
+      (select-frame-by-name "chatgpt")
+      (pop-to-buffer-same-window bname)
+      (set-frame-position f (/ (display-pixel-width) 2) 0)
+      (set-frame-height f (frame-height cur-f))
+      (set-frame-width f  (frame-width cur-f) 1)))
+
+  (defun my/find-or-make-frame (fname)
+    (condition-case
+        nil
+        (select-frame-by-name fname)
+      (error (make-frame `((name . ,fname))))))
+#+end_src
+
+Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 * Commands
 
