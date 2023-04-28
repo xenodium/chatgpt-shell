@@ -1,3 +1,4 @@
+#+EXPORT_EXCLUDE_TAGS: noexport
 👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
 
 * chatgpt-shell
