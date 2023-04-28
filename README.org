@@ -12,7 +12,11 @@ Includes =shell-maker=, a way to create shells for any service (local or cloud).
 
 ** Note
 
-This is very much an experimental proof of concept, possibly incomplete, or maybe with some rough edges. Pull requests with improvements or fixes totally welcome.
+=chatgpt-shell= is young package still. Please report issues or send [[https://github.com/xenodium/chatgpt-shell/pulls][pull requests]] for improvements.
+
+I hope =chatgpt-shell= is becoming as useful to you as it is for me.
+
+✨[[https://github.com/sponsors/xenodium][Sponsorships]]✨ are also greatly appreciated.
 
 * Install
 
