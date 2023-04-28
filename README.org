@@ -19,6 +19,23 @@ This is very much an experimental proof of concept, possibly incomplete, or mayb
 - Load =(require 'chatgpt-shell)=
 - Load =(require 'dall-e-shell)=
 
+** MELPA
+
+As of now, only =chatgpt-shell= is available on MELPA.
+
+If using [[https://github.com/jwiegley/use-package][use-package]], you can install with =:ensure t=.
+
+#+begin_src emacs-lisp :lexical no
+  (use-package chatgpt-shell
+    :ensure t
+    :custom
+    (chatgpt-shell-openai-key
+     (lambda ()
+       (auth-source-pass-get 'secret "openai-key"))))
+#+end_src
+
+Read on for setting your OpenAI key in other ways.
+
 * Set OpenAI key
 
 You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
@@ -77,39 +94,7 @@ Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgp
 
 =chatgpt-shell= can either wait until the entire response is received before displaying, or it can progressively display as chunks arrive (streaming).
 
-=(setq chatgpt-shell-chatgpt-streaming nil)= to disable streaming. Streaming is enabled by default.
-
-* Explain code in region
-
-=M-x chatgpt-shell-explain-code=
-
-There are other functions to act on region. Browse all available via =M-x=.
-
-* ChatGPT org babel
-
-Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell
-    Hello
-  ,#+end_src
-
-  ,#+RESULTS:
-  : Hi there! How can I assist you today?
-#+end_src
-
-* DALL-E org babel
-
-Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
-
-#+begin_src org
-  ,#+begin_src dall-e-shell
-    Pretty clouds
-  ,#+end_src
-
-  ,#+RESULTS:
-  [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
-#+end_src
+Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to disable it.
 
 * ChatGPT customizations
 
@@ -283,6 +268,32 @@ Browse all available via =M-x=.
 |-------------------+---------------------------------------------------------|
 | dall-e-shell      | Start a DALL-E shell.                                   |
 | dall-e-shell-mode | Major mode for editing text written for humans to read. |
+
+* ChatGPT org babel
+
+Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell
+    Hello
+  ,#+end_src
+
+  ,#+RESULTS:
+  : Hi there! How can I assist you today?
+#+end_src
+
+* DALL-E org babel
+
+Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
+
+#+begin_src org
+  ,#+begin_src dall-e-shell
+    Pretty clouds
+  ,#+end_src
+
+  ,#+RESULTS:
+  [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
+#+end_src
 
 * shell-maker
 
