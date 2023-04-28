@@ -103,11 +103,11 @@ Enable it for troubleshooting issues."
 
 (defvar shell-maker-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map "\C-m" 'shell-maker-return)
-    (define-key map "\C-c\C-c" 'shell-maker-interrupt)
+    (define-key map [remap comint-send-input] 'shell-maker-return)
+    (define-key map [remap comint-interrupt-subjob] 'shell-maker-interrupt)
     (define-key map "\C-x\C-s" 'shell-maker-save-session-transcript)
     (define-key map "\C-\M-h" 'shell-maker-mark-output)
-    (define-key map "\M-r" 'shell-maker-search-history)
+    (define-key map [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history)
     map)
   "Keymap for `shell-maker' shells.")
 
