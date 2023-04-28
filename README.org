@@ -1,4 +1,3 @@
-#+EXPORT_EXCLUDE_TAGS: noexport
 👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
 
 * chatgpt-shell
@@ -158,7 +157,7 @@ If you'd prefer your own custom display function,
 Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 * Commands
-#+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :noexport
+#+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
   (let ((rows))
     (mapatoms
      (lambda (symbol)
