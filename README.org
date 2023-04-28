@@ -6,10 +6,6 @@ ChatGPT and DALL-E Emacs shells + [[https://orgmode.org/worg/org-contrib/babel/i
 
 Includes =shell-maker=, a way to create shells for any service (local or cloud).
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/blocks.gif" width="80%" />
-
 ** Note
 
 =chatgpt-shell= is young package still. Please report issues or send [[https://github.com/xenodium/chatgpt-shell/pulls][pull requests]] for improvements.
@@ -17,6 +13,11 @@ Includes =shell-maker=, a way to create shells for any service (local or cloud).
 I hope =chatgpt-shell= is becoming as useful to you as it is for me.
 
 ✨[[https://github.com/sponsors/xenodium][Sponsorships]]✨ are also greatly appreciated.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/blocks.gif" width="80%" />
+
 
 * Install
 
