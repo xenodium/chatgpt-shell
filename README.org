@@ -157,21 +157,55 @@ If you'd prefer your own custom display function,
 Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 * Commands
+#+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :nobrowser
+  (let ((rows))
+    (mapatoms
+     (lambda (symbol)
+       (when (and (string-match "^chatgpt-shell"
+                                (symbol-name symbol))
+                  (commandp symbol))
+         (push `(,symbol
+                 ,(car
+                   (split-string
+                    (or (documentation symbol t) "")
+                    "\n")))
+               rows))))
+    rows)
+#+END_SRC
 
-|----------------------------------------------------+--------------------------------------------------------|
-| dall-e-shell                                       | Start a DALL-E shell.                                  |
-| chatgpt-shell                                      | Start a ChatGPT shell.                                 |
-| chatgpt-shell-prompt                               | Make a ChatGPT request from the minibuffer.            |
-| chatgpt-shell-describe-code                        | Describe code from region using ChatGPT.               |
-| chatgpt-shell-eshell-summarize-last-command-output | Ask ChatGPT to summarize the last command output.      |
-| chatgpt-shell-eshell-whats-wrong-with-last-command | Ask ChatGPT what's wrong with the last eshell command. |
-| chatgpt-shell-mark-output                          | Mark last or current output.                           |
-| chatgpt-shell-restore-session-from-transcript      | Restore session from transcript.                       |
-| chatgpt-shell-save-session-transcript              | Save shell transcript to file.                         |
-| chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.      |
-| chatgpt-shell-send-region                          | Send region to ChatGPT.                                |
+#+RESULTS:
+| Command                                             | Description                                                |
+|-----------------------------------------------------+------------------------------------------------------------|
+| chatgpt-shell                                       | Start a ChatGPT shell.                                     |
+| chatgpt-shell-rename-block-at-point                 | Rename block at point (perhaps a different language).      |
+| chatgpt-shell-proofread-doc                         | Proofread English from region using ChatGPT.               |
+| chatgpt-shell-mark-at-point-dwim                    | Mark source block if at point.  Mark all output otherwise. |
+| chatgpt-shell-execute-primary-block-action-at-point | Execute primary action for known block.                    |
+| chatgpt-shell-execute-babel-block-action-at-point   | Execute block as org babel.                                |
+| chatgpt-shell-eshell-whats-wrong-with-last-command  | Ask ChatGPT what's wrong with the last eshell command.     |
+| chatgpt-shell-previous-item                         | Go to previous item.                                       |
+| chatgpt-shell-explain-code                          | Describe code from region using ChatGPT.                   |
+| chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                |
+| chatgpt-shell-remove-block-overlays                 | Remove block overlays.  Handy for renaming blocks.         |
+| chatgpt-shell-send-and-review-region                | Send region to ChatGPT, review before submitting.          |
+| chatgpt-shell-refactory-code                        | Refactoring code from region using ChatGPT.                |
+| chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.          |
+| chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                   |
+| chatgpt-shell-mode                                  | Major mode for editing text written for humans to read.    |
+| chatgpt-shell-previous-source-block                 | Move point to previous source block.                       |
+| chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                   |
+| chatgpt-shell-save-session-transcript               | Save shell transcript to file.                             |
+| chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                   |
+| chatgpt-shell-proofreading-doc                      | Proofread English from region using ChatGPT.               |
+| chatgpt-shell-next-item                             | Go to next item.                                           |
+| chatgpt-shell-view-at-point                         | View prompt and putput at point in a separate buffer.      |
+| chatgpt-shell-send-region                           | Send region to ChatGPT.                                    |
+| chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                           |
+| chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT. |
+| chatgpt-shell-next-source-block                     | Move point to previous source block.                       |
+| chatgpt-shell-ctrl-c-ctrl-c                         | Ctrl-C Ctrl-C DWIM binding.                                |
 
-There are more. Browse all available via =M-x=.
+Browse all available via =M-x=.
 
 * shell-maker
 
