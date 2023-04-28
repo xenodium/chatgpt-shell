@@ -162,7 +162,7 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-streaming t
-  "Whether or not to stream ChatGPT responses (experimental)."
+  "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
   :type 'boolean
   :group 'chatgpt-shell)
 
