@@ -46,8 +46,8 @@
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-curl-options nil
-  "Options for curl."
+(defcustom chatgpt-shell-additional-curl-options nil
+  "Additional options for `curl' command."
   :type '(repeat (string :tag "String"))
   :group 'chatgpt-shell)
 
@@ -711,7 +711,7 @@ For example:
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
   (append (list "curl" chatgpt-shell--url)
-          chatgpt-shell-curl-options
+          chatgpt-shell-additional-curl-options
           (list "--fail-with-body"
                 "--no-progress-meter"
                 "-m" (number-to-string chatgpt-shell-request-timeout)
