@@ -157,7 +157,7 @@ If you'd prefer your own custom display function,
 Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 * Commands
-<!-- BEGIN-MARKDOWN-IGNORE -->
+<!-- BEGIN-ORG-IGNORE -->
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :nobrowser
   (let ((rows))
     (mapatoms
@@ -173,7 +173,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
                rows))))
     rows)
 #+END_SRC
-<!-- END-MARKDOWN-IGNORE -->
+<!-- END-ORG-IGNORE -->
 
 #+RESULTS:
 | Command                                             | Description                                                |
