@@ -46,6 +46,11 @@
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-curl-options nil
+  "Options for curl."
+  :type '(repeat (string :tag "String"))
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-request-timeout 60
   "How long to wait for a request to time out."
   :type 'integer
@@ -705,20 +710,21 @@ For example:
 
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
-  (list "curl" chatgpt-shell--url
-        "--fail-with-body"
-        "--no-progress-meter"
-        "-m" (number-to-string chatgpt-shell-request-timeout)
-        "-H" "Content-Type: application/json"
-        "-H" (format "Authorization: Bearer %s"
-                     (cond ((stringp chatgpt-shell-openai-key)
-                            chatgpt-shell-openai-key)
-                           ((functionp chatgpt-shell-openai-key)
-                            (condition-case _err
-                                (funcall chatgpt-shell-openai-key)
-                              (error
-                               "KEY-NOT-FOUND")))))
-        "-d" (shell-maker--json-encode request-data)))
+  (append (list "curl" chatgpt-shell--url)
+          chatgpt-shell-curl-options
+          (list "--fail-with-body"
+                "--no-progress-meter"
+                "-m" (number-to-string chatgpt-shell-request-timeout)
+                "-H" "Content-Type: application/json"
+                "-H" (format "Authorization: Bearer %s"
+                             (cond ((stringp chatgpt-shell-openai-key)
+                                    chatgpt-shell-openai-key)
+                                   ((functionp chatgpt-shell-openai-key)
+                                    (condition-case _err
+                                        (funcall chatgpt-shell-openai-key)
+                                      (error
+                                       "KEY-NOT-FOUND")))))
+                "-d" (shell-maker--json-encode request-data))))
 
 (defun chatgpt-shell--make-payload (history)
   "Create the request payload from HISTORY."
