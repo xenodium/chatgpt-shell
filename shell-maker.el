@@ -43,7 +43,7 @@
   (declare-function json-pretty-print "ext:json" (begin end &optional minimize)))
 
 (defcustom shell-maker-display-function #'pop-to-buffer-same-window
-  "Function to display shell.  Can be set to `display-buffer' or custom function."
+  "Function to display the shell.  Set to `display-buffer' or custom function."
   :type 'function
   :group 'shell-maker)
 
