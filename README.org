@@ -99,7 +99,7 @@ Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgp
 
 Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to disable it.
 
-* ChatGPT customizations
+* chatgpt-shell customizations
 
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Custom variable" "Description") :exports results
   (let ((rows))
@@ -167,7 +167,7 @@ If you'd prefer your own custom display function,
 
 Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
-* ChatGPT commands
+* chatgpt-shell commands
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
   (let ((rows))
     (mapatoms
@@ -218,7 +218,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 Browse all available via =M-x=.
 
-* DALL-E customizations
+* dall-e-shell customizations
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Custom variable" "Description") :exports results
   (let ((rows))
     (mapatoms
@@ -249,7 +249,7 @@ Browse all available via =M-x=.
 | dall-e-shell-display-function       | Function to display shell.  Can be set to `display-buffer' or custom function. |
 | dall-e-shell-image-output-directory | Output directory for the generated image.                                      |
 
-* DALL-E commands
+* dall-e-shell commands
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
   (let ((rows))
     (mapatoms
