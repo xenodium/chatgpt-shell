@@ -560,13 +560,12 @@ When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
                             (not chatgpt-shell-insert-queries-inline)
                           chatgpt-shell-insert-queries-inline))
          (buffer (current-buffer))
-         (orig-point (copy-marker (point)))
-         (orig-region-active (region-active-p))
-         (orig-region-start (when orig-region-active
-                              (copy-marker (region-beginning))))
-         (orig-region-end (when orig-region-active
-                            (copy-marker (region-end))))
-         (output-length 0))
+         (point (point))
+         (marker (copy-marker (point)))
+         (orig-region-active (region-active-p)))
+    (when (region-active-p)
+      (setq marker (copy-marker (max (region-beginning)
+                                     (region-end)))))
     (chatgpt-shell insert-inline)
     (cl-flet ((send ()
                     (when shell-maker--busy
@@ -588,24 +587,18 @@ When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
                                  (save-excursion
                                    (if orig-region-active
                                        (progn
-                                         (goto-char (+ (max orig-region-start
-                                                            orig-region-end)
-                                                       output-length))
-                                         (when (zerop output-length)
+                                         (goto-char marker)
+                                         (when (eq (marker-position marker)
+                                                   point)
                                            (insert "\n\n")
-                                           (setq output-length
-                                                 (+ output-length
-                                                    2)))
+                                           (set-marker marker (+ 2 (marker-position marker))))
                                          (insert output)
-                                         (setq output-length
-                                               (+ output-length
-                                                  (length output))))
-                                     (goto-char (+ orig-point
-                                                   output-length))
+                                         (set-marker marker (+ (length output)
+                                                               (marker-position marker))))
+                                     (goto-char marker)
                                      (insert output)
-                                     (setq output-length
-                                           (+ output-length
-                                              (length output))))))))
+                                     (set-marker marker (+ (length output)
+                                                               (marker-position marker))))))))
                          (lambda (_command _output _error _finished)))
                        t))))
       (if insert-inline
