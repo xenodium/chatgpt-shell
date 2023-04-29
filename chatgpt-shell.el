@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.19.1
+;; Version: 0.20.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -64,6 +64,11 @@
     "Explain what the following code does:")
   "List of default prompts to choose from."
   :type '(repeat string)
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-insert-queries-inline t
+  "When making queries in non-shell buffers, insert responses inline."
+  :type 'boolean
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-after-command-functions nil
@@ -438,7 +443,7 @@ Could be a prompt or a source block."
 
 If region is active, append to prompt.
 
-With PREFIX insert result in current buffer."
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
   (interactive "P")
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
@@ -456,9 +461,11 @@ With PREFIX insert result in current buffer."
                            (buffer-substring (region-beginning) (region-end)))))
     (chatgpt-shell-send-to-buffer prompt nil prefix)))
 
-(defun chatgpt-shell-describe-code ()
-  "Describe code from region using ChatGPT."
-  (interactive)
+(defun chatgpt-shell-describe-code (prefix)
+  "Describe code from region using ChatGPT.
+
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
+  (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
   (let ((overlay-blocks (derived-mode-p 'prog-mode)))
@@ -471,32 +478,44 @@ With PREFIX insert result in current buffer."
              (buffer-substring (region-beginning) (region-end))
              (if overlay-blocks
                  "\n```"
-               "")))
+               ""))
+     nil prefix)
     (when overlay-blocks
       (with-current-buffer (get-buffer-create "*chatgpt*")
         (chatgpt-shell--put-source-block-overlays)))))
 
-(defun chatgpt-shell-send-region-with-header (header)
-  "Send text with HEADER from region using ChatGPT."
+(defun chatgpt-shell-send-region-with-header (header invert-insert-inline)
+  "Send text with HEADER from region using ChatGPT.
+
+With INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
   (chatgpt-shell-send-to-buffer
    (concat header
            "\n\n"
-           (buffer-substring (region-beginning) (region-end)))))
+           (buffer-substring (region-beginning) (region-end)))
+   nil invert-insert-inline))
 
-(defun chatgpt-shell-refactor-code ()
-  "Refactor code from region using ChatGPT."
-  (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'."))
+(defun chatgpt-shell-refactor-code (prefix)
+  "Refactor code from region using ChatGPT.
 
-(defun chatgpt-shell-generate-unit-test ()
-  "Generate unit-test for the code from region using ChatGPT."
-  (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me generate unit-test following function:"))
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
+  (interactive "P")
+  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'." prefix))
 
-(defun chatgpt-shell-proofread-doc ()
-  "Proofread English from region using ChatGPT."
-  (interactive)
-  (chatgpt-shell-send-region-with-header "Please help me proofread the following text with English:"))
+(defun chatgpt-shell-generate-unit-test (prefix)
+  "Generate unit-test for the code from region using ChatGPT.
+
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
+  (interactive "P")
+  (chatgpt-shell-send-region-with-header
+   "Please help me generate unit-test following function:" prefix))
+
+(defun chatgpt-shell-proofread-region (prefix)
+  "Proofread English from region using ChatGPT.
+
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
+  (interactive "P")
+  (chatgpt-shell-send-region-with-header
+   "Please help me proofread the following text with English:" prefix))
 
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
@@ -532,13 +551,15 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive)
   (chatgpt-shell-send-region t))
 
-(defun chatgpt-shell-send-to-buffer (text &optional review insert-inline)
+(defun chatgpt-shell-send-to-buffer (text &optional review invert-insert-inline)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
-When INSERT-INLINE, send to shell and insert response inline."
-  (chatgpt-shell insert-inline)
-  (let* ((buffer (current-buffer))
+When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
+  (let* ((insert-inline (if invert-insert-inline
+                            (not chatgpt-shell-insert-queries-inline)
+                          chatgpt-shell-insert-queries-inline))
+         (buffer (current-buffer))
          (orig-point (copy-marker (point)))
          (orig-region-active (region-active-p))
          (orig-region-start (when orig-region-active
@@ -546,6 +567,7 @@ When INSERT-INLINE, send to shell and insert response inline."
          (orig-region-end (when orig-region-active
                             (copy-marker (region-end))))
          (output-length 0))
+    (chatgpt-shell insert-inline)
     (cl-flet ((send ()
                     (when shell-maker--busy
                       (shell-maker-interrupt))
@@ -562,7 +584,7 @@ When INSERT-INLINE, send to shell and insert response inline."
                              (with-current-buffer buffer
                                (if error
                                    (unless (string-empty-p (string-trim output))
-                                    (message "%s" output))
+                                     (message "%s" output))
                                  (save-excursion
                                    (if orig-region-active
                                        (progn
@@ -582,8 +604,8 @@ When INSERT-INLINE, send to shell and insert response inline."
                                                    output-length))
                                      (insert output)
                                      (setq output-length
-                                               (+ output-length
-                                                  (length output))))))))
+                                           (+ output-length
+                                              (length output))))))))
                          (lambda (_command _output _error _finished)))
                        t))))
       (if insert-inline
