@@ -240,9 +240,9 @@ or
 With NO-FOCUS, start the shell without focus."
   (interactive)
   (shell-maker-start chatgpt-shell--config no-focus)
-  (define-key shell-maker-mode-map "\C-\M-h"
+  (define-key shell-maker-mode-map (kbd "C-M-h")
     #'chatgpt-shell-mark-at-point-dwim)
-  (define-key shell-maker-mode-map "\C-c\C-c"
+  (define-key shell-maker-mode-map (kbd "C-c C-c")
     #'chatgpt-shell-ctrl-c-ctrl-c)
   (define-key shell-maker-mode-map (kbd "C-c C-p")
     #'chatgpt-shell-previous-item)
