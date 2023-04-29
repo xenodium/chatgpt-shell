@@ -51,7 +51,7 @@
   :type '(repeat (string :tag "String"))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-request-timeout 60
+(defcustom chatgpt-shell-request-timeout 180
   "How long to wait for a request to time out."
   :type 'integer
   :group 'chatgpt-shell)
