@@ -157,7 +157,13 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-system-prompt "Always show code snippets in markdown blocks with language labels."
+(defcustom chatgpt-shell-system-prompts
+  '("Always show code snippets in markdown blocks with language labels.")
+  "List of default prompts to choose from."
+  :type '(repeat string)
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-system-prompt (nth 0 chatgpt-shell-system-prompts)
   "The system message helps set the behavior of the assistant.
 
 For example: You are a helpful assistant that translates English to French.
@@ -165,6 +171,18 @@ For example: You are a helpful assistant that translates English to French.
 See https://platform.openai.com/docs/guides/chat/introduction"
   :type 'string
   :group 'chatgpt-shell)
+
+(defun chatgpt-shell-swap-system-prompt ()
+  "Swap system prompt from `chatgpt-shell-system-prompts'."
+  (interactive)
+  (let ((choice (completing-read "System prompt: "
+                                 (append
+                                  (list "None")
+                                  chatgpt-shell-system-prompts))))
+    (if (or (string-equal choice "None")
+            (string-empty-p (string-trim choice)))
+        (setq chatgpt-shell-system-prompt nil)
+      (setq chatgpt-shell-system-prompt choice))))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
