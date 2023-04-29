@@ -538,20 +538,22 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
-  (chatgpt-shell-send-to-buffer
-   (concat "What's wrong with this command?\n\n"
-           (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
-           "\n\n"
-           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output)))))
+  (let ((chatgpt-shell-insert-queries-inline nil))
+    (chatgpt-shell-send-to-buffer
+     (concat "What's wrong with this command?\n\n"
+             (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
+             "\n\n"
+             (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))))
 
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
   (interactive)
-  (chatgpt-shell-send-to-buffer
-   (concat "Summarize the output of the following command: \n\n"
-           (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
-           "\n\n"
-           (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output)))))
+  (let ((chatgpt-shell-insert-queries-inline nil))
+    (chatgpt-shell-send-to-buffer
+     (concat "Summarize the output of the following command: \n\n"
+             (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
+             "\n\n"
+             (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))))
 
 (defun chatgpt-shell-send-region (review)
   "Send region to ChatGPT.
