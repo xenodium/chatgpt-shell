@@ -578,7 +578,6 @@ When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
                       (shell-maker--send-input
                        (if insert-inline
                            (lambda (_command output error _finished)
-                             ;; (setq output (string-trim (or output "")))
                              (setq output (or output ""))
                              (with-current-buffer buffer
                                (if error
