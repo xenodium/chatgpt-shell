@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.17.1
+;; Version: 0.18.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -22,9 +22,16 @@
 
 ;;; Commentary:
 
+;; `dall-e-shell' is a comint-based DALL-E shell for Emacs.
+;;
 ;; You must set `dall-e-shell-openai-key' to your key before using.
 ;;
-;; Run `chatgpt-shell' to get a ChatGPT shell.
+;; Run `dall-e-shell' to get a DALL-E shell.
+;;
+;; Note: This is young package still.  Please report issues or send
+;; patches to https://github.com/xenodium/chatgpt-shell
+;;
+;; Support the work https://github.com/sponsors/xenodium
 
 (require 'shell-maker)
 
