@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.20.1
+;; Version: 0.21.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -571,11 +571,13 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive)
   (chatgpt-shell-send-region t))
 
-(defun chatgpt-shell-send-to-buffer (text &optional review invert-insert-inline)
+(defun chatgpt-shell-send-to-buffer (text &optional review invert-insert-inline handler)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
-When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
+When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice.
+
+If passing HANDLER function, use it instead of inserting inline."
   (let* ((insert-inline (if invert-insert-inline
                             (not chatgpt-shell-insert-queries-inline)
                           chatgpt-shell-insert-queries-inline))
@@ -618,7 +620,7 @@ When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
                                      (insert output)
                                      (set-marker marker (+ (length output)
                                                                (marker-position marker))))))))
-                         (lambda (_command _output _error _finished)))
+                         (or handler (lambda (_command _output _error _finished))))
                        t))))
       (if insert-inline
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
