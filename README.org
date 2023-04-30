@@ -168,14 +168,18 @@ If you'd prefer your own custom display function,
 Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 * chatgpt-shell commands
-#+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
+#+BEGIN_SRC emacs-lisp :results table :colnames '("Binding" "Command" "Description") :exports results
   (let ((rows))
     (mapatoms
      (lambda (symbol)
        (when (and (string-match "^chatgpt-shell"
                                 (symbol-name symbol))
                   (commandp symbol))
-         (push `(,symbol
+         (push `(,(mapconcat
+                   #'help--key-description-fontified
+                   (where-is-internal
+                    symbol shell-maker-mode-map nil nil (command-remapping symbol)) ", ")
+                 ,symbol
                  ,(car
                    (split-string
                     (or (documentation symbol t) "")
