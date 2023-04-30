@@ -186,8 +186,8 @@ Optionally provide model VERSION or IMAGE-SIZE."
                        1)))
            (response (dall-e-shell--extract-response
                       (buffer-substring-no-properties
-	               (point-min)
-	               (point-max))
+                       (point-min)
+                       (point-max))
                       t)))
       (if (and (map-elt response 'url)
                (map-elt response 'path)
