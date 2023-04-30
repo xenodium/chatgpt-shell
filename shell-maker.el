@@ -224,8 +224,8 @@ Uses the interface provided by `comint-mode'"
   (let ((proc (get-buffer-process (current-buffer))))
     (save-excursion
       (let* ((pmark (progn (goto-char (process-mark proc))
-			   (forward-line 0)
-			   (point-marker)))
+                           (forward-line 0)
+                           (point-marker)))
              (output (buffer-substring comint-last-input-end pmark))
              (items (split-string output "<shell-maker-end-of-prompt>")))
         (if (> (length items) 1)
@@ -259,7 +259,7 @@ Uses the interface provided by `comint-mode'"
         (prompt-pos (save-excursion
                       (goto-char (process-mark
                                   (get-buffer-process (current-buffer))))
-		      (point))))
+                      (point))))
     (when (>= (point) prompt-pos)
       (goto-char prompt-pos)
       (forward-line 0))
@@ -326,7 +326,7 @@ Otherwise mark current output at location."
         (prompt-pos (save-excursion
                       (goto-char (process-mark
                                   (get-buffer-process (current-buffer))))
-		      (point))))
+                      (point))))
     (when (>= (point) prompt-pos)
       (goto-char prompt-pos)
       (forward-line -1)
@@ -809,48 +809,48 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   (when-let ((oprocbuf (process-buffer process)))
     (with-current-buffer oprocbuf
       (let ((inhibit-read-only t))
-	(save-restriction
-	  (widen)
-	  (goto-char (process-mark process))
-	  (set-marker comint-last-output-start (point))
-	  (insert string)
-	  (set-marker (process-mark process) (point))
-	  (goto-char (process-mark process))
-	  (unless comint-use-prompt-regexp
+        (save-restriction
+          (widen)
+          (goto-char (process-mark process))
+          (set-marker comint-last-output-start (point))
+          (insert string)
+          (set-marker (process-mark process) (point))
+          (goto-char (process-mark process))
+          (unless comint-use-prompt-regexp
             (with-silent-modifications
               (add-text-properties comint-last-output-start (point)
                                    `(rear-nonsticky
-	        		     ,shell-maker--prompt-rear-nonsticky
-	        		     front-sticky
-	        		     (field inhibit-line-move-field-capture)
-	        		     field output
-	        		     inhibit-line-move-field-capture t))))
-	  (when-let* ((prompt-start (save-excursion (forward-line 0) (point)))
-		      (inhibit-read-only t)
+                                     ,shell-maker--prompt-rear-nonsticky
+                                     front-sticky
+                                     (field inhibit-line-move-field-capture)
+                                     field output
+                                     inhibit-line-move-field-capture t))))
+          (when-let* ((prompt-start (save-excursion (forward-line 0) (point)))
+                      (inhibit-read-only t)
                       (prompt (string-match
                                comint-prompt-regexp
                                (buffer-substring prompt-start (point)))))
-	    (with-silent-modifications
-	      (or (= (point-min) prompt-start)
-		  (get-text-property (1- prompt-start) 'read-only)
-		  (put-text-property (1- prompt-start)
-				     prompt-start 'read-only 'fence))
-	      (add-text-properties prompt-start (point)
-				   '(read-only t front-sticky (read-only))))
-	    (when comint-last-prompt
-	      (font-lock--remove-face-from-text-property
-	       (car comint-last-prompt)
-	       (cdr comint-last-prompt)
-	       'font-lock-face
-	       'comint-highlight-prompt))
-	    (setq comint-last-prompt
-		  (cons (copy-marker prompt-start) (point-marker)))
+            (with-silent-modifications
+              (or (= (point-min) prompt-start)
+                  (get-text-property (1- prompt-start) 'read-only)
+                  (put-text-property (1- prompt-start)
+                                     prompt-start 'read-only 'fence))
+              (add-text-properties prompt-start (point)
+                                   '(read-only t front-sticky (read-only))))
+            (when comint-last-prompt
+              (font-lock--remove-face-from-text-property
+               (car comint-last-prompt)
+               (cdr comint-last-prompt)
+               'font-lock-face
+               'comint-highlight-prompt))
+            (setq comint-last-prompt
+                  (cons (copy-marker prompt-start) (point-marker)))
             (font-lock-append-text-property prompt-start (point)
-	        			    'font-lock-face
-	        			    'comint-highlight-prompt)
-	    (add-text-properties prompt-start (point)
-	                         `(rear-nonsticky
-	                           ,shell-maker--prompt-rear-nonsticky))))))))
+                                            'font-lock-face
+                                            'comint-highlight-prompt)
+            (add-text-properties prompt-start (point)
+                                 `(rear-nonsticky
+                                   ,shell-maker--prompt-rear-nonsticky))))))))
 
 (defun shell-maker-buffer (config)
   "Get buffer from CONFIG."

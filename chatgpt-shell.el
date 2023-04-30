@@ -128,8 +128,8 @@ Please submit contributions so more things work out of the box."
 
 Can be used compile or run source block at point."
   :type '(list (cons string
-		     (list (cons 'primary-action-confirmation string)
-			   (cons 'primary-action function))))
+                     (list (cons 'primary-action-confirmation string)
+                           (cons 'primary-action function))))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
@@ -712,8 +712,8 @@ For example:
              (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
         (chatgpt-shell--extract-chatgpt-response
          (buffer-substring-no-properties
-	  (point-min)
-	  (point-max)))))))
+          (point-min)
+          (point-max)))))))
 
 (defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback)
   "Make a single ChatGPT request with PROMPT.
@@ -991,7 +991,7 @@ If no LENGTH set, use 2048."
   (let ((prompt-pos (save-excursion
                       (goto-char (process-mark
                                   (get-buffer-process (current-buffer))))
-		      (point)))
+                      (point)))
         (buf))
     (save-excursion
       (when (>= (point) prompt-pos)
@@ -1162,7 +1162,7 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                            (map-elt block 'language)))
                 (babel-command (chatgpt-shell--org-babel-command language))
                 (lang-headers (intern
-			       (concat "org-babel-default-header-args:" language)))
+                               (concat "org-babel-default-header-args:" language)))
                 (bound (fboundp babel-command))
                 (default-directory "/tmp"))
           (when (y-or-n-p (format "Execute %s ob block?" (capitalize language)))
@@ -1171,12 +1171,12 @@ Actions are defined in `chatgpt-shell-languages-primary-action'.s"
                             (chatgpt-shell--override-language-params
                              language
                              (org-babel-merge-params
-	                      org-babel-default-header-args
-	                      (and (boundp
+                              org-babel-default-header-args
+                              (and (boundp
                                     (intern
-	                             (concat "org-babel-default-header-args:" language)))
+                                     (concat "org-babel-default-header-args:" language)))
                                    (eval (intern
-		                          (concat "org-babel-default-header-args:" language)) t))))))
+                                          (concat "org-babel-default-header-args:" language)) t))))))
                    (output (progn
                              (when (get-buffer org-babel-error-buffer-name)
                                (kill-buffer (get-buffer org-babel-error-buffer-name)))
