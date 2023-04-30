@@ -48,7 +48,7 @@
   :group 'shell-maker)
 
 (defcustom shell-maker-read-string-function (lambda (prompt history)
-                                           (read-string prompt nil history))
+                                              (read-string prompt nil history))
   "Function to read strings from user.
 
 To use `completing-read', it can be done with something like:
@@ -210,12 +210,12 @@ Uses the interface provided by `comint-mode'"
   (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let ((candidate (completing-read
-               "History: "
-               (delete-dups
-                (seq-filter
-                 (lambda (item)
-                   (not (string-empty-p item)))
-                 (ring-elements comint-input-ring))) nil t)))
+                    "History: "
+                    (delete-dups
+                     (seq-filter
+                      (lambda (item)
+                        (not (string-empty-p item)))
+                      (ring-elements comint-input-ring))) nil t)))
     (delete-region (comint-line-beginning-position) (point-max))
     (insert candidate)))
 
@@ -413,10 +413,10 @@ Otherwise save current output at location."
     (comint-send-input)
     (goto-char (point-max))
     (shell-maker--output-filter (shell-maker--process)
-                          (concat (propertize "<shell-maker-failed-command>"
-                                              'invisible (not shell-maker--show-invisible-markers))
-                                  "\n"
-                                  shell-maker--prompt-internal))
+                                (concat (propertize "<shell-maker-failed-command>"
+                                                    'invisible (not shell-maker--show-invisible-markers))
+                                        "\n"
+                                        shell-maker--prompt-internal))
     (when (process-live-p shell-maker--request-process)
       (kill-process shell-maker--request-process))
     (when shell-maker--busy
@@ -507,7 +507,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                      (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
                      (setq shell-maker--busy nil)
                      (unless no-announcement
-                      (shell-maker--announce-response buffer))
+                       (shell-maker--announce-response buffer))
                      (when on-output
                        (funcall on-output
                                 input-string (shell-maker-last-output) t t))))
@@ -517,7 +517,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                      (setq errored t))
                    (setq shell-maker--busy nil)
                    (unless no-announcement
-                    (shell-maker--announce-response buffer))
+                     (shell-maker--announce-response buffer))
                    (when on-output
                      (funcall on-output
                               input-string error t t)))))))))

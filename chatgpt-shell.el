@@ -361,7 +361,7 @@ Otherwise interrupt if busy."
        (group "```") (or "\n" eol)))
 
 (defun chatgpt-shell-next-source-block ()
-    "Move point to previous source block."
+  "Move point to previous source block."
   (interactive)
   (when-let
       ((next-block
@@ -619,7 +619,7 @@ If passing HANDLER function, use it instead of inserting inline."
                                      (goto-char marker)
                                      (insert output)
                                      (set-marker marker (+ (length output)
-                                                               (marker-position marker))))))))
+                                                           (marker-position marker))))))))
                          (or handler (lambda (_command _output _error _finished))))
                        t))))
       (if insert-inline
@@ -933,16 +933,16 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   "Rename block at point (perhaps a different language)."
   (interactive)
   (save-excursion
-   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
-       (if (map-elt block 'language)
-           (perform-replace (map-elt block 'language)
-                            (read-string "Name: " nil nil "") nil nil nil nil nil
-                            (map-elt block 'language-start) (map-elt block 'language-end))
-         (let ((new-name (read-string "Name: " nil nil "")))
-           (goto-char (map-elt block 'language-start))
-           (insert new-name)
-           (chatgpt-shell--put-source-block-overlays)))
-    (user-error "No block at point"))))
+    (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+        (if (map-elt block 'language)
+            (perform-replace (map-elt block 'language)
+                             (read-string "Name: " nil nil "") nil nil nil nil nil
+                             (map-elt block 'language-start) (map-elt block 'language-end))
+          (let ((new-name (read-string "Name: " nil nil "")))
+            (goto-char (map-elt block 'language-start))
+            (insert new-name)
+            (chatgpt-shell--put-source-block-overlays)))
+      (user-error "No block at point"))))
 
 (defun chatgpt-shell-remove-block-overlays ()
   "Remove block overlays.  Handy for renaming blocks."
