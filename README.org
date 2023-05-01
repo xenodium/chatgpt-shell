@@ -29,12 +29,16 @@ As of now, only =chatgpt-shell= is available on MELPA.
 If using [[https://github.com/jwiegley/use-package][use-package]], you can install with =:ensure t=.
 
 #+begin_src emacs-lisp :lexical no
-  (use-package chatgpt-shell
-    :ensure t
-    :custom
-    (chatgpt-shell-openai-key
-     (lambda ()
-       (auth-source-pass-get 'secret "openai-key"))))
+(use-package chatgpt-shell
+  :ensure t
+  :custom
+  ((chatgpt-shell-openai-key
+    (lambda ()
+      (auth-source-pass-get 'secret "openai-key")))
+   ;; If you use ChatGPT through proxy service for example: "https://api.chatgpt.domain.com".
+   (chatgpt-shell-api-url-base
+    "https://api.chatgpt.domain.com")
+   ))
 #+end_src
 
 Read on for setting your OpenAI key in other ways.
@@ -141,6 +145,24 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-request-timeout            | How long to wait for a request to time out.                                    |
 
 There are more. Browse via =M-x set-variable=
+
+** ChatGPT through proxy service
+
+If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like bellowing:
+
+#+begin_src emacs-lisp :lexical no
+(use-package chatgpt-shell
+  :ensure t
+  :custom
+  ((chatgpt-shell-api-url-base "https://api.chatgpt.domain.com")
+   (chatgpt-shell-openai-key
+    (lambda ()
+      ;; here the openai-key should be the proxy service key.
+      (auth-source-pass-get 'secret "openai-key")))))
+#+end_src
+
+If your proxy service API path is not OpenAI ChatGPT default path like "=/v1/chat/completions=", then
+you can customize option ~chatgpt-shell-api-url-path~.
 
 ** =chatgpt-shell-display-function= (with custom function)
 

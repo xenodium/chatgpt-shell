@@ -212,7 +212,30 @@ ChatGPT."
                  (const :tag "Not set" nil))
   :group 'chatgpt-shell)
 
-(defvar chatgpt-shell--url "https://api.openai.com/v1/chat/completions")
+(defcustom chatgpt-shell-api-url-base "https://api.openai.com"
+  "The base domain part of complete API request entry point.
+If you use ChatGPT through proxy service instead of official API URL.
+Change this option."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-api-url-path "/v1/chat/completions"
+  "The path part of complete API request entry point.
+Not suggested to modify this custom option.
+Option for future API entry upgrade."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-api-url
+  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path)
+  "The complete API request entry point.
+If you use ChatGPT through proxy service instead of official API URL.
+Suggest to customize option `chatgpt-shell-api-url-base'."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
 
 (defvar chatgpt-shell--config
   (make-shell-maker-config
@@ -746,7 +769,7 @@ For example:
 
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
-  (append (list "curl" chatgpt-shell--url)
+  (append (list "curl" chatgpt-shell-api-url)
           chatgpt-shell-additional-curl-options
           (list "--fail-with-body"
                 "--no-progress-meter"
