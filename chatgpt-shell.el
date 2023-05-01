@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.22.1
+;; Version: 0.23.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -213,26 +213,21 @@ ChatGPT."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
-  "The base domain part of complete API request entry point.
-If you use ChatGPT through proxy service instead of official API URL.
-Change this option."
+  "OpenAI API's base URL.
+
+`chatgpt-shell--api-url' =
+   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'
+
+If you use ChatGPT through a proxy service, change the URL base."
   :type 'string
   :safe #'stringp
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-api-url-path "/v1/chat/completions"
-  "The path part of complete API request entry point.
-Not suggested to modify this custom option.
-Option for future API entry upgrade."
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
+  "OpenAI API's URL path.
 
-(defcustom chatgpt-shell-api-url
-  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path)
-  "The complete API request entry point.
-If you use ChatGPT through proxy service instead of official API URL.
-Suggest to customize option `chatgpt-shell-api-url-base'."
+`chatgpt-shell--api-url' =
+   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
   :type 'string
   :safe #'stringp
   :group 'chatgpt-shell)
@@ -767,9 +762,16 @@ For example:
         (t
          nil)))
 
+(defun chatgpt-shell--api-url ()
+  "The complete URL OpenAI's API.
+
+`chatgpt-shell--api-url' =
+   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
+  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path))
+
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
-  (append (list "curl" chatgpt-shell-api-url)
+  (append (list "curl" (chatgpt-shell--api-url))
           chatgpt-shell-additional-curl-options
           (list "--fail-with-body"
                 "--no-progress-meter"
