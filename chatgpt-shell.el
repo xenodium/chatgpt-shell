@@ -90,6 +90,10 @@ For example:
 
 (defvaralias 'chatgpt-shell-read-string-function 'shell-maker-read-string-function)
 
+(defvaralias 'chatgpt-shell-logging 'shell-maker-logging)
+
+(defvaralias 'chatgpt-shell-history-path 'shell-maker-history-path)
+
 (defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 
 (defvar chatgpt-shell--prompt-history nil)

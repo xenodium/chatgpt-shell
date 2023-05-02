@@ -143,24 +143,29 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 #+END_SRC
 
 #+RESULTS:
-| Custom variable                          | Description                                                                    |
-|------------------------------------------+--------------------------------------------------------------------------------|
-| chatgpt-shell-display-function           | Function to display shell.  Can be set to `display-buffer' or custom function. |
-| chatgpt-shell-curl-additional-options    | Additional options for `curl' command.                                         |
-| chatgpt-shell-system-prompt              | The system message helps set the behavior of the assistant.                    |
-| chatgpt-shell-default-prompts            | List of default prompts to choose from.                                        |
-| chatgpt-shell-read-string-function       | Function to read strings from user.                                            |
-| chatgpt-shell-model-temperature          | What sampling temperature to use, between 0 and 2, or nil.                     |
-| chatgpt-shell-transmitted-context-length | Controls the amount of context provided to chatGPT.                            |
-| chatgpt-shell-streaming                  | Whether or not to stream ChatGPT responses (experimental).                     |
-| chatgpt-shell-model-version              | The used ChatGPT OpenAI model.                                                 |
-| chatgpt-shell-source-block-actions       | Block actions for known languages.                                             |
-| chatgpt-shell-additional-curl-options    | Additional options for `curl' command.                                         |
-| chatgpt-shell-openai-key                 | OpenAI key as a string or a function that loads and returns it.                |
-| chatgpt-shell-after-command-functions    | Abnormal hook (i.e. with parameters) invoked after each command.               |
-| chatgpt-shell-babel-headers              | Additional headers to make babel blocks work.                                  |
-| chatgpt-shell-language-mapping           | Maps external language names to Emacs names.                                   |
-| chatgpt-shell-request-timeout            | How long to wait for a request to time out.                                    |
+| Custom variable                          | Description                                                                 |
+|------------------------------------------+-----------------------------------------------------------------------------|
+| chatgpt-shell-display-function           | Function to display the shell.  Set to `display-buffer' or custom function. |
+| chatgpt-shell-system-prompt              | The system message helps set the behavior of the assistant.                 |
+| chatgpt-shell-default-prompts            | List of default prompts to choose from.                                     |
+| chatgpt-shell-read-string-function       | Function to read strings from user.                                         |
+| chatgpt-shell-model-temperature          | What sampling temperature to use, between 0 and 2, or nil.                  |
+| chatgpt-shell-transmitted-context-length | Controls the amount of context provided to chatGPT.                         |
+| chatgpt-shell-history-path               | Root path to the location for storing history files.                        |
+| chatgpt-shell-system-prompts             | List of default prompts to choose from.                                     |
+| chatgpt-shell-streaming                  | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
+| chatgpt-shell-insert-queries-inline      | When making queries in non-shell buffers, insert responses inline.          |
+| chatgpt-shell-logging                    | Logging disabled by default (slows things down).                            |
+| chatgpt-shell-model-version              | The used ChatGPT OpenAI model.                                              |
+| chatgpt-shell-source-block-actions       | Block actions for known languages.                                          |
+| chatgpt-shell-api-url-path               | OpenAI API's URL path.                                                      |
+| chatgpt-shell-additional-curl-options    | Additional options for `curl' command.                                      |
+| chatgpt-shell-openai-key                 | OpenAI key as a string or a function that loads and returns it.             |
+| chatgpt-shell-after-command-functions    | Abnormal hook (i.e. with parameters) invoked after each command.            |
+| chatgpt-shell-api-url-base               | OpenAI API's base URL.                                                      |
+| chatgpt-shell-babel-headers              | Additional headers to make babel blocks work.                               |
+| chatgpt-shell-language-mapping           | Maps external language names to Emacs names.                                |
+| chatgpt-shell-request-timeout            | How long to wait for a request to time out.                                 |
 
 There are more. Browse via =M-x set-variable=
 
@@ -230,7 +235,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-mode                                  | Major mode for editing text written for humans to read.    |
 |         | chatgpt-shell-previous-source-block                 | Move point to previous source block.                       |
 |         | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                   |
-|         | chatgpt-shell-swap-system-prompt                    |                                                            |
+|         | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.    |
 |         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                             |
 |         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                   |
 | C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                           |
@@ -264,15 +269,15 @@ Browse all available via =M-x=.
 #+END_SRC
 
 #+RESULTS:
-| Custom variable                     | Description                                                                    |
-|-------------------------------------+--------------------------------------------------------------------------------|
-| dall-e-shell-openai-key             | OpenAI key as a string or a function that loads and returns it.                |
-| dall-e-shell-image-size             | The default size of the requested image as a string.                           |
-| dall-e-shell-read-string-function   | Function to read strings from user.                                            |
-| dall-e-shell-request-timeout        | How long to wait for a request to time out.                                    |
-| dall-e-shell-model-version          | The used DALL-E OpenAI model.                                                  |
-| dall-e-shell-display-function       | Function to display shell.  Can be set to `display-buffer' or custom function. |
-| dall-e-shell-image-output-directory | Output directory for the generated image.                                      |
+| Custom variable                     | Description                                                                 |
+|-------------------------------------+-----------------------------------------------------------------------------|
+| dall-e-shell-openai-key             | OpenAI key as a string or a function that loads and returns it.             |
+| dall-e-shell-image-size             | The default size of the requested image as a string.                        |
+| dall-e-shell-read-string-function   | Function to read strings from user.                                         |
+| dall-e-shell-request-timeout        | How long to wait for a request to time out.                                 |
+| dall-e-shell-model-version          | The used DALL-E OpenAI model.                                               |
+| dall-e-shell-display-function       | Function to display the shell.  Set to `display-buffer' or custom function. |
+| dall-e-shell-image-output-directory | Output directory for the generated image.                                   |
 
 * dall-e-shell commands
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
