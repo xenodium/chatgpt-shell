@@ -488,7 +488,8 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
           chatgpt-shell-default-prompts))
-  (let ((prompt (funcall shell-maker-read-string-function
+  (let ((overlay-blocks (derived-mode-p 'prog-mode))
+        (prompt (funcall shell-maker-read-string-function
                          (concat
                           (if (region-active-p)
                               "[appending region] "
@@ -498,7 +499,14 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
                          'chatgpt-shell--prompt-history)))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
-                           (buffer-substring (region-beginning) (region-end)))))
+                           (if overlay-blocks
+                               (format "``` %s\n"
+                                       (string-remove-suffix "-mode" (format "%s" major-mode)))
+                             "")
+                           (buffer-substring (region-beginning) (region-end))
+                           (if overlay-blocks
+                               "\n```"
+                             ""))))
     (chatgpt-shell-send-to-buffer prompt nil prefix)))
 
 (defun chatgpt-shell-describe-code (prefix)
