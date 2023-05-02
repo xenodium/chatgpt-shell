@@ -12,7 +12,7 @@ If you're finding =chatgpt-shell= useful, consider ✨[[https://github.com/spons
 
 =chatgpt-shell= is in development. Please report issues or send [[https://github.com/xenodium/chatgpt-shell/pulls][pull requests]] for improvements.
 
-** Like this package? Tell me about it
+** Like this package? Tell me about it 💙
 
 Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
 
