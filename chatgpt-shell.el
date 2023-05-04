@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.23.1
+;; Version: 0.24.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -601,6 +601,123 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive)
   (chatgpt-shell-send-region t))
 
+(defun chatgpt-shell-command-line-from-prompt-file (file-path)
+  "Send prompt in FILE-PATH and output to standard output."
+  (let ((prompt (with-temp-buffer
+                  (insert-file-contents file-path)
+                  (buffer-string))))
+    (if (string-empty-p (string-trim prompt))
+        (princ (format "Could not read prompt from %s" file-path)
+               #'external-debugging-output)
+      (chatgpt-shell-command-line prompt))))
+
+(defun chatgpt-shell-command-line (prompt)
+  "Send PROMPT and output to standard output."
+  (let ((chatgpt-shell-insert-queries-inline nil)
+        (worker-done nil)
+        (buffered ""))
+    (chatgpt-shell-send-to-buffer
+     prompt nil nil
+     (lambda (_command output _error finished)
+       (setq buffered (concat buffered output))
+       (when finished
+         (setq worker-done t))))
+    (while buffered
+      (unless (string-empty-p buffered)
+        (princ buffered #'external-debugging-output))
+      (setq buffered "")
+      (when worker-done
+        (setq buffered nil))
+      (sleep-for 0.1))
+    (princ "\n")))
+
+(defun chatgpt-shell--eshell-last-last-command ()
+  "Get second to last eshell command."
+  (save-excursion
+    (if (string= major-mode "eshell-mode")
+        (let ((cmd-start)
+              (cmd-end))
+          ;; Find command start and end positions
+          (goto-char eshell-last-output-start)
+          (re-search-backward eshell-prompt-regexp nil t)
+          (setq cmd-start (point))
+          (goto-char eshell-last-output-start)
+          (setq cmd-end (point))
+
+          ;; Find output start and end positions
+          (goto-char eshell-last-output-start)
+          (forward-line 1)
+          (re-search-forward eshell-prompt-regexp nil t)
+          (forward-line -1)
+          (concat "What's wrong with this command?\n\n"
+                  (buffer-substring-no-properties cmd-start cmd-end)))
+      (message "Current buffer is not an eshell buffer."))))
+
+;; Based on https://emacs.stackexchange.com/a/48215
+(defun chatgpt-shell--source-eshell-string (string)
+  "Execute eshell command in STRING."
+  (interactive "sString to be evaluated as eshell script: ")
+  (let ((orig (point))
+        (here (point-max))
+        (inhibit-point-motion-hooks t))
+    (goto-char (point-max))
+    (with-silent-modifications
+      ;; FIXME: Use temporary buffer and avoid insert/delete.
+      (insert string)
+      (goto-char (point-max))
+      (throw 'eshell-replace-command
+             (prog1
+                 (list 'let
+                       (list (list 'eshell-command-name (list 'quote "source-string"))
+                             (list 'eshell-command-arguments '()))
+                       (eshell-parse-command (cons here (point))))
+               (delete-region here (point))
+               (goto-char orig))))))
+
+(defun chatgpt-shell-add-??-command-to-eshell ()
+  "Add `??' command to `eshell'."
+
+  (defun eshell/?? (&rest _args)
+    "Implements `??' eshell command."
+    (interactive)
+    (let ((prompt (concat
+                   "What's wrong with the following command execution?\n\n"
+                   (chatgpt-shell--eshell-last-last-command)))
+          (prompt-file (concat temporary-file-directory
+                               "chatgpt-shell-command-line-prompt")))
+      (when (file-exists-p prompt-file)
+        (delete-file prompt-file))
+      (with-temp-file prompt-file nil nil t
+                      (insert prompt))
+      (chatgpt-shell--source-eshell-string
+       (concat
+        (file-truename (expand-file-name invocation-name invocation-directory)) " "
+        "--quick --batch --eval "
+        "'"
+        (prin1-to-string
+         `(progn
+            (interactive)
+            (load ,(find-library-name "chatgpt-shell") nil t)
+            (require (intern "chatgpt-shell") nil t)
+            (setq chatgpt-shell-model-temperature 0)
+            (setq chatgpt-shell-openai-key ,(chatgpt-shell-openai-key))
+            (chatgpt-shell-command-line-from-prompt-file ,prompt-file)))
+        "'"))))
+
+  (add-hook 'eshell-post-command-hook
+            (defun chatgpt-shell--eshell-post-??-execution ()
+              (when (string-match (symbol-name #'chatgpt-shell-command-line-from-prompt-file)
+                                  (string-join eshell-last-arguments " "))
+                (save-excursion
+                  (save-restriction
+                    (narrow-to-region (eshell-beginning-of-output)
+                                      (eshell-end-of-output))
+                    (chatgpt-shell--put-source-block-overlays))))))
+
+  (require 'esh-cmd)
+
+  (add-to-list 'eshell-complex-commands "??"))
+
 (defun chatgpt-shell-send-to-buffer (text &optional review invert-insert-inline handler)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
@@ -924,7 +1041,10 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties body-start body-end))
-        (buf (shell-maker-buffer shell-maker-config))
+        (buf (if (and (boundp 'shell-maker-config)
+                      shell-maker-config)
+                 (shell-maker-buffer shell-maker-config)
+               (current-buffer)))
         (pos 0)
         (props)
         (overlay)
@@ -963,7 +1083,10 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (overlay-put (make-overlay body-end
                              (1+ body-end)) 'invisible 'chatgpt-shell)
   (overlay-put (make-overlay body-start body-end
-                             (shell-maker-buffer shell-maker-config))
+                             (if (and (boundp 'shell-maker-config)
+                                      shell-maker-config)
+                                 (shell-maker-buffer shell-maker-config)
+                               (current-buffer)))
                'face 'font-lock-doc-markup-face))
 
 (defun chatgpt-shell-rename-block-at-point ()
