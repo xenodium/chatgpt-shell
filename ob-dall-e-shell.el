@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.17.1
+;; Version: 0.18.1
 ;; Package-Requires: ((emacs "27.1") (dall-e-shell "0.18.1"))
 
 ;;; License:
@@ -61,7 +61,13 @@ This function is called by `org-babel-execute-src-block'"
   (org-babel-do-load-languages 'org-babel-load-languages
                                (append org-babel-load-languages
                                        '((dall-e-shell . t))))
-  (add-to-list 'org-src-lang-modes '("dall-e-shell" . text)))
+  (add-to-list 'org-src-lang-modes '("dall-e-shell" . text))
+
+  ;; Automatically refresh inline images.
+  (add-hook 'org-babel-after-execute-hook
+            (defun ob-dall-e--refresh-inline-images ()
+              (when org-inline-image-overlays
+                (org-redisplay-inline-images)))))
 
 (provide 'ob-dall-e-shell)
 
