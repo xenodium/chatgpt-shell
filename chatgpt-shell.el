@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.24.1
+;; Version: 0.25.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -136,7 +136,18 @@ Can be used compile or run source block at point."
                            (cons 'primary-action function))))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-model-version "gpt-3.5-turbo"
+(defcustom chatgpt-shell-model-versions
+  '("gpt-3.5-turbo"
+    "gpt-4")
+  "The list of ChatGPT OpenAI models to swap from.
+
+The list of models supported by /v1/chat/completions endpoint is
+documented at
+https://platform.openai.com/docs/models/model-endpoint-compatibility."
+  :type '(repeat string)
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-model-version (nth 0 chatgpt-shell-model-versions)
   "The used ChatGPT OpenAI model.
 
 The list of models supported by /v1/chat/completions endpoint is
@@ -187,6 +198,13 @@ See https://platform.openai.com/docs/guides/chat/introduction"
             (string-empty-p (string-trim choice)))
         (setq chatgpt-shell-system-prompt nil)
       (setq chatgpt-shell-system-prompt choice))))
+
+(defun chatgpt-shell-swap-model-version ()
+  "Swap model version from `chatgpt-shell-model-versions'."
+  (interactive)
+  (setq chatgpt-shell-model-version
+        (completing-read "Model version: "
+                         chatgpt-shell-model-versions nil t)))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
