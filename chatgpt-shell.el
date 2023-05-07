@@ -303,6 +303,7 @@ or
 With NO-FOCUS, start the shell without focus."
   (interactive)
   (shell-maker-start chatgpt-shell--config no-focus)
+  (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
   (define-key shell-maker-mode-map (kbd "C-M-h")
     #'chatgpt-shell-mark-at-point-dwim)
   (define-key shell-maker-mode-map (kbd "C-c C-c")
@@ -311,6 +312,20 @@ With NO-FOCUS, start the shell without focus."
     #'chatgpt-shell-previous-item)
   (define-key shell-maker-mode-map (kbd "C-c C-n")
     #'chatgpt-shell-next-item))
+
+(defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
+  "Advice around `keyboard-quit' interrupting active shell.
+
+Applies ORIG-FUN and ARGS."
+  (chatgpt-shell-interrupt)
+  (apply orig-fun args))
+
+(defun chatgpt-shell-interrupt ()
+  "Interrupt `chatgpt-shell' from any buffer."
+  (interactive)
+  (with-current-buffer
+      (shell-maker-buffer-name chatgpt-shell--config)
+    (shell-maker-interrupt)))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c ()
   "Ctrl-C Ctrl-C DWIM binding.
