@@ -769,7 +769,7 @@ If passing HANDLER function, use it instead of inserting inline."
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    (chatgpt-shell insert-inline)
+    (chatgpt-shell (or handler insert-inline))
     (cl-flet ((send ()
                     (when shell-maker--busy
                       (shell-maker-interrupt))
@@ -803,7 +803,7 @@ If passing HANDLER function, use it instead of inserting inline."
                                                            (marker-position marker))))))))
                          (or handler (lambda (_command _output _error _finished))))
                        t))))
-      (if insert-inline
+      (if (or handler insert-inline)
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
             (goto-char (point-max))
             (send))
