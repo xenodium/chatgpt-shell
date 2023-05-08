@@ -286,7 +286,7 @@ Uses the interface provided by `comint-mode'"
                        (shell-maker-prompt shell-maker-config)) nil t)
         (goto-char current-pos)
         (setq revert-pos t))
-      (backward-char (length (shell-maker-prompt shell-maker-config)))
+      (beginning-of-line)
       (setq end (point)))
     (when revert-pos
       (goto-char current-pos)
