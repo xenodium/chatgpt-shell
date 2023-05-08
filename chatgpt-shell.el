@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.26.1
+;; Version: 0.27.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.17.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -204,7 +204,9 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   (interactive)
   (setq chatgpt-shell-model-version
         (completing-read "Model version: "
-                         chatgpt-shell-model-versions nil t)))
+                         chatgpt-shell-model-versions nil t))
+  (chatgpt-shell--update-prompt)
+  (chatgpt-shell-interrupt))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
@@ -302,8 +304,14 @@ or
 
 With NO-FOCUS, start the shell without focus."
   (interactive)
+  (setf (shell-maker-config-prompt chatgpt-shell--config)
+        (car (chatgpt-shell--prompt-pair)))
+  (setf (shell-maker-config-prompt-regexp chatgpt-shell--config)
+        (cdr (chatgpt-shell--prompt-pair)))
   (shell-maker-start chatgpt-shell--config no-focus)
-  (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
+  (chatgpt-shell--update-prompt)
+  ;; Disabling advice for now. It gets in the way.
+  ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
   (define-key shell-maker-mode-map (kbd "C-M-h")
     #'chatgpt-shell-mark-at-point-dwim)
   (define-key shell-maker-mode-map (kbd "C-c C-c")
@@ -312,6 +320,23 @@ With NO-FOCUS, start the shell without focus."
     #'chatgpt-shell-previous-item)
   (define-key shell-maker-mode-map (kbd "C-c C-n")
     #'chatgpt-shell-next-item))
+
+(defun chatgpt-shell--prompt-pair ()
+  "Return a pair with prompt and prompt-regexp."
+  (cons
+   (format "ChatGPT(%s)> " chatgpt-shell-model-version)
+   (let ((elisp "(rx (or "))
+     (dolist (item chatgpt-shell-model-versions elisp)
+       (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)> \") " item))))
+     (setq elisp (concat elisp "))"))
+     (eval (car (read-from-string elisp))))))
+
+(defun chatgpt-shell--update-prompt ()
+  "Update prompt and prompt regexp from `chatgpt-shell-model-versions'."
+  (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
+    (shell-maker-set-prompt
+     (car (chatgpt-shell--prompt-pair))
+     (cdr (chatgpt-shell--prompt-pair)))))
 
 (defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
   "Advice around `keyboard-quit' interrupting active shell.
@@ -1001,12 +1026,12 @@ Very much EXPERIMENTAL."
   (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (let* ((path (read-file-name "Restore from: " nil nil t))
-         (prompt (shell-maker-prompt shell-maker-config))
+         (prompt-regexp (shell-maker-prompt-regexp shell-maker-config))
          (history (with-temp-buffer
                     (insert-file-contents path)
                     (chatgpt-shell--extract-history
                      (buffer-string)
-                     prompt)))
+                     prompt-regexp)))
          (execute-command (shell-maker-config-execute-command
                            shell-maker-config))
          (validate-command (shell-maker-config-validate-command

@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.18.1
+;; Version: 0.19.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -873,20 +873,24 @@ Uses PROCESS and STRING same as `comint-output-filter'."
       (shell-maker-config-prompt config)
     (concat (shell-maker-config-name config) "> ")))
 
+(defun shell-maker-set-prompt (prompt prompt-regexp)
+  "Set internal config's PROMPT and PROMPT-REGEXP."
+  (unless (eq major-mode 'shell-maker-mode)
+    (user-error "Not in a shell"))
+  (setf (shell-maker-config-prompt shell-maker-config)
+        prompt)
+  (setf (shell-maker-config-prompt-regexp shell-maker-config)
+        prompt-regexp)
+  ;; Prevents fontifying streamed response as prompt.
+  (setq comint-prompt-regexp prompt-regexp)
+  (setq-local imenu-generic-expression
+              `(("Prompt" ,(concat "\\(" prompt-regexp "\\)" "\\(.*\\)") 2))))
+
 (defun shell-maker-prompt-regexp (config)
   "Get prompt regexp from CONFIG."
   (if (shell-maker-config-prompt-regexp config)
       (shell-maker-config-prompt-regexp config)
     (concat "^" (shell-maker-prompt config))))
-
-(defun shell-maker-set-prompt-regexp (prompt-regexp)
-  "Set internal config's PROMPT-REGEXP."
-  (unless (eq major-mode 'shell-maker-mode)
-    (user-error "Not in a shell"))
-  (setf (shell-maker-config-prompt-regexp shell-maker-config)
-        prompt-regexp)
-  ;; Prevents fontifying streamed response as prompt.
-  (setq comint-prompt-regexp prompt-regexp))
 
 (provide 'shell-maker)
 
