@@ -341,7 +341,7 @@ Otherwise mark current output at location."
               t)
              ((re-search-backward
                (concat "^"
-                       (shell-maker-prompt shell-maker-config))nil t)
+                       (shell-maker-prompt shell-maker-config)) nil t)
               (if (re-search-forward "<shell-maker-end-of-prompt>" nil t)
                   t
                 (end-of-line))
