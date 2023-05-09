@@ -155,7 +155,7 @@ Uses the interface provided by `comint-mode'"
   (setq comint-get-old-input 'shell-maker--get-old-input)
   (setq-local comint-completion-addsuffix nil)
   (setq-local imenu-generic-expression
-              `(("Prompt" ,(concat (shell-maker-prompt-regexp shell-maker-config) "\\(.*\\)") 1)))
+              `((nil ,(concat (shell-maker-prompt-regexp shell-maker-config) "\\(.*\\)") 1)))
   (shell-maker--read-input-ring-history config)
   (unless (or (comint-check-proc (shell-maker-buffer shell-maker-config))
               (get-buffer-process (shell-maker-buffer shell-maker-config)))
@@ -884,7 +884,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   ;; Prevents fontifying streamed response as prompt.
   (setq comint-prompt-regexp prompt-regexp)
   (setq-local imenu-generic-expression
-              `(("Prompt" ,(concat "\\(" prompt-regexp "\\)" "\\(.*\\)") 2))))
+              `((nil ,(concat "\\(" prompt-regexp "\\)" "\\(.*\\)") 2))))
 
 (defun shell-maker-prompt-regexp (config)
   "Get prompt regexp from CONFIG."
