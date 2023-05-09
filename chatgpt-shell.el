@@ -756,6 +756,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
         (prin1-to-string
          `(progn
             (interactive)
+            (load ,(find-library-name "shell-maker") nil t)
             (load ,(find-library-name "chatgpt-shell") nil t)
             (require (intern "chatgpt-shell") nil t)
             (setq chatgpt-shell-model-temperature 0)
