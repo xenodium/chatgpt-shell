@@ -146,6 +146,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | Custom variable                          | Description                                                                 |
 |------------------------------------------+-----------------------------------------------------------------------------|
 | chatgpt-shell-display-function           | Function to display the shell.  Set to `display-buffer' or custom function. |
+| chatgpt-shell-model-versions             | The list of ChatGPT OpenAI models to swap from.                             |
 | chatgpt-shell-system-prompt              | The system message helps set the behavior of the assistant.                 |
 | chatgpt-shell-default-prompts            | List of default prompts to choose from.                                     |
 | chatgpt-shell-read-string-function       | Function to read strings from user.                                         |
@@ -233,6 +234,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.          |
 |         | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                   |
 |         | chatgpt-shell-mode                                  | Major mode for editing text written for humans to read.    |
+|         | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.    |
 |         | chatgpt-shell-previous-source-block                 | Move point to previous source block.                       |
 |         | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                   |
 |         | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.    |
@@ -245,6 +247,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT. |
 |         | chatgpt-shell-next-source-block                     | Move point to previous source block.                       |
 | C-c C-c | chatgpt-shell-ctrl-c-ctrl-c                         | Ctrl-C Ctrl-C DWIM binding.                                |
+|         | chatgpt-shell-interrupt                             | Interrupt `chatgpt-shell' from any buffer.                 |
 
 Browse all available via =M-x=.
 
