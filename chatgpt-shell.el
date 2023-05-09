@@ -715,7 +715,6 @@ With prefix REVIEW prompt before sending to ChatGPT."
 ;; Based on https://emacs.stackexchange.com/a/48215
 (defun chatgpt-shell--source-eshell-string (string)
   "Execute eshell command in STRING."
-  (interactive "sString to be evaluated as eshell script: ")
   (let ((orig (point))
         (here (point-max))
         (inhibit-point-motion-hooks t))
