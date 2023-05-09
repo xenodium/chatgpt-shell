@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.27.1
+;; Version: 0.28.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.20.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -323,13 +323,18 @@ With NO-FOCUS, start the shell without focus."
 
 (defun chatgpt-shell--prompt-pair ()
   "Return a pair with prompt and prompt-regexp."
-  (cons
-   (format "ChatGPT(%s)> " chatgpt-shell-model-version)
-   (let ((elisp "(rx (or "))
-     (dolist (item chatgpt-shell-model-versions elisp)
-       (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)> \") " item))))
-     (setq elisp (concat elisp "))"))
-     (eval (car (read-from-string elisp))))))
+  (cl-flet ((shrink-model-version (model-version) ;; gpt-3.5-turbo -> 3.5-turbo
+                                  (string-remove-prefix
+                                   "gpt-" (string-trim model-version))))
+    (cons
+     (format "ChatGPT(%s)> " (shrink-model-version
+                              chatgpt-shell-model-version))
+     (let ((elisp "(rx (or "))
+       (dolist (item chatgpt-shell-model-versions elisp)
+         (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)> \") "
+                                           (shrink-model-version item)))))
+       (setq elisp (concat elisp "))"))
+       (eval (car (read-from-string elisp)))))))
 
 (defun chatgpt-shell--update-prompt ()
   "Update prompt and prompt regexp from `chatgpt-shell-model-versions'."
