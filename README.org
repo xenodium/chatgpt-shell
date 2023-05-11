@@ -27,8 +27,6 @@ Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[
 
 ** MELPA
 
-As of now, only =chatgpt-shell= is available on MELPA.
-
 If using [[https://github.com/jwiegley/use-package][use-package]], you can install with =:ensure t=.
 
 #+begin_src emacs-lisp :lexical no
@@ -38,6 +36,19 @@ If using [[https://github.com/jwiegley/use-package][use-package]], you can insta
     ((chatgpt-shell-openai-key
       (lambda ()
         (auth-source-pass-get 'secret "openai-key")))))
+#+end_src
+
+** Straight
+
+=chatgpt-shell= depends on =shell-maker=. This dependency is tesolved without issues on MELPA but seems to run into issues with =straight=. I'm not familiar with =straight= but users have reported the following to work. If you have a better solution, please send a pull request or open an issue with the suggestion.
+
+#+begin_src emacs-lisp :lexical no
+(use-package shell-maker
+  :straight (:host github :repo "xenodium/chatgpt-shell" :files ("shell-maker.el")))
+
+(use-package chatgpt-shell
+  :requires shell-maker
+  :straight (:host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell.el")))
 #+end_src
 
 Read on for setting your OpenAI key in other ways.
