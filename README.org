@@ -90,8 +90,6 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
 ** DALL-E key
 
 Same as ChatGPT, but use =dall-e-shell-openai-key= variable.
-
-
 * ChatGPT through proxy service
 
 If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like bellowing:
