@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.28.1
+;; Version: 0.29.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.21.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -420,8 +420,37 @@ Otherwise interrupt if busy."
                 (cons 'start start)
                 (cons 'end end)))))))
 
-(defun chatgpt-shell--inline-codes ()
-  "Get a list of all inline codess in buffer."
+(defun chatgpt-shell--markdown-links (&optional avoid-ranges)
+  "Extract markdown links with AVOID-RANGES."
+  (let ((links '())
+        (case-fold-search nil))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward
+              (rx (seq "["
+                       (group (one-or-more (not (any "]"))))
+                       "]"
+                       "("
+                       (group (one-or-more (not (any ")"))))
+                       ")"))
+              nil t)
+        (when-let ((begin (match-beginning 0))
+                   (end (match-end 0)))
+          (unless (seq-find (lambda (avoided)
+                              (and (>= begin (car avoided))
+                                   (<= end (cdr avoided))))
+                            avoid-ranges)
+            (push
+             (list
+              'start begin
+              'end end
+              'title (cons (match-beginning 1) (match-end 1))
+              'url (cons (match-beginning 2) (match-end 2)))
+             links)))))
+    (nreverse links)))
+
+(defun chatgpt-shell--markdown-inline-codes (&optional avoid-ranges)
+  "Get a list of all inline markdown code in buffer with AVOID-RANGES."
   (let ((codes '())
         (case-fold-search nil))
     (save-excursion
@@ -431,9 +460,13 @@ Otherwise interrupt if busy."
               nil t)
         (when-let ((begin (match-beginning 0))
                    (end (match-end 0)))
-          (push
-           (list
-            'body (cons (match-beginning 1) (match-end 1))) codes))))
+          (unless (seq-find (lambda (avoided)
+                              (and (>= begin (car avoided))
+                                   (<= end (cdr avoided))))
+                            avoid-ranges)
+            (push
+             (list
+              'body (cons (match-beginning 1) (match-end 1))) codes)))))
     (nreverse codes)))
 
 (defvar chatgpt-shell--source-block-regexp
@@ -1137,6 +1170,24 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
       (overlay-put (make-overlay body-start body-end buf)
                    'face 'font-lock-doc-markup-face))))
 
+(defun chatgpt-shell--fontify-link (start end title-start title-end url-start url-end)
+  "Fontify a markdown link.
+Use START END TITLE-START TITLE-END URL-START URL-END."
+  ;; Hide markup before
+  (overlay-put (make-overlay start title-start) 'invisible 'chatgpt-shell)
+  ;; Show title as link
+  (overlay-put (make-overlay title-start title-end) 'face 'link)
+  ;; Make RET open the URL
+  (define-key (let ((map (make-sparse-keymap)))
+                (define-key map (kbd "RET")
+                  (lambda () (interactive)
+                    (browse-url (buffer-substring-no-properties url-start url-end))))
+                (overlay-put (make-overlay title-start title-end) 'keymap map)
+                map)
+    [remap self-insert-command] 'ignore)
+  ;; Hide markup after
+  (overlay-put (make-overlay title-end end) 'invisible 'chatgpt-shell))
+
 (defun chatgpt-shell--fontify-inline-code (body-start body-end)
   "Fontify a source block.
 Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
@@ -1176,24 +1227,36 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
 
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
-  (dolist (overlay (overlays-in (point-min) (point-max)))
-    (delete-overlay overlay))
-  (dolist (block (chatgpt-shell--source-blocks))
-    (chatgpt-shell--fontify-source-block
-     (car (map-elt block 'start))
-     (cdr (map-elt block 'start))
-     (buffer-substring-no-properties (car (map-elt block 'language))
-                                     (cdr (map-elt block 'language)))
-     (car (map-elt block 'language))
-     (cdr (map-elt block 'language))
-     (car (map-elt block 'body))
-     (cdr (map-elt block 'body))
-     (car (map-elt block 'end))
-     (cdr (map-elt block 'end))))
-  (dolist (block (chatgpt-shell--inline-codes))
-    (chatgpt-shell--fontify-inline-code
-     (car (map-elt block 'body))
-     (cdr (map-elt block 'body)))))
+  (let* ((source-blocks (chatgpt-shell--source-blocks))
+         (avoid-ranges (seq-map (lambda (block)
+                                 (map-elt block 'body))
+                               source-blocks)))
+    (dolist (overlay (overlays-in (point-min) (point-max)))
+      (delete-overlay overlay))
+    (dolist (block source-blocks)
+      (chatgpt-shell--fontify-source-block
+       (car (map-elt block 'start))
+       (cdr (map-elt block 'start))
+       (buffer-substring-no-properties (car (map-elt block 'language))
+                                       (cdr (map-elt block 'language)))
+       (car (map-elt block 'language))
+       (cdr (map-elt block 'language))
+       (car (map-elt block 'body))
+       (cdr (map-elt block 'body))
+       (car (map-elt block 'end))
+       (cdr (map-elt block 'end))))
+    (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
+      (chatgpt-shell--fontify-link
+       (map-elt link 'start)
+       (map-elt link 'end)
+       (car (map-elt link 'title))
+       (cdr (map-elt link 'title))
+       (car (map-elt link 'url))
+       (cdr (map-elt link 'url))))
+    (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
+      (chatgpt-shell--fontify-inline-code
+       (car (map-elt inline-code 'body))
+       (cdr (map-elt inline-code 'body))))))
 
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
