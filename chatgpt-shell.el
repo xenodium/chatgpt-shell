@@ -633,6 +633,8 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
   "Send text with HEADER from region using ChatGPT.
 
 With INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
+  (unless (region-active-p)
+    (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
    (concat header
            "\n\n"
