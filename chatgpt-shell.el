@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.31.1
+;; Version: 0.32.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.21.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -178,14 +178,25 @@ for details."
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-system-prompt (nth 0 chatgpt-shell-system-prompts)
+(defcustom chatgpt-shell-system-prompt 0
   "The system message helps set the behavior of the assistant.
 
 For example: You are a helpful assistant that translates English to French.
 
 See https://platform.openai.com/docs/guides/chat/introduction"
-  :type 'string
+  :type '(choice (string :tag "String")
+                 (integer :tag "Integer"))
   :group 'chatgpt-shell)
+
+(defun chatgpt-shell-system-prompt ()
+  "Return current system prompt."
+  (cond ((stringp chatgpt-shell-system-prompt)
+         chatgpt-shell-system-prompt)
+        ((integerp chatgpt-shell-system-prompt)
+         (nth chatgpt-shell-system-prompt
+              chatgpt-shell-system-prompts))
+        (t
+         nil)))
 
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
@@ -193,11 +204,19 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   (let ((choice (completing-read "System prompt: "
                                  (append
                                   (list "None")
-                                  chatgpt-shell-system-prompts))))
+                                  (seq-map (lambda (item)
+                                             (truncate-string-to-width
+                                              (nth 0 (split-string item "\n"))
+                                              (window-body-width)))
+                                           chatgpt-shell-system-prompts)))))
     (if (or (string-equal choice "None")
             (string-empty-p (string-trim choice)))
         (setq chatgpt-shell-system-prompt nil)
-      (setq chatgpt-shell-system-prompt choice))))
+      (setq chatgpt-shell-system-prompt
+            (or (seq-position chatgpt-shell-system-prompts choice
+                              (lambda (item prefix)
+                                (string-prefix-p prefix item)))
+                choice)))))
 
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
@@ -1133,12 +1152,12 @@ For example:
                 (chatgpt-shell--unpaired-length
                  chatgpt-shell-transmitted-context-length)))))
   (let ((request-data `((model . ,chatgpt-shell-model-version)
-                        (messages . ,(if chatgpt-shell-system-prompt
+                        (messages . ,(if (chatgpt-shell-system-prompt)
                                          (vconcat ;; Vector for json
                                           (list
                                            (list
                                             (cons 'role "system")
-                                            (cons 'content chatgpt-shell-system-prompt)))
+                                            (cons 'content (chatgpt-shell-system-prompt))))
                                           history)
                                        history)))))
     (when chatgpt-shell-model-temperature
