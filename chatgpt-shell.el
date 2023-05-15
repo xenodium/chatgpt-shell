@@ -1411,6 +1411,11 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (dolist (overlay (overlays-in (point-min) (point-max)))
     (delete-overlay overlay)))
 
+(defun chatgpt-shell-refresh-rendering ()
+  "Refresh markdown rendering by re-applying to entire buffer."
+  (interactive)
+  (chatgpt-shell--put-source-block-overlays))
+
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
   (let* ((source-blocks (chatgpt-shell--source-blocks))
