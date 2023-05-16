@@ -1,10 +1,10 @@
-;;; chatgpt-shell.el --- Interaction mode for ChatGPT  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- ChatGPT shell + buffer insert commands  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.32.1
+;; Version: 0.33.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.21.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
