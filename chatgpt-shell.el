@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.33.1
+;; Version: 0.34.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.21.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -732,6 +732,24 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
                                "\n```"
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil prefix)))
+
+(defun chatgpt-shell-prompt-appending-kill-ring (prefix)
+  "Make a ChatGPT request from the minibuffer appending kill ring.
+
+With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
+  (interactive "P")
+  (unless chatgpt-shell--prompt-history
+    (setq chatgpt-shell--prompt-history
+          chatgpt-shell-default-prompts))
+  (let ((prompt (funcall shell-maker-read-string-function
+                         (concat
+                          "[appending kill ring] "
+                          (shell-maker-prompt
+                           chatgpt-shell--config))
+                         'chatgpt-shell--prompt-history)))
+    (chatgpt-shell-send-to-buffer
+     (concat prompt "\n\n"
+             (current-kill 0)) nil prefix)))
 
 (defun chatgpt-shell-describe-code (prefix)
   "Describe code from region using ChatGPT.
