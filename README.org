@@ -20,7 +20,7 @@ Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/blocks.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/org-table.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/org-table.gif" width="100%" />
 
 * Install
 
