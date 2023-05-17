@@ -258,6 +258,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.     |
 |         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                              |
 |         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                    |
+|         | chatgpt-shell-prompt-with-kill-ring                 | Make a ChatGPT request from the minibuffer.                 |
 | C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                            |
 |         | chatgpt-shell-view-at-point                         | View prompt and putput at point in a separate buffer.       |
 |         | chatgpt-shell-send-region                           | Send region to ChatGPT.                                     |
