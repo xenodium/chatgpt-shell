@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.21.1
+;; Version: 0.22.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -185,14 +185,15 @@ Uses the interface provided by `comint-mode'"
 (defun shell-maker--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
   (let ((inhibit-read-only t))
-    (goto-char (point-max))
-    (comint-output-filter (shell-maker--process)
-                          (concat reply
-                                  (if failed
-                                      (propertize "<shell-maker-failed-command>"
-                                                  'invisible (not shell-maker--show-invisible-markers))
-                                    "")
-                                  (shell-maker-prompt shell-maker-config)))))
+    (save-excursion
+      (goto-char (point-max))
+      (comint-output-filter (shell-maker--process)
+                            (concat reply
+                                    (if failed
+                                        (propertize "<shell-maker-failed-command>"
+                                                    'invisible (not shell-maker--show-invisible-markers))
+                                      "")
+                                    (shell-maker-prompt shell-maker-config))))))
 
 (defun shell-maker-return ()
   "RET binding."
@@ -696,8 +697,9 @@ NO-ANNOUNCEMENT skips announcing response when in background."
 (defun shell-maker--write-partial-reply (reply)
   "Write partial REPLY to prompt."
   (let ((inhibit-read-only t))
-    (goto-char (point-max))
-    (shell-maker--output-filter (shell-maker--process) reply)))
+    (save-excursion
+      (goto-char (point-max))
+      (shell-maker--output-filter (shell-maker--process) reply))))
 
 (defun shell-maker--preparse-json (json)
   "Preparse JSON and return a cons of parsed objects vs unparsed text."
