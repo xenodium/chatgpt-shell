@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.17.1
+;; Version: 0.18.1
 ;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.18.1"))
 
 ;;; License:
@@ -49,16 +49,19 @@
 
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
                                                       (:version . nil)
-                                                      (:preface . nil)))
+                                                      (:system . nil)))
 
 (defun org-babel-execute:chatgpt-shell(body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
-  (if (map-elt params :preface)
+  (if (map-elt params :system)
       (chatgpt-shell-post-messages
        (vconcat ;; Vector for json
-        (map-elt params :preface)
+        (list
+         (list
+          (cons 'role "system")
+          (cons 'content (map-elt params :system))))
         `(((role . "user")
            (content . ,body))))
        (map-elt params :version))
