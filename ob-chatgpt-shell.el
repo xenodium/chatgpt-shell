@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.18.1
+;; Version: 0.19.1
 ;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.18.1"))
 
 ;;; License:
@@ -49,23 +49,43 @@
 
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
                                                       (:version . nil)
-                                                      (:system . nil)))
+                                                      (:system . nil)
+                                                      (:context . nil)))
 
 (defun org-babel-execute:chatgpt-shell(body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
-  (if (map-elt params :system)
-      (chatgpt-shell-post-messages
+  (chatgpt-shell-post-messages
        (vconcat ;; Vector for json
-        (list
-         (list
-          (cons 'role "system")
-          (cons 'content (map-elt params :system))))
+        (when (map-elt params :system)
+          (list
+           (list
+            (cons 'role "system")
+            (cons 'content (map-elt params :system)))))
+        (when (map-elt params :context)
+          (ob-chatgpt-shell--context))
         `(((role . "user")
            (content . ,body))))
-       (map-elt params :version))
-    (chatgpt-shell-post-prompt body (map-elt params :version))))
+       (map-elt params :version)))
+
+(defun ob-chatgpt-shell--context ()
+  "Return the context (what was asked and responded) in all previous blocks."
+  (let ((context '()))
+    (mapc
+     (lambda (src-block)
+       (add-to-list
+        'context
+        (list
+         (cons 'role "user")
+         (cons 'content (map-elt src-block 'body))))
+       (add-to-list
+        'context
+        (list
+         (cons 'role "assistant")
+         (cons 'content (map-elt src-block 'result)))))
+     (ob-chatgpt--relevant-source-blocks-before-current))
+    (nreverse context)))
 
 (defun ob-chatgpt-shell-setup ()
   "Set up babel ChatGPT support."
@@ -73,6 +93,33 @@ This function is called by `org-babel-execute-src-block'"
                                (append org-babel-load-languages
                                        '((chatgpt-shell . t))))
   (add-to-list 'org-src-lang-modes '("chatgpt-shell" . text)))
+
+(defun ob-chatgpt--relevant-source-blocks-before-current ()
+  "Return all previous source blocks from current one."
+  (when-let ((current-block-pos (let ((element (org-element-context)))
+                                  (when (eq (org-element-type element) 'src-block)
+                                    (org-element-property :begin element)))))
+    (seq-filter (lambda (src)
+                  (and (string-equal (map-elt src 'language)
+                                     "chatgpt-shell")
+                       (< (map-elt src 'start) current-block-pos)))
+                (ob-chatgpt--all-source-blocks))))
+
+(defun ob-chatgpt--all-source-blocks ()
+  "Return all source blocks in buffer."
+  (org-element-map (org-element-parse-buffer) '(src-block fixed-width)
+    (lambda (element)
+      (cond ((eq (org-element-type element) 'src-block)
+             (list 'start (org-element-property :begin element)
+                   'body (when (org-element-property :value element)
+                           (string-trim (org-element-property :value element)))
+                   'language (when (org-element-property :language element)
+                               (string-trim (org-element-property :language element)))
+                   'result (save-restriction
+                             (goto-char (org-element-property :begin element))
+                             (when (org-babel-where-is-src-block-result)
+                               (goto-char (org-babel-where-is-src-block-result))
+                               (org-babel-read-result)))))))))
 
 (provide 'ob-chatgpt-shell)
 

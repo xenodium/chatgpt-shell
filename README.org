@@ -337,6 +337,46 @@ Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
   : Hi there! How can I assist you today?
 #+end_src
 
+** :version
+
+Use =:version= to specify "gpt-4", "gpt-3.5-turbo", or something else.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell :version "gpt-4"
+   Hello
+  ,#+end_src
+
+  ,#+RESULTS:
+  Hello! How can I help you today?
+#+end_src
+
+** :context
+
+Use =:context t= to include any prior context in current buffer.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell
+    tell me a random day of the week
+  ,#+end_src
+
+  ,#+RESULTS:
+  Wednesday
+
+  ,#+begin_src chatgpt-shell :system "always respond like a pirate"
+    hello
+  ,#+end_src
+
+  ,#+RESULTS:
+  Ahoy there, me hearty! How be ye today?
+
+  ,#+begin_src chatgpt-shell :context t
+    what was the day you told me and what greeting?
+  ,#+end_src
+
+  ,#+RESULTS:
+  The day I told you was Wednesday, and the greeting I used was "Ahoy there, me hearty! How be ye today?"
+#+end_src
+
 * DALL-E org babel
 
 Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
