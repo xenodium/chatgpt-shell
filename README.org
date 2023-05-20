@@ -350,6 +350,19 @@ Use =:version= to specify "gpt-4", "gpt-3.5-turbo", or something else.
   Hello! How can I help you today?
 #+end_src
 
+** :system
+
+Use =:system= to set the system prompt.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell :system "always respond like a pirate"
+    hello
+  ,#+end_src
+
+  ,#+RESULTS:
+  Ahoy there, me hearty! How be ye today?
+#+end_src
+
 ** :context
 
 Use =:context t= to include any prior context in current buffer.
