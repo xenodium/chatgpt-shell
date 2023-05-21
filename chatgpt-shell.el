@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.35.1
+;; Version: 0.36.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.22.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -249,10 +249,14 @@ option, but ChatGPT can't look back on your conversation.
 A value of 1 will send only the latest prompt-completion pair as
 context.
 
-A Value >1 will send that amount of prompt-completion pairs to
-ChatGPT."
-  :type '(choice (integer :tag "Integer value")
-                 (const :tag "Not set" nil))
+A Value > 1 will send that amount of prompt-completion pairs to
+ChatGPT.
+
+A function `(lambda (tokens-per-message tokens-per-name messages))' returning length can use
+custom logic to enable a shifting window."
+  :type '(choice (integer :tag "Integer")
+                 (const :tag "Not set" nil)
+                 (function :tag "Function"))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
@@ -1168,7 +1172,10 @@ For example:
          (chatgpt-shell--user-assistant-messages
           (last history
                 (chatgpt-shell--unpaired-length
-                 chatgpt-shell-transmitted-context-length)))))
+                 (if (functionp chatgpt-shell-transmitted-context-length)
+                     (funcall chatgpt-shell-transmitted-context-length
+                              chatgpt-shell-model-version history)
+                   chatgpt-shell-transmitted-context-length))))))
   (let ((request-data `((model . ,chatgpt-shell-model-version)
                         (messages . ,(if (chatgpt-shell-system-prompt)
                                          (vconcat ;; Vector for json
@@ -1183,6 +1190,47 @@ For example:
     (when chatgpt-shell-streaming
       (push `(stream . t) request-data))
     request-data))
+
+(defun chatgpt-shell--approximate-context-length (model messages)
+  "Approximate the contenxt length using MODEL and MESSAGES."
+  (let* ((tokens-per-message)
+         (tokens-per-name)
+         (max-tokens)
+         (original-length (floor (/ (length messages) 2)))
+         (context-length original-length))
+    (cond
+     ((or (string= model "gpt-3.5-turbo")
+          (string= model "gpt-3.5-turbo-0301"))
+      (setq tokens-per-message 4
+            tokens-per-name -1
+            ;; https://platform.openai.com/docs/models/gpt-3-5
+            max-tokens 4096))
+     ((or (string= model "gpt-4")
+          (string= model "gpt-4-0314"))
+      (setq tokens-per-message 3
+            tokens-per-name 1
+            ;; https://platform.openai.com/docs/models/gpt-4
+            max-tokens 8192)))
+    (while (> (chatgpt-shell--num-tokens-from-messages
+               tokens-per-message tokens-per-name messages)
+              max-tokens)
+      (setq messages (cdr messages)))
+    (setq context-length (floor (/ (length messages) 2)))
+    (unless (eq original-length context-length)
+      (message "Warning: chatgpt-shell context clipped"))
+    context-length))
+
+;; Very rough token approximation loosely based on num_tokens_from_messages from:
+;; https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
+(defun chatgpt-shell--num-tokens-from-messages (tokens-per-message tokens-per-name messages)
+  "Approximate the number of tokens using TOKENS-PER-MESSAGE, TOKENS-PER-NAME and MESSAGES."
+  (let ((num-tokens 0))
+    (dolist (message messages)
+      (setq num-tokens (+ num-tokens tokens-per-message))
+      (setq num-tokens (+ num-tokens (/ (length (cdr message)) tokens-per-message))))
+    ;; Every reply is primed with <|start|>assistant<|message|>
+    (setq num-tokens (+ num-tokens 3))
+    num-tokens))
 
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
