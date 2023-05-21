@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.34.1
+;; Version: 0.35.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.22.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1244,6 +1244,7 @@ Very much EXPERIMENTAL."
                     (setq command (car history))
                     (setq history (cdr history))
                     (when command
+                      (goto-char (point-max))
                       (insert (map-elt command 'content))
                       (shell-maker--send-input)))))
           (goto-char (point-max))
@@ -1255,6 +1256,7 @@ Very much EXPERIMENTAL."
                                   "user")
               (setq failed t)
               (user-error "Invalid transcript"))
+            (goto-char (point-max))
             (insert (map-elt command 'content))
             (shell-maker--send-input)))
       (if failed
@@ -1264,7 +1266,8 @@ Very much EXPERIMENTAL."
       (setf (shell-maker-config-validate-command shell-maker-config)
             validate-command)
       (setf (shell-maker-config-execute-command shell-maker-config)
-            execute-command))))
+            execute-command)))
+  (goto-char (point-max)))
 
 (defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
 lang-start lang-end body-start body-end quotes2-start quotes2-end)
