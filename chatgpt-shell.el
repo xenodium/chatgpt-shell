@@ -252,8 +252,9 @@ context.
 A Value > 1 will send that amount of prompt-completion pairs to
 ChatGPT.
 
-A function `(lambda (tokens-per-message tokens-per-name messages))' returning length can use
-custom logic to enable a shifting window."
+A function `(lambda (tokens-per-message tokens-per-name messages))'
+returning length.  Can use custom logic to enable a shifting context
+window."
   :type '(choice (integer :tag "Integer")
                  (const :tag "Not set" nil)
                  (function :tag "Function"))
@@ -1197,7 +1198,6 @@ For example:
 (defun chatgpt-shell--approximate-context-length (model messages)
   "Approximate the contenxt length using MODEL and MESSAGES."
   (let* ((tokens-per-message)
-         (tokens-per-name)
          (max-tokens)
          (original-length (floor (/ (length messages) 2)))
          (context-length original-length))
@@ -1205,17 +1205,15 @@ For example:
      ((or (string= model "gpt-3.5-turbo")
           (string= model "gpt-3.5-turbo-0301"))
       (setq tokens-per-message 4
-            tokens-per-name -1
             ;; https://platform.openai.com/docs/models/gpt-3-5
             max-tokens 4096))
      ((or (string= model "gpt-4")
           (string= model "gpt-4-0314"))
       (setq tokens-per-message 3
-            tokens-per-name 1
             ;; https://platform.openai.com/docs/models/gpt-4
             max-tokens 8192)))
     (while (> (chatgpt-shell--num-tokens-from-messages
-               tokens-per-message tokens-per-name messages)
+               tokens-per-message messages)
               max-tokens)
       (setq messages (cdr messages)))
     (setq context-length (floor (/ (length messages) 2)))
@@ -1225,8 +1223,8 @@ For example:
 
 ;; Very rough token approximation loosely based on num_tokens_from_messages from:
 ;; https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
-(defun chatgpt-shell--num-tokens-from-messages (tokens-per-message tokens-per-name messages)
-  "Approximate the number of tokens using TOKENS-PER-MESSAGE, TOKENS-PER-NAME and MESSAGES."
+(defun chatgpt-shell--num-tokens-from-messages (tokens-per-message messages)
+  "Approximate number of tokens in messages using TOKENS-PER-MESSAGE."
   (let ((num-tokens 0))
     (dolist (message messages)
       (setq num-tokens (+ num-tokens tokens-per-message))
@@ -1400,7 +1398,7 @@ Use START END TEXT-START TEXT-END."
   ;; Hide markup after
   (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
 
-(defun chatgpt-shell--fontify-header (start end level-start level-end title-start title-end)
+(defun chatgpt-shell--fontify-header (start _end level-start level-end title-start title-end)
   "Fontify a markdown header.
 Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
   ;; Hide markup before
