@@ -798,6 +798,9 @@ Returns a list of (command . output) cons."
                 (setq response (string-trim (replace-regexp-in-string
                                              "<shell-maker-[^>]+>" ""
                                              response)))
+                (setq prompt (string-trim (replace-regexp-in-string
+                                           "<shell-maker-[^>]+>" ""
+                                           prompt)))
                 (when (or (not (string-empty-p prompt))
                           (not (string-empty-p response)))
                   (push (cons (if (string-empty-p prompt)

@@ -355,7 +355,7 @@ With NO-FOCUS, start the shell without focus."
                               chatgpt-shell-model-version))
      (let ((elisp "(rx (or "))
        (dolist (item chatgpt-shell-model-versions elisp)
-         (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)> \") "
+         (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)>\" (or space \"\n\")) "
                                            (shrink-model-version item)))))
        (setq elisp (concat elisp "))"))
        (eval (car (read-from-string elisp)))))))
