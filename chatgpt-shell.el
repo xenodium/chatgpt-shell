@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.36.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.22.1"))
+;; Version: 0.37.1
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.23.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -225,7 +225,7 @@ See https://platform.openai.com/docs/guides/chat/introduction"
         (completing-read "Model version: "
                          chatgpt-shell-model-versions nil t))
   (chatgpt-shell--update-prompt)
-  (chatgpt-shell-interrupt))
+  (chatgpt-shell-interrupt nil))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
@@ -370,23 +370,27 @@ With NO-FOCUS, start the shell without focus."
   "Advice around `keyboard-quit' interrupting active shell.
 
 Applies ORIG-FUN and ARGS."
-  (chatgpt-shell-interrupt)
+  (chatgpt-shell-interrupt nil)
   (apply orig-fun args))
 
-(defun chatgpt-shell-interrupt ()
-  "Interrupt `chatgpt-shell' from any buffer."
-  (interactive)
+(defun chatgpt-shell-interrupt (ignore-item)
+  "Interrupt `chatgpt-shell' from any buffer.
+
+With prefix IGNORE-ITEM, do not mark as failed."
+  (interactive "P")
   (with-current-buffer
       (shell-maker-buffer-name chatgpt-shell--config)
-    (shell-maker-interrupt)))
+    (shell-maker-interrupt ignore-item)))
 
-(defun chatgpt-shell-ctrl-c-ctrl-c ()
+(defun chatgpt-shell-ctrl-c-ctrl-c (ignore-item)
   "Ctrl-C Ctrl-C DWIM binding.
 
 If on a block with primary action, execute it.
 
-Otherwise interrupt if busy."
-  (interactive)
+Otherwise interrupt if busy.
+
+With prefix IGNORE-ITEM, do not use interrupted item in context."
+  (interactive "P")
   (cond ((chatgpt-shell-primary-block-action-at-point)
          (chatgpt-shell-execute-primary-block-action-at-point))
         ((chatgpt-shell-markdown-block-at-point)
@@ -394,10 +398,9 @@ Otherwise interrupt if busy."
         ((and shell-maker--busy
               (eq (line-number-at-pos (point-max))
                   (line-number-at-pos (point))))
-         (shell-maker-interrupt)
-         (chatgpt-shell--put-source-block-overlays))
+         (shell-maker-interrupt ignore-item))
         (t
-         (shell-maker-interrupt))))
+         (shell-maker-interrupt ignore-item))))
 
 (defun chatgpt-shell-mark-at-point-dwim ()
   "Mark source block if at point.  Mark all output otherwise."
@@ -987,7 +990,7 @@ If passing HANDLER function, use it instead of inserting inline."
     (chatgpt-shell (or handler insert-inline))
     (cl-flet ((send ()
                     (when shell-maker--busy
-                      (shell-maker-interrupt))
+                      (shell-maker-interrupt nil))
                     (goto-char (point-max))
                     (if review
                         (save-excursion

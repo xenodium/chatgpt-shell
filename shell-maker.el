@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.22.1
+;; Version: 0.23.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -397,23 +397,25 @@ Otherwise save current output at location."
         (setq mark-active nil)
         (goto-char orig-point)))))
 
-(defun shell-maker-interrupt ()
-  "Interrupt current request."
-  (interactive)
+(defun shell-maker-interrupt (add-failure-marker)
+  "Interrupt current request.
+
+With prefix ADD-FAILURE-MARKER, mark as failed."
+  (interactive "P")
   (unless (eq major-mode 'shell-maker-mode)
     (user-error "Not in a shell"))
   (with-current-buffer (shell-maker-buffer shell-maker-config)
     ;; Increment id, so in-flight request is ignored.
     (shell-maker--increment-request-id)
-    (comint-send-input)
-    (goto-char (point-max))
-    (shell-maker--output-filter (shell-maker--process)
-                                (concat (propertize "<shell-maker-failed-command>"
-                                                    'invisible (not shell-maker--show-invisible-markers))
-                                        "\n"
-                                        (shell-maker-prompt shell-maker-config)))
     (when (process-live-p shell-maker--request-process)
       (kill-process shell-maker--request-process))
+    (goto-char (point-max))
+    (when add-failure-marker
+      (shell-maker--output-filter (shell-maker--process)
+                                  (concat (propertize "\n<shell-maker-failed-command>"
+                                                      'invisible (not shell-maker--show-invisible-markers))
+                                          "\n\n"
+                                          (shell-maker-prompt shell-maker-config))))
     (when shell-maker--busy
       (message "interrupted!"))
     (setq shell-maker--busy nil)))
@@ -515,7 +517,11 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                      (shell-maker--announce-response buffer))
                    (when on-output
                      (funcall on-output
-                              input-string error t t)))))))))
+                              input-string error t t))
+                   (when (shell-maker-config-on-command-finished shell-maker-config)
+                     (funcall (shell-maker-config-on-command-finished shell-maker-config)
+                              input-string
+                              error)))))))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
@@ -579,11 +585,11 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (when-let ((active (and (eq request-id shell-maker--current-request-id)
-                                 (buffer-live-p buffer)))
-                    (output (with-current-buffer (process-buffer process)
-                              (buffer-string)))
-                    (exit-status (process-exit-status process)))
+         (let ((active (and (eq request-id shell-maker--current-request-id)
+                            (buffer-live-p buffer)))
+               (output (with-current-buffer (process-buffer process)
+                         (buffer-string)))
+               (exit-status (process-exit-status process)))
            (shell-maker--write-output-to-log-buffer
             (format "// Response (%s)\n\n" (if active "active" "inactive")) config)
            (shell-maker--write-output-to-log-buffer
@@ -591,18 +597,17 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
            (shell-maker--write-output-to-log-buffer output config)
            (shell-maker--write-output-to-log-buffer "\n\n" config)
            (with-current-buffer buffer
-             (when active
-               (if (= exit-status 0)
-                   (funcall callback
-                            (if (string-empty-p (string-trim output))
-                                output
-                              (funcall response-extractor output))
-                            nil)
-                 (if-let ((error (if (string-empty-p (string-trim output))
-                                     output
-                                   (funcall response-extractor output))))
-                     (funcall error-callback error)
-                   (funcall error-callback output))))))
+             (if (and active (= exit-status 0))
+                 (funcall callback
+                          (if (string-empty-p (string-trim output))
+                              output
+                            (funcall response-extractor output))
+                          nil)
+               (if-let ((error (if (string-empty-p (string-trim output))
+                                   output
+                                 (funcall response-extractor output))))
+                   (funcall error-callback error)
+                 (funcall error-callback output)))))
          (kill-buffer output-buffer))))))
 
 (defun shell-maker--json-parse-string-filtering (json regexp)
