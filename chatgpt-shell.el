@@ -1253,7 +1253,7 @@ For example:
 ;; Very rough token approximation loosely based on num_tokens_from_messages from:
 ;; https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
 (defun chatgpt-shell--num-tokens-from-messages (tokens-per-message messages)
-  "Approximate number of tokens in messages using TOKENS-PER-MESSAGE."
+  "Approximate number of tokens in MESSAGES using TOKENS-PER-MESSAGE."
   (let ((num-tokens 0))
     (dolist (message messages)
       (setq num-tokens (+ num-tokens tokens-per-message))
