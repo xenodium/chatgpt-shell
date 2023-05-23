@@ -381,12 +381,7 @@ With NO-FOCUS, start the shell without focus."
     (cons
      (format "ChatGPT(%s)> " (shrink-model-version
                               chatgpt-shell-model-version))
-     (let ((elisp "(rx (or "))
-       (dolist (item chatgpt-shell-model-versions elisp)
-         (setq elisp (concat elisp (format "(seq bol \"ChatGPT(%s)>\" (or space \"\n\")) "
-                                           (shrink-model-version item)))))
-       (setq elisp (concat elisp "))"))
-       (eval (car (read-from-string elisp)))))))
+     (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
 
 (defun chatgpt-shell--update-prompt ()
   "Update prompt and prompt regexp from `chatgpt-shell-model-versions'."
