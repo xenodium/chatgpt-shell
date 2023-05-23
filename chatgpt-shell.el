@@ -1299,7 +1299,8 @@ Very much EXPERIMENTAL."
          (history (with-temp-buffer
                     (insert-file-contents path)
                     (chatgpt-shell--extract-history
-                     (buffer-string)
+                     (buffer-substring-no-properties
+                      (point-min) (point-max))
                      prompt-regexp)))
          (execute-command (shell-maker-config-execute-command
                            shell-maker-config))
