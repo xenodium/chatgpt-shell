@@ -173,9 +173,18 @@ for details."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-system-prompts
-  '("Always show code snippets in markdown blocks with language labels.")
-  "List of default prompts to choose from."
-  :type '(repeat string)
+  '(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
+    ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
+    ("Concise" . "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")
+    )
+  "List of system prompts to choose from.
+
+If prompt is a cons, its car will be used as a title as display.
+
+For example:
+
+\(\"Programming\" . \"The user is a programmer with very limited time...\")"
+  :type '(repeat (choice (cons string string) string))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-system-prompt 0
@@ -193,29 +202,48 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   (cond ((stringp chatgpt-shell-system-prompt)
          chatgpt-shell-system-prompt)
         ((integerp chatgpt-shell-system-prompt)
-         (nth chatgpt-shell-system-prompt
-              chatgpt-shell-system-prompts))
+         (let ((prompt (nth chatgpt-shell-system-prompt
+                            chatgpt-shell-system-prompts)))
+           (if (consp prompt)
+               (cdr prompt)
+             prompt)))
         (t
          nil)))
 
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
   (interactive)
-  (let ((choice (completing-read "System prompt: "
-                                 (append
-                                  (list "None")
-                                  (seq-map (lambda (item)
-                                             (truncate-string-to-width
-                                              (nth 0 (split-string item "\n"))
-                                              (window-body-width)))
-                                           chatgpt-shell-system-prompts)))))
+  (let ((choice (completing-read
+                 "System prompt: "
+                 (append
+                  (list "None")
+                  (seq-map (lambda (item)
+                             (if (consp item)
+                                 (concat
+                                  (car item)
+                                  (propertize (concat "<<prompt>>"
+                                                      (cdr item))
+                                              'invisible t))
+                               (truncate-string-to-width
+                                (nth 0 (split-string item "\n"))
+                                (window-body-width))))
+                           chatgpt-shell-system-prompts)))))
     (if (or (string-equal choice "None")
             (string-empty-p (string-trim choice)))
         (setq chatgpt-shell-system-prompt nil)
       (setq chatgpt-shell-system-prompt
             (or (seq-position chatgpt-shell-system-prompts choice
                               (lambda (item prefix)
-                                (string-prefix-p prefix item)))
+                                ;; Some items are of the form:
+                                ;;   Programing<<prompt>>The user is a programmer.
+                                (if-let ((parts (split-string choice "<<prompt>>"))
+                                         (prompt (when (length> parts 1)
+                                                   (cons (nth 0 parts)
+                                                         (nth 1 parts)))))
+                                    (equal item prompt)
+                                  (if (consp item)
+                                      nil ;; Different type / no matching.
+                                    (string-prefix-p prefix item)))))
                 choice)))))
 
 (defun chatgpt-shell-swap-model-version ()
