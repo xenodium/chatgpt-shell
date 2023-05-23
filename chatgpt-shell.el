@@ -1592,6 +1592,7 @@ If no LENGTH set, use 2048."
             (when (and command response)
               (insert "\n\n"))
             (insert (or response "")))
+          (chatgpt-shell--put-source-block-overlays)
           (view-mode +1)
           (setq view-exit-action 'kill-buffer))))
     (switch-to-buffer buf)
