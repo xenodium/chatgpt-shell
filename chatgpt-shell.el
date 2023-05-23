@@ -844,10 +844,11 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
-  (chatgpt-shell-send-to-buffer
-   (if review
-       (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
-     (buffer-substring (region-beginning) (region-end))) review))
+  (let ((chatgpt-shell-insert-queries-inline nil))
+    (chatgpt-shell-send-to-buffer
+     (if review
+         (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
+       (buffer-substring (region-beginning) (region-end))) review)))
 
 (defun chatgpt-shell-send-and-review-region ()
   "Send region to ChatGPT, review before submitting."
