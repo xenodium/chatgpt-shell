@@ -175,11 +175,10 @@ for details."
 (defcustom chatgpt-shell-system-prompts
   '(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
     ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
-    ("Concise" . "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")
-    )
+    ("Concise" . "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets."))
   "List of system prompts to choose from.
 
-If prompt is a cons, its car will be used as a title as display.
+If prompt is a cons, its car will be used as a title to display.
 
 For example:
 
@@ -244,7 +243,9 @@ See https://platform.openai.com/docs/guides/chat/introduction"
                                   (if (consp item)
                                       nil ;; Different type / no matching.
                                     (string-prefix-p prefix item)))))
-                choice)))))
+                choice))))
+  (chatgpt-shell--update-prompt)
+  (chatgpt-shell-interrupt nil))
 
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
@@ -377,10 +378,19 @@ With NO-FOCUS, start the shell without focus."
   "Return a pair with prompt and prompt-regexp."
   (cl-flet ((shrink-model-version (model-version) ;; gpt-3.5-turbo -> 3.5-turbo
                                   (string-remove-prefix
-                                   "gpt-" (string-trim model-version))))
+                                   "gpt-" (string-trim model-version)))
+            (shrink-system-prompt (prompt)
+                                  (if (consp prompt)
+                                      (car prompt)
+                                    (if (length> (string-trim prompt) 6)
+                                        (format "%s..."
+                                                (substring (string-trim prompt) 0 15))
+                                      (string-trim prompt)))))
     (cons
-     (format "ChatGPT(%s)> " (shrink-model-version
-                              chatgpt-shell-model-version))
+     (format "ChatGPT(%s/%s)> " (shrink-model-version
+                                 chatgpt-shell-model-version)
+             (shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                        chatgpt-shell-system-prompts)))
      (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
 
 (defun chatgpt-shell--update-prompt ()
