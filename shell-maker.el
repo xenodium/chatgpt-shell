@@ -505,7 +505,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                                       input-string response nil t))
                            (funcall (shell-maker-config-on-command-finished shell-maker-config)
                                     input-string
-                                    (shell-maker-last-output))))
+                                    (shell-maker-last-output))
+                           (goto-char (point-max))))
                      (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
                      (setq shell-maker--busy nil)
                      (unless no-announcement
@@ -526,7 +527,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                    (when (shell-maker-config-on-command-finished shell-maker-config)
                      (funcall (shell-maker-config-on-command-finished shell-maker-config)
                               input-string
-                              error)))))))))
+                              error)
+                     (goto-char (point-max))))))))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
