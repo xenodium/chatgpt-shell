@@ -1085,6 +1085,9 @@ If passing HANDLER function, use it instead of `chatgpt-shell-prompt-query-style
                        (eq chatgpt-shell-prompt-query-style 'other-buffer)
                        handler))
     (when (eq chatgpt-shell-prompt-query-style 'other-buffer)
+      (with-current-buffer buffer (view-mode +1)
+                           (setq view-exit-action 'kill-buffer)))
+    (when (eq chatgpt-shell-prompt-query-style 'other-buffer)
       (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
                      display-buffer-alist)
         (add-to-list 'display-buffer-alist
@@ -1103,27 +1106,27 @@ If passing HANDLER function, use it instead of `chatgpt-shell-prompt-query-style
                        (if (or (eq chatgpt-shell-prompt-query-style 'other-buffer)
                                (eq chatgpt-shell-prompt-query-style 'inline))
                            (lambda (_command output error finished)
-                             (message "FINISHED? %s" (if finished "Y" "N"))
                              (setq output (or output ""))
                              (with-current-buffer buffer
                                (if error
                                    (unless (string-empty-p (string-trim output))
                                      (message "%s" output))
-                                 (save-excursion
-                                   (if orig-region-active
-                                       (progn
-                                         (goto-char marker)
-                                         (when (eq (marker-position marker)
-                                                   point)
-                                           (insert "\n\n")
-                                           (set-marker marker (+ 2 (marker-position marker))))
-                                         (insert output)
-                                         (set-marker marker (+ (length output)
-                                                               (marker-position marker))))
-                                     (goto-char marker)
-                                     (insert output)
-                                     (set-marker marker (+ (length output)
-                                                           (marker-position marker))))))
+                                 (let ((inhibit-read-only t))
+                                   (save-excursion
+                                     (if orig-region-active
+                                         (progn
+                                           (goto-char marker)
+                                           (when (eq (marker-position marker)
+                                                     point)
+                                             (insert "\n\n")
+                                             (set-marker marker (+ 2 (marker-position marker))))
+                                           (insert output)
+                                           (set-marker marker (+ (length output)
+                                                                 (marker-position marker))))
+                                       (goto-char marker)
+                                       (insert output)
+                                       (set-marker marker (+ (length output)
+                                                             (marker-position marker)))))))
                                (when (and finished
                                           (eq chatgpt-shell-prompt-query-style 'other-buffer))
                                  (chatgpt-shell--put-source-block-overlays))))
