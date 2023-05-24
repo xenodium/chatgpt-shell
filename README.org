@@ -164,7 +164,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 |------------------------------------------+-----------------------------------------------------------------------------|
 | chatgpt-shell-display-function           | Function to display the shell.  Set to `display-buffer' or custom function. |
 | chatgpt-shell-model-versions             | The list of ChatGPT OpenAI models to swap from.                             |
-| chatgpt-shell-system-prompt              | The system message helps set the behavior of the assistant.                 |
+| chatgpt-shell-system-prompt              | The system prompt `chatgpt-shell-system-prompts' index.                     |
 | chatgpt-shell-default-prompts            | List of default prompts to choose from.                                     |
 | chatgpt-shell-read-string-function       | Function to read strings from user.                                         |
 | chatgpt-shell-model-temperature          | What sampling temperature to use, between 0 and 2, or nil.                  |
@@ -174,7 +174,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-streaming                  | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
 | chatgpt-shell-insert-queries-inline      | When making queries in non-shell buffers, insert responses inline.          |
 | chatgpt-shell-logging                    | Logging disabled by default (slows things down).                            |
-| chatgpt-shell-model-version              | The used ChatGPT OpenAI model.                                              |
+| chatgpt-shell-model-version              | The active ChatGPT OpenAI model index.                                      |
 | chatgpt-shell-source-block-actions       | Block actions for known languages.                                          |
 | chatgpt-shell-api-url-path               | OpenAI API's URL path.                                                      |
 | chatgpt-shell-additional-curl-options    | Additional options for `curl' command.                                      |
