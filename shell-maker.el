@@ -492,7 +492,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                              (setq shell-maker--busy partial)
                              (when on-output
                                (funcall on-output
-                                        input-string response nil partial)))
+                                        input-string response nil nil)))
                          (shell-maker--write-reply (concat prefix-newline response suffix-newline))
                          (unless no-announcement
                            (shell-maker--announce-response buffer))
