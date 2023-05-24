@@ -149,13 +149,19 @@ https://platform.openai.com/docs/models/model-endpoint-compatibility."
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-model-version (nth 0 chatgpt-shell-model-versions)
-  "The used ChatGPT OpenAI model.
+(defcustom chatgpt-shell-model-version 0
+  "The active ChatGPT OpenAI model index.
+
+See `chatgpt-shell-model-versions' for available model versions.
+
+Swap using `chatgpt-shell-swap-model-version'.
 
 The list of models supported by /v1/chat/completions endpoint is
 documented at
 https://platform.openai.com/docs/models/model-endpoint-compatibility."
-  :type 'string
+  :type '(choice (string :tag "String")
+                 (integer :tag "Integer")
+                 (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-temperature nil
@@ -184,22 +190,31 @@ If prompt is a cons, its car will be used as a title to display.
 
 For example:
 
+\(\"Translating\" . \"You are a helpful English to Spanish assistant.\")\"
 \(\"Programming\" . \"The user is a programmer with very limited time...\")"
   :type '(repeat (choice (cons string string) string))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-system-prompt 0
-  "The system message helps set the behavior of the assistant.
+(defcustom chatgpt-shell-system-prompt 1 ;; Concise
+  "The system prompt `chatgpt-shell-system-prompts' index.
 
-For example: You are a helpful assistant that translates English to French.
-
-See https://platform.openai.com/docs/guides/chat/introduction"
+Or nil if none."
   :type '(choice (string :tag "String")
                  (integer :tag "Integer"))
   :group 'chatgpt-shell)
 
+(defun chatgpt-shell-model-version ()
+  "Return active model version."
+  (cond ((stringp chatgpt-shell-model-version)
+         chatgpt-shell-model-version)
+        ((integerp chatgpt-shell-model-version)
+         (nth chatgpt-shell-model-version
+              chatgpt-shell-model-versions))
+        (t
+         nil)))
+
 (defun chatgpt-shell-system-prompt ()
-  "Return current system prompt."
+  "Return active system prompt."
   (cond ((stringp chatgpt-shell-system-prompt)
          chatgpt-shell-system-prompt)
         ((integerp chatgpt-shell-system-prompt)
@@ -254,7 +269,12 @@ See https://platform.openai.com/docs/guides/chat/introduction"
   (interactive)
   (setq chatgpt-shell-model-version
         (completing-read "Model version: "
-                         chatgpt-shell-model-versions nil t))
+                         (if (length> chatgpt-shell-model-versions 1)
+                             (seq-remove
+                              (lambda (item)
+                                (string-equal item (chatgpt-shell-model-version)))
+                              chatgpt-shell-model-versions)
+                           chatgpt-shell-model-versions) nil t))
   (chatgpt-shell--update-prompt)
   (chatgpt-shell-interrupt nil))
 
@@ -378,9 +398,11 @@ With NO-FOCUS, start the shell without focus."
 
 (defun chatgpt-shell--prompt-pair ()
   "Return a pair with prompt and prompt-regexp."
-  (cl-flet ((shrink-model-version (model-version) ;; gpt-3.5-turbo -> 3.5-turbo
-                                  (string-remove-prefix
-                                   "gpt-" (string-trim model-version)))
+  (cl-flet ((shrink-model-version (model-version) ;; gpt-3.5-turbo -> 3.5t
+                                  (replace-regexp-in-string
+                                   "-turbo" "t"
+                                   (string-remove-prefix
+                                    "gpt-" (string-trim model-version))))
             (shrink-system-prompt (prompt)
                                   (if (consp prompt)
                                       (car prompt)
@@ -389,10 +411,15 @@ With NO-FOCUS, start the shell without focus."
                                                 (substring (string-trim prompt) 0 15))
                                       (string-trim prompt)))))
     (cons
-     (format "ChatGPT(%s/%s)> " (shrink-model-version
-                                 chatgpt-shell-model-version)
-             (shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                        chatgpt-shell-system-prompts)))
+     (format "ChatGPT(%s%s)> " (shrink-model-version
+                                 (chatgpt-shell-model-version))
+             (cond ((integerp chatgpt-shell-system-prompt)
+                    (concat "/" (shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                               chatgpt-shell-system-prompts))))
+                   ((stringp chatgpt-shell-system-prompt)
+                    (concat "/" (shrink-system-prompt chatgpt-shell-system-prompt)))
+                   (t
+                    "")))
      (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
 
 (defun chatgpt-shell--update-prompt ()
@@ -1122,7 +1149,7 @@ For example:
         (shell-maker-async-shell-command
          (chatgpt-shell--make-curl-request-command-list
           (let ((request-data `((model . ,(or version
-                                              chatgpt-shell-model-version))
+                                              (chatgpt-shell-model-version)))
                                 (messages . ,(vconcat ;; Vector for json
                                               messages)))))
             (when chatgpt-shell-model-temperature
@@ -1139,7 +1166,7 @@ For example:
              (command
               (chatgpt-shell--make-curl-request-command-list
                (let ((request-data `((model . ,(or version
-                                                   chatgpt-shell-model-version))
+                                                   (chatgpt-shell-model-version)))
                                      (messages . ,(vconcat ;; Vector for json
                                                    messages)))))
                  (when chatgpt-shell-model-temperature
@@ -1214,9 +1241,9 @@ For example:
                 (chatgpt-shell--unpaired-length
                  (if (functionp chatgpt-shell-transmitted-context-length)
                      (funcall chatgpt-shell-transmitted-context-length
-                              chatgpt-shell-model-version history)
+                              (chatgpt-shell-model-version) history)
                    chatgpt-shell-transmitted-context-length))))))
-  (let ((request-data `((model . ,chatgpt-shell-model-version)
+  (let ((request-data `((model . ,(chatgpt-shell-model-version))
                         (messages . ,(if (chatgpt-shell-system-prompt)
                                          (vconcat ;; Vector for json
                                           (list
