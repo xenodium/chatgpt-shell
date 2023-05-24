@@ -253,10 +253,10 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring. |
 |         | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                        |
 |         | chatgpt-shell-mode                                  | Major mode for editing text written for humans to read.         |
-|         | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.         |
+| C-c C-v | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.         |
 |         | chatgpt-shell-previous-source-block                 | Move point to previous source block.                            |
 |         | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                        |
-|         | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.         |
+| C-c C-s | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.         |
 |         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                                  |
 |         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                        |
 | C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                                |
