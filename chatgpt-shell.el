@@ -66,10 +66,12 @@
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-insert-queries-inline t
-  "When making queries in non-shell buffers, insert responses inline."
-  :type 'boolean
-  :group 'chatgpt-shell)
+(defcustom chatgpt-shell-prompt-query-style 'other-buffer
+  "Determines the style of prompt for ChatGPT shell queries."
+  :type '(choice (const :tag "Inline" inline)
+                 (const :tag "Other Buffer" other-buffer)
+                 (const :tag "Shell" shell))
+  :group 'chatgpt)
 
 (defcustom chatgpt-shell-after-command-functions nil
   "Abnormal hook (i.e. with parameters) invoked after each command.
@@ -809,13 +811,11 @@ Could be a prompt or a source block."
                 markdown-blocks))))
     (nreverse markdown-blocks)))
 
-(defun chatgpt-shell-prompt (prefix)
+(defun chatgpt-shell-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
-If region is active, append to prompt.
-
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
+If region is active, append to prompt."
+  (interactive)
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
           chatgpt-shell-default-prompts))
@@ -838,13 +838,11 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
                            (if overlay-blocks
                                "\n```"
                              ""))))
-    (chatgpt-shell-send-to-buffer prompt nil prefix)))
+    (chatgpt-shell-send-to-buffer prompt nil)))
 
-(defun chatgpt-shell-prompt-appending-kill-ring (prefix)
-  "Make a ChatGPT request from the minibuffer appending kill ring.
-
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
+(defun chatgpt-shell-prompt-appending-kill-ring ()
+  "Make a ChatGPT request from the minibuffer appending kill ring."
+  (interactive)
   (unless chatgpt-shell--prompt-history
     (setq chatgpt-shell--prompt-history
           chatgpt-shell-default-prompts))
@@ -856,13 +854,11 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
                          'chatgpt-shell--prompt-history)))
     (chatgpt-shell-send-to-buffer
      (concat prompt "\n\n"
-             (current-kill 0)) nil prefix)))
+             (current-kill 0)) nil)))
 
-(defun chatgpt-shell-describe-code (prefix)
-  "Describe code from region using ChatGPT.
-
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
+(defun chatgpt-shell-describe-code ()
+  "Describe code from region using ChatGPT."
+  (interactive)
   (unless (region-active-p)
     (user-error "No region active"))
   (let ((overlay-blocks (derived-mode-p 'prog-mode)))
@@ -875,52 +871,43 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
              (buffer-substring (region-beginning) (region-end))
              (if overlay-blocks
                  "\n```"
-               ""))
-     nil prefix)
+               "")) nil)
     (when overlay-blocks
       (with-current-buffer
           (shell-maker-buffer-name chatgpt-shell--config)
         (chatgpt-shell--put-source-block-overlays)))))
 
-(defun chatgpt-shell-send-region-with-header (header invert-insert-inline)
-  "Send text with HEADER from region using ChatGPT.
-
-With INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice."
+(defun chatgpt-shell-send-region-with-header (header)
+  "Send text with HEADER from region using ChatGPT."
   (unless (region-active-p)
     (user-error "No region active"))
   (chatgpt-shell-send-to-buffer
    (concat header
            "\n\n"
            (buffer-substring (region-beginning) (region-end)))
-   nil invert-insert-inline))
+   nil))
 
-(defun chatgpt-shell-refactor-code (prefix)
-  "Refactor code from region using ChatGPT.
+(defun chatgpt-shell-refactor-code ()
+  "Refactor code from region using ChatGPT."
+  (interactive)
+  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'."))
 
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
-  (chatgpt-shell-send-region-with-header "Please help me refactor the following code. Please reply with the refactoring explanation in English, refactored code, and diff between two versions. Please ignore the comments and strings in the code during the refactoring. If the code remains unchanged after refactoring, please say 'No need to refactor'." prefix))
-
-(defun chatgpt-shell-generate-unit-test (prefix)
-  "Generate unit-test for the code from region using ChatGPT.
-
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
+(defun chatgpt-shell-generate-unit-test ()
+  "Generate unit-test for the code from region using ChatGPT."
+  (interactive)
   (chatgpt-shell-send-region-with-header
-   "Please help me generate unit-test following function:" prefix))
+   "Please help me generate unit-test following function:"))
 
-(defun chatgpt-shell-proofread-region (prefix)
-  "Proofread English from region using ChatGPT.
-
-With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
-  (interactive "P")
+(defun chatgpt-shell-proofread-region ()
+  "Proofread English from region using ChatGPT."
+  (interactive)
   (chatgpt-shell-send-region-with-header
-   "Please help me proofread the following text with English:" prefix))
+   "Please help me proofread the following text with English:"))
 
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
-  (let ((chatgpt-shell-insert-queries-inline nil))
+  (let ((chatgpt-shell-prompt-query-style 'other-buffer))
     (chatgpt-shell-send-to-buffer
      (concat "What's wrong with this command?\n\n"
              (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -930,7 +917,7 @@ With PREFIX, invert `chatgpt-shell-insert-queries-inline' choice."
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
   (interactive)
-  (let ((chatgpt-shell-insert-queries-inline nil))
+  (let ((chatgpt-shell-prompt-query-style 'other-buffer))
     (chatgpt-shell-send-to-buffer
      (concat "Summarize the output of the following command: \n\n"
              (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -943,7 +930,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
-  (let ((chatgpt-shell-insert-queries-inline nil))
+  (let ((chatgpt-shell-prompt-query-style 'shell))
     (chatgpt-shell-send-to-buffer
      (if review
          (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
@@ -966,11 +953,11 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
 (defun chatgpt-shell-command-line (prompt)
   "Send PROMPT and output to standard output."
-  (let ((chatgpt-shell-insert-queries-inline nil)
+  (let ((chatgpt-shell-prompt-query-style 'shell)
         (worker-done nil)
         (buffered ""))
     (chatgpt-shell-send-to-buffer
-     prompt nil nil
+     prompt nil
      (lambda (_command output _error finished)
        (setq buffered (concat buffered output))
        (when finished
@@ -1071,24 +1058,39 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
   (add-to-list 'eshell-complex-commands "??"))
 
-(defun chatgpt-shell-send-to-buffer (text &optional review invert-insert-inline handler)
+(defun chatgpt-shell-send-to-buffer (text &optional review handler)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
-When INVERT-INSERT-INLINE, invert `chatgpt-shell-insert-queries-inline' choice.
-
-If passing HANDLER function, use it instead of inserting inline."
-  (let* ((insert-inline (if invert-insert-inline
-                            (not chatgpt-shell-insert-queries-inline)
-                          chatgpt-shell-insert-queries-inline))
-         (buffer (current-buffer))
+If passing HANDLER function, use it instead of `chatgpt-shell-prompt-query-style'."
+  (let* ((buffer (cond (handler
+                        nil)
+                       ((eq chatgpt-shell-prompt-query-style 'inline)
+                        (current-buffer))
+                       ((eq chatgpt-shell-prompt-query-style 'other-buffer)
+                        (get-buffer-create
+                         (format "*%s> %s*" (shell-maker-config-name chatgpt-shell--config)
+                                 (truncate-string-to-width
+                                  (nth 0 (split-string text "\n"))
+                                  (window-body-width)))))
+                       (t
+                        nil)))
          (point (point))
          (marker (copy-marker (point)))
          (orig-region-active (region-active-p)))
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    (chatgpt-shell (or handler insert-inline))
+    (chatgpt-shell (or (eq chatgpt-shell-prompt-query-style 'inline)
+                       (eq chatgpt-shell-prompt-query-style 'other-buffer)
+                       handler))
+    (when (eq chatgpt-shell-prompt-query-style 'other-buffer)
+      (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
+                     display-buffer-alist)
+        (add-to-list 'display-buffer-alist
+                     (cons (rx "*ChatGPT>" (zero-or-more not-newline) "*")
+                           '((display-buffer-below-selected) (split-window-sensibly)))))
+      (display-buffer buffer))
     (cl-flet ((send ()
                     (when shell-maker--busy
                       (shell-maker-interrupt nil))
@@ -1098,8 +1100,10 @@ If passing HANDLER function, use it instead of inserting inline."
                           (insert text))
                       (insert text)
                       (shell-maker--send-input
-                       (if insert-inline
-                           (lambda (_command output error _finished)
+                       (if (or (eq chatgpt-shell-prompt-query-style 'other-buffer)
+                               (eq chatgpt-shell-prompt-query-style 'inline))
+                           (lambda (_command output error finished)
+                             (message "FINISHED? %s" (if finished "Y" "N"))
                              (setq output (or output ""))
                              (with-current-buffer buffer
                                (if error
@@ -1119,10 +1123,15 @@ If passing HANDLER function, use it instead of inserting inline."
                                      (goto-char marker)
                                      (insert output)
                                      (set-marker marker (+ (length output)
-                                                           (marker-position marker))))))))
+                                                           (marker-position marker))))))
+                               (when (and finished
+                                          (eq chatgpt-shell-prompt-query-style 'other-buffer))
+                                 (chatgpt-shell--put-source-block-overlays))))
                          (or handler (lambda (_command _output _error _finished))))
                        t))))
-      (if (or handler insert-inline)
+      (if (or (eq chatgpt-shell-prompt-query-style 'inline)
+              (eq chatgpt-shell-prompt-query-style 'other-buffer)
+              handler)
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
             (goto-char (point-max))
             (send))
