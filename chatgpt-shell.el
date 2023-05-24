@@ -138,7 +138,9 @@ Can be used compile or run source block at point."
 
 (defcustom chatgpt-shell-model-versions
   '("gpt-3.5-turbo"
-    "gpt-4")
+    "gpt-3.5-turbo-0301"
+    "gpt-4"
+    "gpt-4-0314")
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
