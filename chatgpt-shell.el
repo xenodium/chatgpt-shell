@@ -180,22 +180,6 @@ for details."
                  (const :tag "Nil" nil))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-system-prompts
-  `(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
-    ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
-    ("Programming" . ,(chatgpt-shell--append-system-info
-                       "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")))
-  "List of system prompts to choose from.
-
-If prompt is a cons, its car will be used as a title to display.
-
-For example:
-
-\(\"Translating\" . \"You are a helpful English to Spanish assistant.\")\"
-\(\"Programming\" . \"The user is a programmer with very limited time...\")"
-  :type '(repeat (choice (cons string string) string))
-  :group 'chatgpt-shell)
-
 (defun chatgpt-shell--append-system-info (text)
   "Append system info to TEXT."
   (cond ((eq system-type 'darwin)
@@ -227,6 +211,22 @@ For example:
                  (format "%s" system-type)
                  "\n## Editor\n"
                  (emacs-version)))))
+
+(defcustom chatgpt-shell-system-prompts
+  `(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
+    ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
+    ("Programming" . ,(chatgpt-shell--append-system-info
+                       "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")))
+  "List of system prompts to choose from.
+
+If prompt is a cons, its car will be used as a title to display.
+
+For example:
+
+\(\"Translating\" . \"You are a helpful English to Spanish assistant.\")\"
+\(\"Programming\" . \"The user is a programmer with very limited time...\")"
+  :type '(repeat (choice (cons string string) string))
+  :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-system-prompt 1 ;; Concise
   "The system prompt `chatgpt-shell-system-prompts' index.
