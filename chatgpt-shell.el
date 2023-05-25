@@ -1062,7 +1062,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
-If passing HANDLER function, use it instead of `chatgpt-shell-prompt-query-style'."
+If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
   (let* ((buffer (cond (handler
                         nil)
                        ((eq chatgpt-shell-prompt-query-style 'inline)
