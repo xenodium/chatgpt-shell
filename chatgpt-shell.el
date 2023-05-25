@@ -66,8 +66,14 @@
   :type '(repeat string)
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-prompt-query-style 'other-buffer
-  "Determines the style of prompt for ChatGPT shell queries."
+(defcustom chatgpt-shell-prompt-query-response-style 'other-buffer
+  "Determines the prompt style when invoking from other buffers.
+
+`'inline' inserts responses into current buffer.
+`'other-buffer' inserts responses into a transient buffer.
+`'shell' inserts responses and focuses the shell
+
+Note: in all cases responses are written to the shell to keep context."
   :type '(choice (const :tag "Inline" inline)
                  (const :tag "Other Buffer" other-buffer)
                  (const :tag "Shell" shell))
@@ -907,7 +913,7 @@ If region is active, append to prompt."
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
-  (let ((chatgpt-shell-prompt-query-style 'other-buffer))
+  (let ((chatgpt-shell-prompt-query-response-style 'other-buffer))
     (chatgpt-shell-send-to-buffer
      (concat "What's wrong with this command?\n\n"
              (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -917,7 +923,7 @@ If region is active, append to prompt."
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
   (interactive)
-  (let ((chatgpt-shell-prompt-query-style 'other-buffer))
+  (let ((chatgpt-shell-prompt-query-response-style 'other-buffer))
     (chatgpt-shell-send-to-buffer
      (concat "Summarize the output of the following command: \n\n"
              (buffer-substring-no-properties eshell-last-input-start eshell-last-input-end)
@@ -930,7 +936,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
-  (let ((chatgpt-shell-prompt-query-style 'shell))
+  (let ((chatgpt-shell-prompt-query-response-style 'shell))
     (chatgpt-shell-send-to-buffer
      (if review
          (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
@@ -953,7 +959,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
 (defun chatgpt-shell-command-line (prompt)
   "Send PROMPT and output to standard output."
-  (let ((chatgpt-shell-prompt-query-style 'shell)
+  (let ((chatgpt-shell-prompt-query-response-style 'shell)
         (worker-done nil)
         (buffered ""))
     (chatgpt-shell-send-to-buffer
@@ -1065,9 +1071,9 @@ Set REVIEW to make changes before submitting to ChatGPT.
 If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
   (let* ((buffer (cond (handler
                         nil)
-                       ((eq chatgpt-shell-prompt-query-style 'inline)
+                       ((eq chatgpt-shell-prompt-query-response-style 'inline)
                         (current-buffer))
-                       ((eq chatgpt-shell-prompt-query-style 'other-buffer)
+                       ((eq chatgpt-shell-prompt-query-response-style 'other-buffer)
                         (get-buffer-create
                          (format "*%s> %s*" (shell-maker-config-name chatgpt-shell--config)
                                  (truncate-string-to-width
@@ -1081,13 +1087,13 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    (chatgpt-shell (or (eq chatgpt-shell-prompt-query-style 'inline)
-                       (eq chatgpt-shell-prompt-query-style 'other-buffer)
+    (chatgpt-shell (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                       (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
                        handler))
-    (when (eq chatgpt-shell-prompt-query-style 'other-buffer)
+    (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (with-current-buffer buffer (view-mode +1)
                            (setq view-exit-action 'kill-buffer)))
-    (when (eq chatgpt-shell-prompt-query-style 'other-buffer)
+    (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
                      display-buffer-alist)
         (add-to-list 'display-buffer-alist
@@ -1103,8 +1109,8 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                           (insert text))
                       (insert text)
                       (shell-maker--send-input
-                       (if (or (eq chatgpt-shell-prompt-query-style 'other-buffer)
-                               (eq chatgpt-shell-prompt-query-style 'inline))
+                       (if (or (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
+                               (eq chatgpt-shell-prompt-query-response-style 'inline))
                            (lambda (_command output error finished)
                              (setq output (or output ""))
                              (with-current-buffer buffer
@@ -1128,12 +1134,12 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                                        (set-marker marker (+ (length output)
                                                              (marker-position marker)))))))
                                (when (and finished
-                                          (eq chatgpt-shell-prompt-query-style 'other-buffer))
+                                          (eq chatgpt-shell-prompt-query-response-style 'other-buffer))
                                  (chatgpt-shell--put-source-block-overlays))))
                          (or handler (lambda (_command _output _error _finished))))
                        t))))
-      (if (or (eq chatgpt-shell-prompt-query-style 'inline)
-              (eq chatgpt-shell-prompt-query-style 'other-buffer)
+      (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+              (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
               handler)
           (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
             (goto-char (point-max))
