@@ -496,10 +496,12 @@ With NO-FOCUS, start the shell without focus."
                                       (string-trim prompt)))))
     (cons
      (format "ChatGPT(%s%s)> " (shrink-model-version
-                                 (chatgpt-shell-model-version))
-             (cond ((integerp chatgpt-shell-system-prompt)
+                                (chatgpt-shell-model-version))
+             (cond ((and (integerp chatgpt-shell-system-prompt)
+                         (nth chatgpt-shell-system-prompt
+                              chatgpt-shell-system-prompts))
                     (concat "/" (shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                               chatgpt-shell-system-prompts))))
+                                                           chatgpt-shell-system-prompts))))
                    ((stringp chatgpt-shell-system-prompt)
                     (concat "/" (shrink-system-prompt chatgpt-shell-system-prompt)))
                    (t
