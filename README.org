@@ -1,5 +1,7 @@
 👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
 
+[[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
+
 * chatgpt-shell
 
 ChatGPT and DALL-E Emacs shells + [[https://orgmode.org/worg/org-contrib/babel/intro.html][Org Babel]].
