@@ -1223,9 +1223,9 @@ Set SAVE-EXCURSION to prevent point from moving."
      (prin1-to-string form))
    (chatgpt-shell-parse-elisp-code code)))
 
-(defun chatgpt-shell-post-messages (messages &optional version callback error-callback)
+(defun chatgpt-shell-post-messages (messages &optional version callback error-callback temperature)
   "Make a single ChatGPT request with MESSAGES.
-Optionally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
+Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, and TEMPERATURE.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
@@ -1249,8 +1249,9 @@ For example:
                                               (chatgpt-shell-model-version)))
                                 (messages . ,(vconcat ;; Vector for json
                                               messages)))))
-            (when chatgpt-shell-model-temperature
-              (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+            (when (or temperature chatgpt-shell-model-temperature)
+              (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
+                    request-data))
             request-data))
          nil ;; streaming
          #'chatgpt-shell--extract-chatgpt-response
@@ -1266,8 +1267,9 @@ For example:
                                                    (chatgpt-shell-model-version)))
                                      (messages . ,(vconcat ;; Vector for json
                                                    messages)))))
-                 (when chatgpt-shell-model-temperature
-                   (push `(temperature . ,chatgpt-shell-model-temperature) request-data))
+                 (when (or temperature chatgpt-shell-model-temperature)
+                   (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
+                         request-data))
                  request-data)))
              (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
         (chatgpt-shell--extract-chatgpt-response

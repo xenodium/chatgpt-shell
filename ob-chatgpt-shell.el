@@ -50,24 +50,27 @@
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
                                                       (:version . nil)
                                                       (:system . nil)
-                                                      (:context . nil)))
+                                                      (:context . nil)
+                                                      (:temperature . nil)))
 
 (defun org-babel-execute:chatgpt-shell(body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
   (chatgpt-shell-post-messages
-       (vconcat ;; Vector for json
-        (when (map-elt params :system)
-          (list
-           (list
-            (cons 'role "system")
-            (cons 'content (map-elt params :system)))))
-        (when (map-elt params :context)
-          (ob-chatgpt-shell--context))
-        `(((role . "user")
-           (content . ,body))))
-       (map-elt params :version)))
+   (vconcat ;; Vector for json
+    (when (map-elt params :system)
+      (list
+       (list
+        (cons 'role "system")
+        (cons 'content (map-elt params :system)))))
+    (when (map-elt params :context)
+      (ob-chatgpt-shell--context))
+    `(((role . "user")
+       (content . ,body))))
+   (map-elt params :version)
+   nil nil
+   (map-elt params :temperature)))
 
 (defun ob-chatgpt-shell--context ()
   "Return the context (what was asked and responded) in all previous blocks."

@@ -372,6 +372,16 @@ Use =:system= to set the system prompt.
   Ahoy there, me hearty! How be ye today?
 #+end_src
 
+** :temperature
+
+Use =:temperature= to set the [[https://platform.openai.com/docs/api-reference/completions/create#completions/create-temperature][temperature]] parameter.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell :temperature 0.3
+    hello
+  ,#+end_src
+#+end_src
+
 ** :context
 
 Use =:context t= to include any prior context in current buffer.
