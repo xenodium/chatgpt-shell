@@ -68,7 +68,7 @@
 
 (defcustom chatgpt-shell-prompt-header-describe-code
   "What does the following code do?"
-  "Prompt header of `describe-code`"
+  "Prompt header of `describe-code`."
   :type 'string
   :group 'chatgpt-shell)
 
@@ -77,31 +77,31 @@
    Please reply with the refactoring explanation in English, refactored code, and diff between two versions.
    Please ignore the comments and strings in the code during the refactoring.
    If the code remains unchanged after refactoring, please say 'No need to refactor'."
-  "Prompt header of `refactor-code`"
+  "Prompt header of `refactor-code`."
   :type 'string
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-generate-unit-test
   "Please help me generate unit-test following function:"
-  "Prompt header of `generate-unit-test`"
+  "Prompt header of `generate-unit-test`."
   :type 'string
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-proofread-region
   "Please help me proofread the following text with English:"
-  "Promt header of `proofread-region`"
+  "Promt header of `proofread-region`."
   :type 'string
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-whats-wrong-with-last-command
   "What's wrong with this command?"
-  "Prompt header of `whats-wrong-with-last-command`"
+  "Prompt header of `whats-wrong-with-last-command`."
   :type 'string
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-eshell-summarize-last-command-output
   "Summarize the output of the following command:"
-  "Prompt header of `eshell-summarize-last-command-output`"
+  "Prompt header of `eshell-summarize-last-command-output`."
   :type 'string
   :group 'chatgpt-shell)
 
