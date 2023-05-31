@@ -42,10 +42,10 @@
 ;;; Requirements:
 
 ;;; Code:
-(require 'ob)
-(require 'org)
 (require 'chatgpt-shell)
 (require 'map)
+(require 'ob)
+(require 'org-element)
 
 (defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
                                                       (:version . nil)

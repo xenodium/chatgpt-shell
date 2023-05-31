@@ -43,7 +43,6 @@
 
 ;;; Code:
 (require 'ob)
-(require 'org)
 (require 'dall-e-shell)
 (require 'map)
 
