@@ -1271,11 +1271,14 @@ For example:
                    (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
                          request-data))
                  request-data)))
-             (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
-        (chatgpt-shell--extract-chatgpt-response
-         (buffer-substring-no-properties
-          (point-min)
-          (point-max)))))))
+             (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
+             (response (chatgpt-shell--extract-chatgpt-response
+                        (buffer-substring-no-properties (point-min) (point-max)))))
+        (if (string-empty-p response)
+            (progn
+              (let ((print-length 100)) (print command)) ; print full command for debugging
+              (message response))
+          response)))))
 
 (defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback)
   "Make a single ChatGPT request with PROMPT.
