@@ -1271,7 +1271,12 @@ For example:
                    (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
                          request-data))
                  request-data)))
-             (_status (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
+             (config chatgpt-shell--config)
+             (_status (progn
+                        (shell-maker--write-output-to-log-buffer "// Request\n\n" config)
+                        (shell-maker--write-output-to-log-buffer (string-join command " ") config)
+                        (shell-maker--write-output-to-log-buffer "\n\n" config)
+                        (apply #'call-process (seq-first command) nil buffer nil (cdr command)))))
         (chatgpt-shell--extract-chatgpt-response
          (buffer-substring-no-properties
           (point-min)
