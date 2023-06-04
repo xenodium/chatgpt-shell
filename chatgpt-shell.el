@@ -344,6 +344,29 @@ Or nil if none."
   (chatgpt-shell--update-prompt)
   (chatgpt-shell-interrupt nil))
 
+(defun chatgpt-shell-load-awesome-prompts ()
+  "Load `chatgpt-shell-system-prompts' from https://github.com/f/awesome-chatgpt-prompts."
+  (interactive)
+  (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
+    (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
+                   csv-path t)
+    ;; Based on Daniel Gomez's parsing code from
+    ;; https://github.com/xenodium/chatgpt-shell/issues/104
+    (setq chatgpt-shell-system-prompts
+          (with-temp-buffer
+            (insert-file-contents csv-path)
+            (cdr
+             (mapcar
+              (lambda (row) (cons (car row) (cadr row)))
+              (mapcar
+               (lambda (line)
+                 (mapcar
+                  (lambda (s)
+                    (replace-regexp-in-string "\"" "" s))
+                  (split-string line ",")))
+               (split-string (buffer-string) "\n"))))))
+    (message "Loaded awesome-chatgpt-prompts")))
+
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
   (interactive)
