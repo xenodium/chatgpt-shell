@@ -746,6 +746,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
 
 (defun shell-maker--write-output-to-log-buffer (output config)
   "Write OUTPUT to log buffer using CONFIG."
+  (unless output
+    (setq output "<nil>"))
   (when (and shell-maker-logging config)
     (when (shell-maker-config-redact-log-output config)
       (setq output
