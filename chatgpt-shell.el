@@ -1272,15 +1272,20 @@ For example:
                          request-data))
                  request-data)))
              (config chatgpt-shell--config)
-             (_status (progn
-                        (shell-maker--write-output-to-log-buffer "// Request\n\n" config)
-                        (shell-maker--write-output-to-log-buffer (string-join command " ") config)
-                        (shell-maker--write-output-to-log-buffer "\n\n" config)
-                        (apply #'call-process (seq-first command) nil buffer nil (cdr command)))))
-        (chatgpt-shell--extract-chatgpt-response
-         (buffer-substring-no-properties
-          (point-min)
-          (point-max)))))))
+             (status (progn
+                       (shell-maker--write-output-to-log-buffer "// Request\n\n" config)
+                       (shell-maker--write-output-to-log-buffer (string-join command " ") config)
+                       (shell-maker--write-output-to-log-buffer "\n\n" config)
+                       (apply #'call-process (seq-first command) nil buffer nil (cdr command))))
+             (data (buffer-substring-no-properties (point-min) (point-max)))
+             (response (chatgpt-shell--extract-chatgpt-response data)))
+        (shell-maker--write-output-to-log-buffer (format "// Data (status: %d)\n\n" status) config)
+        (shell-maker--write-output-to-log-buffer data config)
+        (shell-maker--write-output-to-log-buffer "\n\n" config)
+        (shell-maker--write-output-to-log-buffer "// Response\n\n" config)
+        (shell-maker--write-output-to-log-buffer response config)
+        (shell-maker--write-output-to-log-buffer "\n\n" config)
+        response))))
 
 (defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback)
   "Make a single ChatGPT request with PROMPT.
