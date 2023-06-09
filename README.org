@@ -174,25 +174,24 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-history-path                                       | Root path to the location for storing history files.                        |
 | chatgpt-shell-system-prompts                                     | List of system prompts to choose from.                                      |
 | chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
-| chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`                                            |
-| chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`                            |
+| chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                           |
+| chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`.                           |
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                            |
 | chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.               |
-| chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`                                          |
+| chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`.                                         |
 | chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                      |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                          |
-| chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of `eshell-summarize-last-command-output`                     |
+| chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of `eshell-summarize-last-command-output`.                    |
 | chatgpt-shell-api-url-path                                       | OpenAI API's URL path.                                                      |
 | chatgpt-shell-additional-curl-options                            | Additional options for `curl' command.                                      |
 | chatgpt-shell-openai-key                                         | OpenAI key as a string or a function that loads and returns it.             |
 | chatgpt-shell-after-command-functions                            | Abnormal hook (i.e. with parameters) invoked after each command.            |
-| chatgpt-shell-prompt-header-describe-code                        | Prompt header of `describe-code`                                            |
+| chatgpt-shell-prompt-header-describe-code                        | Prompt header of `describe-code`.                                           |
 | chatgpt-shell-api-url-base                                       | OpenAI API's base URL.                                                      |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                               |
 | chatgpt-shell-language-mapping                                   | Maps external language names to Emacs names.                                |
-| chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of `generate-unit-test`                                       |
+| chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of `generate-unit-test`.                                      |
 | chatgpt-shell-request-timeout                                    | How long to wait for a request to time out in seconds.                      |
-
 
 There are more. Browse via =M-x set-variable=
 
