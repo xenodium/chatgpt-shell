@@ -48,7 +48,7 @@ If using [[https://github.com/jwiegley/use-package][use-package]], you can insta
 
 ** Straight
 
-=chatgpt-shell= depends on =shell-maker=. This dependency is tesolved without issues on MELPA but seems to run into issues with =straight=. I'm not familiar with =straight= but users have reported the following to work.
+=chatgpt-shell= depends on =shell-maker=. This dependency is resolved without issues on MELPA but seems to run into issues with =straight=. I'm not familiar with =straight= but users have reported the following to work.
 
 #+begin_src emacs-lisp :lexical no
 (use-package shell-maker
