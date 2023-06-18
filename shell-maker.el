@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.25.1
+;; Version: 0.26.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -64,6 +64,25 @@ To use `completing-read', it can be done with something like:
 
 Enable it for troubleshooting issues."
   :type 'boolean
+  :group 'shell-maker)
+
+(defcustom shell-maker-transcript-default-path nil
+  "Default path to save transcripts to."
+  :type 'directory
+  :group 'shell-maker)
+
+(defcustom shell-maker-transcript-default-filename
+  (lambda ()
+    "transcript.txt")
+  "Default file name to save transcripts to.
+
+As a function, so it can also logic to generate a name.
+
+For example:
+
+\(lambda ()
+    (format-time-string \"%Y-%m-%d-%H:%M:%S-transcript.txt\"))"
+  :type 'function
   :group 'shell-maker)
 
 (defcustom shell-maker-history-path user-emacs-directory
@@ -778,7 +797,9 @@ Very much EXPERIMENTAL."
           (insert content)
           (write-file path nil)))
     (when-let ((path (read-file-name "Write file: "
-                                     nil nil nil "transcript.txt"))
+				     (when shell-maker-transcript-default-path
+                                       (file-name-as-directory shell-maker-transcript-default-path))
+				     nil nil (funcall shell-maker-transcript-default-filename)))
                (content (buffer-string)))
       (with-temp-buffer
         (insert content)
