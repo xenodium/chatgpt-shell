@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.44.1
+;; Version: 0.45.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.25.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -501,17 +501,17 @@ With NO-FOCUS, start the shell without focus."
   (chatgpt-shell--update-prompt)
   ;; Disabling advice for now. It gets in the way.
   ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
-  (define-key shell-maker-mode-map (kbd "C-M-h")
+  (define-key chatgpt-shell-mode-map (kbd "C-M-h")
     #'chatgpt-shell-mark-at-point-dwim)
-  (define-key shell-maker-mode-map (kbd "C-c C-c")
+  (define-key chatgpt-shell-mode-map (kbd "C-c C-c")
     #'chatgpt-shell-ctrl-c-ctrl-c)
-  (define-key shell-maker-mode-map (kbd "C-c C-v")
+  (define-key chatgpt-shell-mode-map (kbd "C-c C-v")
     #'chatgpt-shell-swap-model-version)
-  (define-key shell-maker-mode-map (kbd "C-c C-s")
+  (define-key chatgpt-shell-mode-map (kbd "C-c C-s")
     #'chatgpt-shell-swap-system-prompt)
-  (define-key shell-maker-mode-map (kbd "C-c C-p")
+  (define-key chatgpt-shell-mode-map (kbd "C-c C-p")
     #'chatgpt-shell-previous-item)
-  (define-key shell-maker-mode-map (kbd "C-c C-n")
+  (define-key chatgpt-shell-mode-map (kbd "C-c C-n")
     #'chatgpt-shell-next-item))
 
 (defun chatgpt-shell--prompt-pair ()

@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.26.1
+;; Version: 0.27.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -118,40 +118,34 @@ For example:
 
 (defvar-local shell-maker--request-process nil)
 
-(defvaralias 'shell-maker-mode-map 'shell-maker-map)
-
-(defvar shell-maker-map
-  (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map [remap comint-send-input] 'shell-maker-return)
-    (define-key map [remap comint-interrupt-subjob] 'shell-maker-interrupt)
-    (define-key map (kbd "C-x C-s") 'shell-maker-save-session-transcript)
-    (define-key map (kbd "C-M-h") 'shell-maker-mark-output)
-    (define-key map [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history)
-    map)
-  "Keymap for `shell-maker' shells.")
-
-(declare-function shell-maker-mode "shell-maker" ())
-
 (defun shell-maker-start (config &optional no-focus)
   "Start a shell with CONFIG.
 
 Specify NO-FOCUS if started shell should not be focused."
-  (define-derived-mode shell-maker-mode comint-mode
-    (shell-maker-config-name config)
-    "Major mode for interactively evaluating shell-maker prompts.
-Uses the interface provided by `comint-mode'"
-    nil)
+  (let* ((old-point)
+         (buf-name (shell-maker-buffer-name config)))
+    (eval
+     (macroexpand
+      `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
+         ,(shell-maker-config-name config)
+         ,(format "Major mode for %s shell." (shell-maker-config-name config))
+         (define-key ,(shell-maker-major-mode-map config)
+           [remap comint-send-input] 'shell-maker-return)
+         (define-key ,(shell-maker-major-mode-map config)
+           [remap comint-interrupt-subjob] 'shell-maker-interrupt)
+         (define-key ,(shell-maker-major-mode-map config)
+           (kbd "C-x C-s") 'shell-maker-save-session-transcript)
+         (define-key ,(shell-maker-major-mode-map config)
+           (kbd "C-M-h") 'shell-maker-mark-output)
+         (define-key ,(shell-maker-major-mode-map config)
+           [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history))))
 
-  (make-local-variable 'shell-maker-map)
-
-  (let ((old-point)
-        (buf-name (shell-maker-buffer-name config)))
     (unless (comint-check-proc buf-name)
       (with-current-buffer (get-buffer-create buf-name)
         (setq-local shell-maker--busy nil)
         (unless (zerop (buffer-size))
           (setq old-point (point)))
-        (shell-maker-mode)
+        (funcall (shell-maker-major-mode config))
         (shell-maker--initialize config)))
     (unless no-focus
       (funcall shell-maker-display-function buf-name))
@@ -217,14 +211,14 @@ Uses the interface provided by `comint-mode'"
 (defun shell-maker-return ()
   "RET binding."
   (interactive)
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (shell-maker--send-input))
 
 (defun shell-maker-search-history ()
   "Search comint input ring."
   (interactive)
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (let ((candidate (completing-read
                     "History: "
@@ -267,7 +261,7 @@ Uses the interface provided by `comint-mode'"
 
 (defun shell-maker--output-at-point ()
   "Output at point range with cons of start and end."
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
@@ -332,7 +326,7 @@ Uses the interface provided by `comint-mode'"
   "If at latest prompt, mark last output.
 Otherwise mark current output at location."
   (interactive)
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (let ((current-pos (point))
         (revert-pos)
@@ -397,7 +391,7 @@ Otherwise mark current output at location."
   "If at latest prompt, save last output.
 Otherwise save current output at location."
   (interactive)
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (let ((orig-point (point))
         (orig-region-active (region-active-p))
@@ -421,7 +415,7 @@ Otherwise save current output at location."
 
 With prefix TREAT-AS-FAILURE, mark as failed."
   (interactive "P")
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (with-current-buffer (shell-maker-buffer shell-maker-config)
     ;; Increment id, so in-flight request is ignored.
@@ -788,7 +782,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
 
 Very much EXPERIMENTAL."
   (interactive)
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (if shell-maker--file
       (let ((content (buffer-string))
@@ -901,6 +895,16 @@ Uses PROCESS and STRING same as `comint-output-filter'."
           (downcase (shell-maker-config-name config))
           "*"))
 
+(defun shell-maker-major-mode (config)
+  "Get major mode from CONFIG."
+  (unless config
+    (error "No shell-maker config available"))
+  (intern (concat (downcase (shell-maker-config-name config)) "-shell-mode")))
+
+(defun shell-maker-major-mode-map (config)
+  "Get major mode map from CONFIG."
+  (intern (concat (downcase (shell-maker-config-name config)) "-shell-mode-map")))
+
 (defun shell-maker-process-name (config)
   "Get process name from CONFIG."
   (downcase (shell-maker-config-name config)))
@@ -920,7 +924,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 
 (defun shell-maker-set-prompt (prompt prompt-regexp)
   "Set internal config's PROMPT and PROMPT-REGEXP."
-  (unless (eq major-mode 'shell-maker-mode)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
   (setf (shell-maker-config-prompt shell-maker-config)
         prompt)
