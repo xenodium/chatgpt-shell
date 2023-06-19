@@ -1765,7 +1765,7 @@ If no LENGTH set, use 2048."
     2048))
 
 (defun chatgpt-shell-view-at-point ()
-  "View prompt and putput at point in a separate buffer."
+  "View prompt and output at point in a separate buffer."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
