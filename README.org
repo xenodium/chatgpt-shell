@@ -269,7 +269,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                                               |
 |         | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from https://github.com/f/awesome-chatgpt-prompts. |
 | C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                                                       |
-|         | chatgpt-shell-view-at-point                         | View prompt and putput at point in a separate buffer.                                  |
+|         | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.                                  |
 |         | chatgpt-shell-send-region                           | Send region to ChatGPT.                                                                |
 |         | chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                                                       |
 |         | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT.                             |
