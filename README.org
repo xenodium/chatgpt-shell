@@ -272,7 +272,6 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                                                           | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.   |
 |                                                           | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                          |
 |                                                           | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                     |
-| RET                                                       | chatgpt-shell-return                                | RET binding.                                                      |
 | C-c C-v                                                   | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.           |
 |                                                           | chatgpt-shell-previous-source-block                 | Move point to previous source block.                              |
 |                                                           | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                          |
@@ -280,6 +279,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 | C-x C-s                                                   | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                                    |
 | C-c M-o                                                   | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                          |
 |                                                           | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts. |
+| RET                                                       | chatgpt-shell-submit                                | Submit current input.                                             |
 | C-c C-n                                                   | chatgpt-shell-next-item                             | Go to next item.                                                  |
 |                                                           | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.             |
 |                                                           | chatgpt-shell-send-region                           | Send region to ChatGPT.                                           |
@@ -344,7 +344,7 @@ Browse all available via =M-x=.
 |--------------------------------------+------------------------------------------------------|
 | dall-e-shell-previous-input          | Cycle backwards through input history, saving input. |
 | dall-e-shell                         | Start a DALL-E shell.                                |
-| dall-e-shell-return                  | RET binding.                                         |
+| dall-e-shell-submit                  | Submit current input.                                |
 | dall-e-shell-save-session-transcript | Save shell transcript to file.                       |
 | dall-e-shell-mode                    | Major mode for DALL-E shell.                         |
 | dall-e-shell-next-input              | Cycle forwards through input history.                |

@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.28.1
+;; Version: 0.29.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -128,7 +128,7 @@ Specify NO-FOCUS if started shell should not be focused."
     ;; Alias with concrete shell symbols.
     (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
     (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
-    (fset (intern (concat namespace "-shell-return")) #'shell-maker-return)
+    (fset (intern (concat namespace "-shell-submit")) #'shell-maker-submit)
     (fset (intern (concat namespace "-shell-save-session-transcript"))
           #'shell-maker-save-session-transcript)
     (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
@@ -138,7 +138,7 @@ Specify NO-FOCUS if started shell should not be focused."
          ,(shell-maker-config-name config)
          ,(format "Major mode for %s shell." (shell-maker-config-name config))
          (define-key ,(shell-maker-major-mode-map config)
-           [remap comint-send-input] 'shell-maker-return)
+           [remap comint-send-input] 'shell-maker-submit)
          (define-key ,(shell-maker-major-mode-map config)
            [remap comint-interrupt-subjob] 'shell-maker-interrupt)
          (define-key ,(shell-maker-major-mode-map config)
@@ -216,8 +216,8 @@ Specify NO-FOCUS if started shell should not be focused."
                                       "")
                                     (shell-maker-prompt shell-maker-config))))))
 
-(defun shell-maker-return ()
-  "RET binding."
+(defun shell-maker-submit ()
+  "Submit current input."
   (interactive)
   (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
