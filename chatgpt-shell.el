@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.45.1
+;; Version: 0.46.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.25.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -345,7 +345,9 @@ Or nil if none."
   (chatgpt-shell-interrupt nil))
 
 (defun chatgpt-shell-load-awesome-prompts ()
-  "Load `chatgpt-shell-system-prompts' from https://github.com/f/awesome-chatgpt-prompts."
+  "Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.
+
+Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"

@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.27.1
+;; Version: 0.28.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -123,7 +123,15 @@ For example:
 
 Specify NO-FOCUS if started shell should not be focused."
   (let* ((old-point)
-         (buf-name (shell-maker-buffer-name config)))
+         (buf-name (shell-maker-buffer-name config))
+         (namespace (downcase (shell-maker-config-name config))))
+    ;; Alias with concrete shell symbols.
+    (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
+    (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
+    (fset (intern (concat namespace "-shell-return")) #'shell-maker-return)
+    (fset (intern (concat namespace "-shell-save-session-transcript"))
+          #'shell-maker-save-session-transcript)
+    (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
     (eval
      (macroexpand
       `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
@@ -460,6 +468,9 @@ NO-ANNOUNCEMENT skips announcing response when in background."
     (unless shell-maker--busy
       (setq shell-maker--busy t)
       (cond
+       ((string-equal "help" (string-trim input-string))
+        (shell-maker--print-help)
+        (setq shell-maker--busy nil))
        ((string-equal "clear" (string-trim input-string))
         (call-interactively #'comint-clear-buffer)
         (shell-maker--output-filter (shell-maker--process) (shell-maker-prompt shell-maker-config))
@@ -940,6 +951,97 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   (if (shell-maker-config-prompt-regexp config)
       (shell-maker-config-prompt-regexp config)
     (concat "^" (shell-maker-prompt config))))
+
+(defun shell-maker--print-help ()
+  "Print help."
+  (shell-maker-echo
+   (let ((rows))
+     (mapatoms
+      (lambda (symbol)
+        (when (and (string-match (concat "^" (downcase (shell-maker-config-name
+                                                        shell-maker-config)) "-shell")
+                                 (symbol-name symbol))
+                   (commandp symbol))
+          (push `(,(string-join
+                    (seq-filter
+                     (lambda (item)
+                       (not (string-match "menu" item)))
+                     (mapcar
+                      (lambda (keys)
+                        (propertize (key-description keys)
+                                    'font-lock-face 'font-lock-string-face))
+                      (or
+                       (where-is-internal
+                        (symbol-function symbol)
+                        comint-mode-map
+                        nil nil (command-remapping 'comint-next-input))
+                       (where-is-internal
+                        (symbol-function symbol)
+                        (symbol-value
+                         (shell-maker-major-mode-map shell-maker-config))
+                        nil nil (command-remapping symbol))
+                       (where-is-internal
+                        symbol (symbol-value
+                                (shell-maker-major-mode-map shell-maker-config))
+                        nil nil (command-remapping symbol))))) " or ")
+                  ,(symbol-name symbol)
+                  ,(propertize
+                    (car
+                     (split-string
+                      (or (documentation symbol t) "")
+                      "\n"))
+                    'font-lock-face 'font-lock-doc-face))
+                rows))))
+     (concat "\n" (shell-maker-align-columns
+                   ;; Commands with keybinding listed first.
+                   (sort rows
+                         (lambda (a b)
+                           (cond
+                            ((and (string-empty-p (nth 0 a))
+                                  (string-empty-p (nth 0 b)))
+                             nil)
+                            ((string= (nth 0 a) "") nil)
+                            ((string= (nth 0 b) "") t)
+                            (t (string> (nth 0 a) (nth 0 b)))))))))))
+
+(defun shell-maker-echo (text &optional keep-in-history)
+  "Echo TEXT to shell.
+
+If KEEP-IN-HISTORY, don't mark to ignore it."
+  (interactive "P")
+  (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
+    (user-error "Not in a shell"))
+  (with-current-buffer (shell-maker-buffer shell-maker-config)
+    (goto-char (point-max))
+    (shell-maker--output-filter (shell-maker--process)
+                                (concat
+                                 text
+                                 (if keep-in-history
+                                     ""
+                                   (propertize "\n<shell-maker-failed-command>\n"
+                                               'invisible (not shell-maker--show-invisible-markers)))))
+    (comint-send-input)
+    (shell-maker--output-filter
+     (shell-maker--process)
+     (concat "\n" (shell-maker-prompt shell-maker-config)))
+    (setq shell-maker--busy nil)))
+
+(defun shell-maker-align-columns (rows)
+  "Align columns in ROWS."
+  (let* ((columns (length (car rows)))
+         (max-widths (cl-mapcar (lambda (column)
+                                  (apply 'max
+                                         (mapcar (lambda (row)
+                                                   (length (format "%s" (nth column row))))
+                                                 rows)))
+                                (number-sequence 0 (1- columns))))
+         (fmt (mapconcat
+               (lambda (w)
+                 (format "%%-%ds" w))
+               max-widths "   ")))
+    (mapconcat
+     (lambda (row) (apply 'format fmt row))
+     rows "\n")))
 
 (provide 'shell-maker)
 
