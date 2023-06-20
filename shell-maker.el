@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.29.1
+;; Version: 0.30.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -154,6 +154,13 @@ Specify NO-FOCUS if started shell should not be focused."
         (unless (zerop (buffer-size))
           (setq old-point (point)))
         (funcall (shell-maker-major-mode config))
+        (insert (format "Welcome to %s shell\n\n  Type %s and press %s for details.\n\n%s"
+                        (propertize (shell-maker-config-name config)
+                                    'font-lock-face 'font-lock-comment-face)
+                        (propertize "help" 'font-lock-face 'italic)
+                        (shell-maker--propertize-key-binding "-shell-submit" config)
+                        (propertize "\n<shell-maker-failed-command>\n"
+                            'invisible (not shell-maker--show-invisible-markers))))
         (shell-maker--initialize config)))
     (unless no-focus
       (funcall shell-maker-display-function buf-name))
@@ -176,16 +183,16 @@ Specify NO-FOCUS if started shell should not be focused."
   (setq comint-get-old-input 'shell-maker--get-old-input)
   (setq-local comint-completion-addsuffix nil)
   (setq-local imenu-generic-expression
-              `((nil ,(concat (shell-maker-prompt-regexp shell-maker-config) "\\(.*\\)") 1)))
+              `((nil ,(concat (shell-maker-prompt-regexp config) "\\(.*\\)") 1)))
   (shell-maker--read-input-ring-history config)
-  (unless (or (comint-check-proc (shell-maker-buffer shell-maker-config))
-              (get-buffer-process (shell-maker-buffer shell-maker-config)))
+  (unless (or (comint-check-proc (shell-maker-buffer config))
+              (get-buffer-process (shell-maker-buffer config)))
     (condition-case nil
-        (start-process (shell-maker-process-name shell-maker-config)
-                       (shell-maker-buffer shell-maker-config) "hexl")
+        (start-process (shell-maker-process-name config)
+                       (shell-maker-buffer config) "hexl")
       (file-error (start-process
-                   (shell-maker-process-name shell-maker-config)
-                   (shell-maker-buffer shell-maker-config) "cat")))
+                   (shell-maker-process-name config)
+                   (shell-maker-buffer config) "cat")))
     (set-process-query-on-exit-flag (shell-maker--process) nil)
     (goto-char (point-max))
     (setq-local comint-inhibit-carriage-motion t)
@@ -197,10 +204,10 @@ Specify NO-FOCUS if started shell should not be focused."
          (point-min) (point-max)
          '(rear-nonsticky t field output inhibit-line-move-field-capture t))))
     (shell-maker--output-filter (shell-maker--process)
-                                (shell-maker-prompt shell-maker-config))
+                                (shell-maker-prompt config))
     (set-marker comint-last-input-start (shell-maker--pm))
     (set-process-filter (get-buffer-process
-                         (shell-maker-buffer shell-maker-config))
+                         (shell-maker-buffer config))
                         'shell-maker--output-filter)))
 
 (defun shell-maker--write-reply (reply &optional failed)
@@ -224,7 +231,7 @@ Specify NO-FOCUS if started shell should not be focused."
   (shell-maker--send-input))
 
 (defun shell-maker-search-history ()
-  "Search comint input ring."
+  "Search previous input history."
   (interactive)
   (unless (eq major-mode (shell-maker-major-mode shell-maker-config))
     (user-error "Not in a shell"))
@@ -984,25 +991,46 @@ Uses PROCESS and STRING same as `comint-output-filter'."
                         symbol (symbol-value
                                 (shell-maker-major-mode-map shell-maker-config))
                         nil nil (command-remapping symbol))))) " or ")
-                  ,(symbol-name symbol)
                   ,(propertize
-                    (car
-                     (split-string
-                      (or (documentation symbol t) "")
-                      "\n"))
-                    'font-lock-face 'font-lock-doc-face))
+                    (symbol-name symbol)
+                    'font-lock-face 'font-lock-doc-face)
+                  ,(car
+                    (split-string
+                     (or (documentation symbol t) "")
+                     "\n")))
                 rows))))
-     (concat "\n" (shell-maker-align-columns
-                   ;; Commands with keybinding listed first.
-                   (sort rows
-                         (lambda (a b)
-                           (cond
-                            ((and (string-empty-p (nth 0 a))
-                                  (string-empty-p (nth 0 b)))
-                             nil)
-                            ((string= (nth 0 a) "") nil)
-                            ((string= (nth 0 b) "") t)
-                            (t (string> (nth 0 a) (nth 0 b)))))))))))
+     (shell-maker--indent-text
+      2
+      (format "
+Type your input and press %s to submit.
+
+Type %s and press %s to clear all content.
+
+%s shell is based on %s. Check out the current %s for all enabled features.
+
+%s"
+              (shell-maker--propertize-key-binding "-shell-submit" shell-maker-config)
+              (propertize "clear" 'font-lock-face 'italic)
+              (shell-maker--propertize-key-binding "-shell-submit" shell-maker-config)
+              (propertize (shell-maker-config-name shell-maker-config)
+                          'font-lock-face 'font-lock-comment-face)
+              (shell-maker--actionable-text "comint-mode"
+                                            (lambda ()
+                                              (describe-function 'comint-mode)))
+              (shell-maker--actionable-text "major mode"
+                                            (lambda ()
+                                              (describe-mode)))
+              (shell-maker--align-docs
+               ;; Commands with keybinding listed first.
+               (sort rows
+                     (lambda (a b)
+                       (cond
+                        ((and (string-empty-p (nth 0 a))
+                              (string-empty-p (nth 0 b)))
+                         nil)
+                        ((string= (nth 0 a) "") nil)
+                        ((string= (nth 0 b) "") t)
+                        (t (string> (nth 0 a) (nth 0 b)))))) 3))))))
 
 (defun shell-maker-echo (text &optional keep-in-history)
   "Echo TEXT to shell.
@@ -1023,8 +1051,21 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
     (comint-send-input)
     (shell-maker--output-filter
      (shell-maker--process)
-     (concat "\n" (shell-maker-prompt shell-maker-config)))
-    (setq shell-maker--busy nil)))
+     (concat "\n" (shell-maker-prompt shell-maker-config)))))
+
+(defun shell-maker--align-docs (rows space-count)
+  "Align columns in ROWS using SPACE-COUNT."
+  (let ((first-col-width (apply #'max
+                                (mapcar (lambda (x)
+                                          (length (nth 0 x)))
+                                        rows)))
+        (space-str (make-string space-count ?\s)))
+    (mapconcat (lambda (row)
+                 (format (concat "%-" (number-to-string first-col-width)
+                                 "s" space-str "%s\n%" (number-to-string first-col-width)
+                                 "s" space-str "%s")
+                         (nth 0 row) (nth 1 row) "" (nth 2 row)))
+               rows "\n\n")))
 
 (defun shell-maker-align-columns (rows)
   "Align columns in ROWS."
@@ -1042,6 +1083,37 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
     (mapconcat
      (lambda (row) (apply 'format fmt row))
      rows "\n")))
+
+(defun shell-maker--make-ret-binding-map (fun)
+  "Make (kbd \"RET\") binding map to FUN."
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") fun)
+    (define-key map [remap self-insert-command]
+      'ignore)
+    map))
+
+(defun shell-maker--actionable-text (text fun)
+  "Make actionable TEXT invoking FUN."
+  (propertize text
+              'font-lock-face 'link
+              'keymap (shell-maker--make-ret-binding-map
+                       (lambda ()
+                         (interactive)
+                         (funcall fun)))))
+
+(defun shell-maker--indent-text (n-spaces text)
+  "Indent TEXT by N-SPACES."
+  (replace-regexp-in-string "^" (make-string n-spaces ?\s) text t))
+
+(defun shell-maker--propertize-key-binding (symbol-suffix config)
+  "Propertize SYMBOL-SUFFIX using CONFIG."
+  (mapconcat
+   (lambda (keys)
+     (propertize (key-description keys)
+                 'font-lock-face 'font-lock-string-face))
+   (where-is-internal
+    (symbol-function (intern (concat (downcase (shell-maker-config-name config)) symbol-suffix)))
+    (symbol-value (shell-maker-major-mode-map config))) " or "))
 
 (provide 'shell-maker)
 
