@@ -242,40 +242,44 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 #+END_SRC
 
 #+RESULTS:
-| Binding | Command                                             | Description                                                                            |
-|---------+-----------------------------------------------------+----------------------------------------------------------------------------------------|
-|         | chatgpt-shell                                       | Start a ChatGPT shell.                                                                 |
-|         | chatgpt-shell-rename-block-at-point                 | Rename block at point (perhaps a different language).                                  |
-| C-M-h   | chatgpt-shell-mark-at-point-dwim                    | Mark source block if at point.  Mark all output otherwise.                             |
-|         | chatgpt-shell-execute-primary-block-action-at-point | Execute primary action for known block.                                                |
-|         | chatgpt-shell-execute-babel-block-action-at-point   | Execute block as org babel.                                                            |
-|         | chatgpt-shell-eshell-whats-wrong-with-last-command  | Ask ChatGPT what's wrong with the last eshell command.                                 |
-| C-c C-p | chatgpt-shell-previous-item                         | Go to previous item.                                                                   |
-|         | chatgpt-shell-refresh-rendering                     | Refresh markdown rendering by re-applying to entire buffer.                            |
-|         | chatgpt-shell-explain-code                          | Describe code from region using ChatGPT.                                               |
-|         | chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                                            |
-|         | chatgpt-shell-remove-block-overlays                 | Remove block overlays.  Handy for renaming blocks.                                     |
-|         | chatgpt-shell-proofread-region                      | Proofread English from region using ChatGPT.                                           |
-|         | chatgpt-shell-send-and-review-region                | Send region to ChatGPT, review before submitting.                                      |
-|         | chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.                                      |
-|         | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.                        |
-|         | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                                               |
-|         | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                                          |
-| C-c C-v | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.                                |
-|         | chatgpt-shell-previous-source-block                 | Move point to previous source block.                                                   |
-|         | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                                               |
-| C-c C-s | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.                                |
-|         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                                                         |
-|         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                                               |
-|         | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from https://github.com/f/awesome-chatgpt-prompts. |
-| C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                                                       |
-|         | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.                                  |
-|         | chatgpt-shell-send-region                           | Send region to ChatGPT.                                                                |
-|         | chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                                                       |
-|         | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT.                             |
-|         | chatgpt-shell-next-source-block                     | Move point to previous source block.                                                   |
-| C-c C-c | chatgpt-shell-ctrl-c-ctrl-c                         | Ctrl-C Ctrl-C DWIM binding.                                                            |
-|         | chatgpt-shell-interrupt                             | Interrupt `chatgpt-shell' from any buffer.                                             |
+| Binding | Command                                             | Description                                                       |
+|---------+-----------------------------------------------------+-------------------------------------------------------------------|
+|         | chatgpt-shell                                       | Start a ChatGPT shell.                                            |
+|         | chatgpt-shell-rename-block-at-point                 | Rename block at point (perhaps a different language).             |
+| C-M-h   | chatgpt-shell-mark-at-point-dwim                    | Mark source block if at point.  Mark all output otherwise.        |
+|         | chatgpt-shell-previous-input                        | Cycle backwards through input history, saving input.              |
+|         | chatgpt-shell-execute-primary-block-action-at-point | Execute primary action for known block.                           |
+|         | chatgpt-shell-execute-babel-block-action-at-point   | Execute block as org babel.                                       |
+|         | chatgpt-shell-eshell-whats-wrong-with-last-command  | Ask ChatGPT what's wrong with the last eshell command.            |
+| C-c C-p | chatgpt-shell-previous-item                         | Go to previous item.                                              |
+|         | chatgpt-shell-refresh-rendering                     | Refresh markdown rendering by re-applying to entire buffer.       |
+|         | chatgpt-shell-explain-code                          | Describe code from region using ChatGPT.                          |
+|         | chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                       |
+|         | chatgpt-shell-remove-block-overlays                 | Remove block overlays.  Handy for renaming blocks.                |
+|         | chatgpt-shell-proofread-region                      | Proofread English from region using ChatGPT.                      |
+|         | chatgpt-shell-search-history                        | Search comint input ring.                                         |
+|         | chatgpt-shell-send-and-review-region                | Send region to ChatGPT, review before submitting.                 |
+|         | chatgpt-shell-next-input                            | Cycle forwards through input history.                             |
+|         | chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.                 |
+|         | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.   |
+|         | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                          |
+|         | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                     |
+|         | chatgpt-shell-return                                | RET binding.                                                      |
+| C-c C-v | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.           |
+|         | chatgpt-shell-previous-source-block                 | Move point to previous source block.                              |
+|         | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                          |
+| C-c C-s | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.           |
+|         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                                    |
+|         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                          |
+|         | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts. |
+| C-c C-n | chatgpt-shell-next-item                             | Go to next item.                                                  |
+|         | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.             |
+|         | chatgpt-shell-send-region                           | Send region to ChatGPT.                                           |
+|         | chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                                  |
+|         | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT.        |
+|         | chatgpt-shell-next-source-block                     | Move point to previous source block.                              |
+| C-c C-c | chatgpt-shell-ctrl-c-ctrl-c                         | Ctrl-C Ctrl-C DWIM binding.                                       |
+|         | chatgpt-shell-interrupt                             | Interrupt `chatgpt-shell' from any buffer.                        |
 
 Browse all available via =M-x=.
 
@@ -328,10 +332,15 @@ Browse all available via =M-x=.
 #+END_SRC
 
 #+RESULTS:
-| Command           | Description                                             |
-|-------------------+---------------------------------------------------------|
-| dall-e-shell      | Start a DALL-E shell.                                   |
-| dall-e-shell-mode | Major mode for editing text written for humans to read. |
+| Command                              | Description                                          |
+|--------------------------------------+------------------------------------------------------|
+| dall-e-shell-previous-input          | Cycle backwards through input history, saving input. |
+| dall-e-shell                         | Start a DALL-E shell.                                |
+| dall-e-shell-return                  | RET binding.                                         |
+| dall-e-shell-save-session-transcript | Save shell transcript to file.                       |
+| dall-e-shell-mode                    | Major mode for DALL-E shell.                         |
+| dall-e-shell-next-input              | Cycle forwards through input history.                |
+| dall-e-shell-search-history          | Search comint input ring.                            |
 
 * ChatGPT org babel
 
