@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.30.1
+;; Version: 0.31.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -118,13 +118,14 @@ For example:
 
 (defvar-local shell-maker--request-process nil)
 
-(defun shell-maker-start (config &optional no-focus)
+(defun shell-maker-start (config &optional no-focus welcome-function)
   "Start a shell with CONFIG.
 
 Specify NO-FOCUS if started shell should not be focused."
   (let* ((old-point)
          (buf-name (shell-maker-buffer-name config))
-         (namespace (downcase (shell-maker-config-name config))))
+         (namespace (downcase (shell-maker-config-name config)))
+         (welcome-message))
     ;; Alias with concrete shell symbols.
     (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
     (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
@@ -154,18 +155,26 @@ Specify NO-FOCUS if started shell should not be focused."
         (unless (zerop (buffer-size))
           (setq old-point (point)))
         (funcall (shell-maker-major-mode config))
-        (insert (format "Welcome to %s shell\n\n  Type %s and press %s for details.\n\n%s"
-                        (propertize (shell-maker-config-name config)
-                                    'font-lock-face 'font-lock-comment-face)
-                        (propertize "help" 'font-lock-face 'italic)
-                        (shell-maker--propertize-key-binding "-shell-submit" config)
-                        (propertize "\n<shell-maker-failed-command>\n"
-                            'invisible (not shell-maker--show-invisible-markers))))
+        (when welcome-function
+          (setq welcome-message
+                (funcall welcome-function config)))
+        (when welcome-message
+          (insert welcome-message)
+          (insert (propertize "\n<shell-maker-failed-command>\n"
+                              'invisible (not shell-maker--show-invisible-markers))))
         (shell-maker--initialize config)))
     (unless no-focus
       (funcall shell-maker-display-function buf-name))
     (when old-point
       (push-mark old-point))))
+
+(defun shell-maker-welcome-message (config)
+  "Return a welcome message to be printed using CONFIG."
+  (format "Welcome to %s shell\n\n  Type %s and press %s for details.\n\n"
+          (propertize (shell-maker-config-name config)
+                      'font-lock-face 'font-lock-comment-face)
+          (propertize "help" 'font-lock-face 'italic)
+          (shell-maker--propertize-key-binding "-shell-submit" config)))
 
 (defun shell-maker--initialize (config)
   "Initialize shell using CONFIG."

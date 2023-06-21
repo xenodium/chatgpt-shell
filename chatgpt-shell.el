@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.49.1
+;; Version: 0.50.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.25.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -447,6 +447,13 @@ If you use ChatGPT through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-welcome-function #'shell-maker-welcome-message
+  "Function returning welcome message or nil for no message.
+
+See `shell-maker-welcome-message' as an example."
+  :type 'function
+  :group 'chatgpt-shell)
+
 (defvar chatgpt-shell--config
   (make-shell-maker-config
    :name "ChatGPT"
@@ -499,7 +506,8 @@ With NO-FOCUS, start the shell without focus."
         (car (chatgpt-shell--prompt-pair)))
   (setf (shell-maker-config-prompt-regexp chatgpt-shell--config)
         (cdr (chatgpt-shell--prompt-pair)))
-  (shell-maker-start chatgpt-shell--config no-focus)
+  (shell-maker-start chatgpt-shell--config no-focus
+                     chatgpt-shell-welcome-function)
   (chatgpt-shell--update-prompt)
   ;; Disabling advice for now. It gets in the way.
   ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)

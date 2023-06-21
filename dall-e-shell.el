@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.19.1
+;; Version: 0.20.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.25.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -65,6 +65,13 @@ For example: \"1024x1024\""
   :type 'directory
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-welcome-function #'shell-maker-welcome-message
+  "Function returning welcome message or nil for no message.
+
+See `shell-maker-welcome-message' as an example."
+  :type 'function
+  :group 'dall-e-shell)
+
 (defvaralias 'dall-e-shell-display-function 'shell-maker-display-function)
 
 (defvaralias 'dall-e-shell-read-string-function 'shell-maker-read-string-function)
@@ -101,7 +108,7 @@ or
 (defun dall-e-shell ()
   "Start a DALL-E shell."
   (interactive)
-  (shell-maker-start dall-e-shell--config))
+  (shell-maker-start dall-e-shell--config nil dall-e-shell-welcome-function))
 
 (defun dall-e-shell--make-payload (history)
   "Create the request payload from HISTORY."

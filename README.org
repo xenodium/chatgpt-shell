@@ -182,6 +182,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                      |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                          |
 | chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of `eshell-summarize-last-command-output`.                    |
+| chatgpt-shell-welcome-function                                   | Function returning welcome message or nil for no message.                   |
 | chatgpt-shell-api-url-path                                       | OpenAI API's URL path.                                                      |
 | chatgpt-shell-additional-curl-options                            | Additional options for `curl' command.                                      |
 | chatgpt-shell-openai-key                                         | OpenAI key as a string or a function that loads and returns it.             |
@@ -265,13 +266,13 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                                                           | chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                       |
 |                                                           | chatgpt-shell-remove-block-overlays                 | Remove block overlays.  Handy for renaming blocks.                |
 |                                                           | chatgpt-shell-proofread-region                      | Proofread English from region using ChatGPT.                      |
-| M-r, <menu-bar> <inout> <history-isearch-backward-regexp> | chatgpt-shell-search-history                        | Search comint input ring.                                         |
+| M-r, <menu-bar> <inout> <history-isearch-backward-regexp> | chatgpt-shell-search-history                        | Search previous input history.                                    |
 |                                                           | chatgpt-shell-send-and-review-region                | Send region to ChatGPT, review before submitting.                 |
 | C-<down>, M-n, <menu-bar> <inout> <next-history>          | chatgpt-shell-next-input                            | Cycle forwards through input history.                             |
 |                                                           | chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.                 |
 |                                                           | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.   |
 |                                                           | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                          |
-|                                                           | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                     |
+|                                                           | chatgpt-shell-mode                                  | Major mode for editing text written for humans to read.           |
 | C-c C-v                                                   | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.           |
 |                                                           | chatgpt-shell-previous-source-block                 | Move point to previous source block.                              |
 |                                                           | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                          |
@@ -314,6 +315,7 @@ Browse all available via =M-x=.
 #+RESULTS:
 | Custom variable                     | Description                                                                 |
 |-------------------------------------+-----------------------------------------------------------------------------|
+| dall-e-shell-welcome-function       | Function returning welcome message or nil for no message.                   |
 | dall-e-shell-openai-key             | OpenAI key as a string or a function that loads and returns it.             |
 | dall-e-shell-image-size             | The default size of the requested image as a string.                        |
 | dall-e-shell-read-string-function   | Function to read strings from user.                                         |
@@ -348,7 +350,7 @@ Browse all available via =M-x=.
 | dall-e-shell-save-session-transcript | Save shell transcript to file.                       |
 | dall-e-shell-mode                    | Major mode for DALL-E shell.                         |
 | dall-e-shell-next-input              | Cycle forwards through input history.                |
-| dall-e-shell-search-history          | Search comint input ring.                            |
+| dall-e-shell-search-history          | Search previous input history.                       |
 
 * ChatGPT org babel
 
