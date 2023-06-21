@@ -133,6 +133,7 @@ Specify NO-FOCUS if started shell should not be focused."
     (fset (intern (concat namespace "-shell-save-session-transcript"))
           #'shell-maker-save-session-transcript)
     (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
+    (fset (intern (concat namespace "-shell-newline")) #'newline)
     (eval
      (macroexpand
       `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
