@@ -141,6 +141,8 @@ Specify NO-FOCUS if started shell should not be focused."
          (define-key ,(shell-maker-major-mode-map config)
            [remap comint-send-input] 'shell-maker-submit)
          (define-key ,(shell-maker-major-mode-map config)
+           (kbd "S-<return>") #'newline)
+         (define-key ,(shell-maker-major-mode-map config)
            [remap comint-interrupt-subjob] 'shell-maker-interrupt)
          (define-key ,(shell-maker-major-mode-map config)
            (kbd "C-x C-s") 'shell-maker-save-session-transcript)
