@@ -399,7 +399,8 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   :type 'boolean
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-transmitted-context-length nil
+(defcustom chatgpt-shell-transmitted-context-length
+  #'chatgpt-shell--approximate-context-length
   "Controls the amount of context provided to chatGPT.
 
 This context needs to be transmitted to the API on every request.
