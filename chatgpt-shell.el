@@ -1414,16 +1414,16 @@ For example:
          (original-length (floor (/ (length messages) 2)))
          (context-length original-length))
     (cond
-     ((or (string= model "gpt-3.5-turbo")
-          (string= model "gpt-3.5-turbo-0613"))
+     ((string-prefix-p "gpt-3.5" model)
       (setq tokens-per-message 4
             ;; https://platform.openai.com/docs/models/gpt-3-5
             max-tokens 4096))
-     ((or (string= model "gpt-4")
-          (string= model "gpt-4-0613"))
+     ((string-prefix-p "gpt-4" model)
       (setq tokens-per-message 3
             ;; https://platform.openai.com/docs/models/gpt-4
-            max-tokens 8192)))
+            max-tokens 8192))
+     (t
+      (error "Don't know '%s', so can't approximate context length" model)))
     (while (> (chatgpt-shell--num-tokens-from-messages
                tokens-per-message messages)
               max-tokens)
