@@ -576,16 +576,12 @@ With prefix IGNORE-ITEM, do not mark as failed."
     (shell-maker-interrupt ignore-item)))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c (ignore-item)
-  "Ctrl-C Ctrl-C DWIM binding.
-
-If on a block with primary action, execute it.
-
-Otherwise interrupt if busy.
+  "If point in source block, execute it.  Otherwise interrupt.
 
 With prefix IGNORE-ITEM, do not use interrupted item in context."
   (interactive "P")
-  (cond ((chatgpt-shell-primary-block-action-at-point)
-         (chatgpt-shell-execute-primary-block-action-at-point))
+  (cond ((chatgpt-shell-block-action-at-point)
+         (chatgpt-shell-execute-block-action-at-point))
         ((chatgpt-shell-markdown-block-at-point)
          (user-error "No action available"))
         ((and shell-maker--busy
@@ -1872,8 +1868,8 @@ For example \"elisp\" -> \"emacs-lisp\"."
                               "-mode"))
           (downcase (string-trim language))))))
 
-(defun chatgpt-shell-primary-block-action-at-point ()
-  "Return t if block at point has primary action.  nil otherwise."
+(defun chatgpt-shell-block-action-at-point ()
+  "Return t if block at point has an action.  nil otherwise."
   (let* ((source-block (chatgpt-shell-markdown-block-at-point))
          (language (chatgpt-shell--resolve-internal-language
                     (map-elt source-block 'language)))
@@ -1903,10 +1899,8 @@ For example \"elisp\" -> \"emacs-lisp\"."
         (if (fboundp f-cap)
             f-cap)))))
 
-(defun chatgpt-shell-execute-primary-block-action-at-point ()
-  "Execute primary action for known block.
-
-Actions are defined in `chatgpt-shell-languages-primary-action'.s"
+(defun chatgpt-shell-execute-block-action-at-point ()
+  "Execute block at point."
   (interactive)
   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
       (if-let ((actions (chatgpt-shell--get-block-actions (map-elt block 'language)))
