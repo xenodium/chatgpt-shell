@@ -1007,6 +1007,11 @@ If region is active, append to prompt."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-refactor-code))
 
+(defun chatgpt-shell-write-git-commit ()
+  "Write commit from region using ChatGPT."
+  (interactive)
+  (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-write-git-commit))
+
 (defun chatgpt-shell-generate-unit-test ()
   "Generate unit-test for the code from region using ChatGPT."
   (interactive)
