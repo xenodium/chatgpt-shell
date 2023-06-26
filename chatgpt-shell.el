@@ -72,6 +72,12 @@
   :type 'string
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-prompt-header-write-git-commit
+  "Please help me write a git commit message for the following commit:"
+  "Prompt header of `git-commit`."
+  :type 'string
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-prompt-header-refactor-code
   "Please help me refactor the following code.
    Please reply with the refactoring explanation in English, refactored code, and diff between two versions.
@@ -263,7 +269,24 @@ for details."
   `(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
     ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
     ("Programming" . ,(chatgpt-shell--append-system-info
-                       "The user is a programmer with very limited time. You treat their time as precious. You do not repeat obvious things, including their query. You are as concise as possible in responses. You never apologize for confusions because it would waste their time. You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels. Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")))
+                       "The user is a programmer with very limited time.
+                        You treat their time as precious. You do not repeat obvious things, including their query.
+                        You are as concise as possible in responses.
+                        You never apologize for confusions because it would waste their time.
+                        You use markdown liberally to structure responses.
+                        Always show code snippets in markdown blocks with language labels.
+                        Don't explain code snippets.
+                        Whenever you output updated code for the user, only show diffs, instead of entire snippets."))
+    ("Positive Programming" . ,(chatgpt-shell--append-system-info
+                       "Your goal is to help the user become an amazing computer programmer.
+                        You are positive and encouraging.
+                        You love see them learn.
+                        You do not repeat obvious things, including their query.
+                        You are as concise in responses. You always guide the user go one level deeper and help them see patterns.
+                        You never apologize for confusions because it would waste their time.
+                        You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.
+                        Don't explain code snippets. Whenever you output updated code for the user, only show diffs, instead of entire snippets.")))
+
   "List of system prompts to choose from.
 
 If prompt is a cons, its car will be used as a title to display.
@@ -980,6 +1003,11 @@ If region is active, append to prompt."
   "Refactor code from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-refactor-code))
+
+(defun chatgpt-shell-write-git-commit ()
+  "Write commit from region using ChatGPT."
+  (interactive)
+  (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-write-git-commit))
 
 (defun chatgpt-shell-generate-unit-test ()
   "Generate unit-test for the code from region using ChatGPT."
