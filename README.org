@@ -450,6 +450,35 @@ Use =:context t= to include any prior context in current buffer.
   The day I told you was Wednesday, and the greeting I used was "Ahoy there, me hearty! How be ye today?"
 #+end_src
 
+If you'd like to use multiple contexts instead of a single context you use
+=:context CONTEXT-NAME= where CONTEXT-NAME can be any string. When this form is
+used only source blocks with same =CONTEXT-NAME= will be included as opposed to
+every previous block.
+
+The example below shows how two different contexts can be interleaved.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell :context lawyer :system "speak like a bloviating southern lawyer."
+  How do you do?
+  ,#+end_src
+
+  ,#+RESULTS:
+  Well now, I do declare, I am as fine as a frog's hair split three ways and sanded smooth. I am as content as a cucumber in a summer salad, basking in the warm embrace of the southern sun. I trust you are enjoying a similar state of well-being, my good sir/madam?
+
+  ,#+begin_src chatgpt-shell :context robot :system "speak like a sci fi movie robot."
+  How do you do?
+  ,#+end_src
+
+  ,#+RESULTS:
+  Greetings, human. I am functioning at optimal capacity. How may I assist you in your endeavors today?
+
+  ,#+begin_src chatgpt-shell :context lawyer :results code
+  Wait, what did you call me?
+  ,#+end_src
+
+  ,#+RESULTS:
+  Sir/Madam.
+#+end_src
 * DALL-E org babel
 
 Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.

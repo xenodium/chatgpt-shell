@@ -54,7 +54,7 @@
                                                       (:temperature . nil)
                                                       (:preflight . nil)))
 
-(defun org-babel-execute:chatgpt-shell(body params)
+(defun org-babel-execute:chatgpt-shell (body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
@@ -65,7 +65,7 @@ This function is called by `org-babel-execute-src-block'"
                        (cons 'role "system")
                        (cons 'content (map-elt params :system)))))
                    (when (map-elt params :context)
-                     (ob-chatgpt-shell--context))
+                     (ob-chatgpt-shell--context (map-elt params :context)))
                    `(((role . "user")
                       (content . ,body))))))
     (if (map-elt params :preflight)
@@ -79,11 +79,20 @@ This function is called by `org-babel-execute-src-block'"
        nil nil
        (map-elt params :temperature)))))
 
-(defun ob-chatgpt-shell--context ()
-  "Return the context (what was asked and responded) in all previous blocks."
+(defun ob-chatgpt-shell--context (context-name)
+  "Return the context (what was asked and responded) for matching
+previous src blocks. Each must have a :context source block arg
+with a value matching `CONTEXT-NAME'."
   (let ((context '()))
     (mapc
      (lambda (src-block)
+       (let ((system (map-elt (map-elt src-block 'parameters '()) :system)))
+         (when system
+           (add-to-list
+            'context
+            (list
+             (cons 'role "system")
+             (cons 'content system)))))
        (add-to-list
         'context
         (list
@@ -94,7 +103,7 @@ This function is called by `org-babel-execute-src-block'"
         (list
          (cons 'role "assistant")
          (cons 'content (map-elt src-block 'result)))))
-     (ob-chatgpt--relevant-source-blocks-before-current))
+     (ob-chatgpt--relevant-source-blocks-before-current context-name))
     (nreverse context)))
 
 (defun ob-chatgpt-shell-setup ()
@@ -104,14 +113,17 @@ This function is called by `org-babel-execute-src-block'"
                                        '((chatgpt-shell . t))))
   (add-to-list 'org-src-lang-modes '("chatgpt-shell" . text)))
 
-(defun ob-chatgpt--relevant-source-blocks-before-current ()
-  "Return all previous source blocks from current one."
+(defun ob-chatgpt--relevant-source-blocks-before-current (context-name)
+  "Return all previous source blocks relative to the current block with a
+:context arg with a value matching `CONTEXT-NAME'."
   (when-let ((current-block-pos (let ((element (org-element-context)))
                                   (when (eq (org-element-type element) 'src-block)
                                     (org-element-property :begin element)))))
     (seq-filter (lambda (src)
                   (and (string-equal (map-elt src 'language)
                                      "chatgpt-shell")
+                       (string-equal (map-elt (map-elt src 'parameters '()) :context)
+                                     context-name)
                        (< (map-elt src 'start) current-block-pos)))
                 (ob-chatgpt--all-source-blocks))))
 
@@ -125,11 +137,21 @@ This function is called by `org-babel-execute-src-block'"
                            (string-trim (org-element-property :value element)))
                    'language (when (org-element-property :language element)
                                (string-trim (org-element-property :language element)))
+                   'parameters (when (org-element-property :parameters element)
+                                 (ob-chatgpt--string-to-plist
+                                  (string-trim (org-element-property :parameters element))))
                    'result (save-restriction
                              (goto-char (org-element-property :begin element))
                              (when (org-babel-where-is-src-block-result)
                                (goto-char (org-babel-where-is-src-block-result))
                                (org-babel-read-result)))))))))
+
+(defun ob-chatgpt--string-to-plist (str)
+  "Convert `STR' to an plist.
+
+WARNING: This will do dangerous things with untrusted input --
+should likely avoid using the reader."
+  (read (concat "(" str ")")))
 
 (provide 'ob-chatgpt-shell)
 
