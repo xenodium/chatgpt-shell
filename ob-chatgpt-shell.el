@@ -88,11 +88,13 @@ with a value matching `CONTEXT-NAME'."
      (lambda (src-block)
        (let ((system (map-elt (map-elt src-block 'parameters '()) :system)))
          (when system
-           (add-to-list
-            'context
-            (list
-             (cons 'role "system")
-             (cons 'content system)))))
+           (if context
+               (message "Warning: multiple system contexts found, using the first.")
+             (add-to-list
+              'context
+              (list
+               (cons 'role "system")
+               (cons 'content system))))))
        (add-to-list
         'context
         (list
