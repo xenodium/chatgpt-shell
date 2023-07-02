@@ -64,8 +64,12 @@ This function is called by `org-babel-execute-src-block'"
                       (list
                        (cons 'role "system")
                        (cons 'content (map-elt params :system)))))
-                   (when (map-elt params :context)
-                     (ob-chatgpt-shell--context (map-elt params :context)))
+                   (when-let ((context-name (map-elt params :context)))
+                     (if (string-equal context-name "t")
+                         ;; If the context is `t' then collect all previous contexts
+                         (ob-chatgpt-shell--context)
+                       ;; Otherwise only collect contexts with matching context-name
+                       (ob-chatgpt-shell--context context-name)))
                    `(((role . "user")
                       (content . ,body))))))
     (if (map-elt params :preflight)
@@ -79,22 +83,27 @@ This function is called by `org-babel-execute-src-block'"
        nil nil
        (map-elt params :temperature)))))
 
-(defun ob-chatgpt-shell--context (context-name)
+(defun ob-chatgpt-shell--context (&optional context-name)
   "Return the context (what was asked and responded) for matching
 previous src blocks. Each must have a :context source block arg
 with a value matching `CONTEXT-NAME'."
   (let ((context '()))
     (mapc
      (lambda (src-block)
-       (let ((system (map-elt (map-elt src-block 'parameters '()) :system)))
-         (when system
-           (if context
-               (message "Warning: multiple system contexts found, using the first.")
-             (add-to-list
-              'context
-              (list
-               (cons 'role "system")
-               (cons 'content system))))))
+       (when-let ((system (map-elt (map-elt src-block 'parameters '()) :system)))
+         (if-let ((first-system (seq-find
+                                 (lambda (x) (equal (map-elt x 'role) "system"))
+                                 context)))
+             (message "Warning: skipping extra system message \"%s\", using \"%s\""
+                      (truncate-string-to-width
+                       system 48 nil nil "...")
+                      (truncate-string-to-width
+                       (map-elt first-system 'content) 48 nil nil "..."))
+           (add-to-list
+            'context
+            (list
+             (cons 'role "system")
+             (cons 'content system)))))
        (add-to-list
         'context
         (list
@@ -124,8 +133,9 @@ with a value matching `CONTEXT-NAME'."
     (seq-filter (lambda (src)
                   (and (string-equal (map-elt src 'language)
                                      "chatgpt-shell")
-                       (string-equal (map-elt (map-elt src 'parameters '()) :context)
-                                     context-name)
+                       (or (not context-name)
+                           (string-equal (map-elt (map-elt src 'parameters '()) :context)
+                                         context-name))
                        (< (map-elt src 'start) current-block-pos)))
                 (ob-chatgpt--all-source-blocks))))
 
@@ -140,7 +150,7 @@ with a value matching `CONTEXT-NAME'."
                    'language (when (org-element-property :language element)
                                (string-trim (org-element-property :language element)))
                    'parameters (when (org-element-property :parameters element)
-                                 (ob-chatgpt--string-to-plist
+                                 (org-babel-parse-header-arguments
                                   (string-trim (org-element-property :parameters element))))
                    'result (save-restriction
                              (goto-char (org-element-property :begin element))
