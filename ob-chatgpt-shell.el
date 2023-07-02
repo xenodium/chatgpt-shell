@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.20.1
-;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.39.1"))
+;; Version: 0.21.1
+;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.53.1"))
 
 ;;; License:
 
@@ -51,26 +51,33 @@
                                                       (:version . nil)
                                                       (:system . nil)
                                                       (:context . nil)
-                                                      (:temperature . nil)))
+                                                      (:temperature . nil)
+                                                      (:preflight . nil)))
 
 (defun org-babel-execute:chatgpt-shell(body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
-  (chatgpt-shell-post-messages
-   (vconcat ;; Vector for json
-    (when (map-elt params :system)
-      (list
-       (list
-        (cons 'role "system")
-        (cons 'content (map-elt params :system)))))
-    (when (map-elt params :context)
-      (ob-chatgpt-shell--context))
-    `(((role . "user")
-       (content . ,body))))
-   (map-elt params :version)
-   nil nil
-   (map-elt params :temperature)))
+  (let ((messages (vconcat ;; Vector for json
+                   (when (map-elt params :system)
+                     (list
+                      (list
+                       (cons 'role "system")
+                       (cons 'content (map-elt params :system)))))
+                   (when (map-elt params :context)
+                     (ob-chatgpt-shell--context))
+                   `(((role . "user")
+                      (content . ,body))))))
+    (if (map-elt params :preflight)
+        (pp (chatgpt-shell-make-request-data
+             messages
+             (map-elt params :version)
+             (map-elt params :temperature)))
+      (chatgpt-shell-post-messages
+       messages
+       (map-elt params :version)
+       nil nil
+       (map-elt params :temperature)))))
 
 (defun ob-chatgpt-shell--context ()
   "Return the context (what was asked and responded) in all previous blocks."

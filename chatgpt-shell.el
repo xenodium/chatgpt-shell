@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.52.1
+;; Version: 0.53.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.25.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1292,6 +1292,18 @@ Set SAVE-EXCURSION to prevent point from moving."
      (prin1-to-string form))
    (chatgpt-shell-parse-elisp-code code)))
 
+
+(defun chatgpt-shell-make-request-data (messages &optional version temperature)
+  "Make request data from MESSAGES, VERSION, and TEMPERATURE."
+  (let ((request-data `((model . ,(or version
+                                      (chatgpt-shell-model-version)))
+                        (messages . ,(vconcat ;; Vector for json
+                                      messages)))))
+    (when (or temperature chatgpt-shell-model-temperature)
+      (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
+            request-data))
+    request-data))
+
 (defun chatgpt-shell-post-messages (messages &optional version callback error-callback temperature)
   "Make a single ChatGPT request with MESSAGES.
 Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, and TEMPERATURE.
@@ -1314,14 +1326,7 @@ For example:
                     chatgpt-shell--config)
         (shell-maker-async-shell-command
          (chatgpt-shell--make-curl-request-command-list
-          (let ((request-data `((model . ,(or version
-                                              (chatgpt-shell-model-version)))
-                                (messages . ,(vconcat ;; Vector for json
-                                              messages)))))
-            (when (or temperature chatgpt-shell-model-temperature)
-              (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
-                    request-data))
-            request-data))
+          (chatgpt-shell-make-request-data messages version temperature))
          nil ;; streaming
          #'chatgpt-shell--extract-chatgpt-response
          callback
@@ -1421,6 +1426,7 @@ For example:
                      (funcall chatgpt-shell-transmitted-context-length
                               (chatgpt-shell-model-version) history)
                    chatgpt-shell-transmitted-context-length))))))
+  ;; TODO: Use `chatgpt-shell-make-request-data'.
   (let ((request-data `((model . ,(chatgpt-shell-model-version))
                         (messages . ,(if (chatgpt-shell-system-prompt)
                                          (vconcat ;; Vector for json
