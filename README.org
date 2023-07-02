@@ -458,14 +458,14 @@ every previous block.
 The example below shows how two different contexts can be interleaved.
 
 #+begin_src org
-  ,#+begin_src chatgpt-shell :context shakespeare :system "speak like shakespeare."
+  ,#+begin_src chatgpt-shell :context shakespeare :system "alway speak like shakespeare"
   How do you do?
   ,#+end_src
 
   #+RESULTS:
   How dost thou fare?
 
-  ,#+begin_src chatgpt-shell :context robot :system "speak like a sci fi movie robot."
+  ,#+begin_src chatgpt-shell :context robot :system "always speak like a sci fi movie robot"
   How do you do?
   ,#+end_src
 
@@ -477,7 +477,7 @@ The example below shows how two different contexts can be interleaved.
   ,#+end_src
 
   ,#+RESULTS:
-  Human.
+  Mine apologies if mine words hath caused confusion. I merely addressed thee as 'sir' or 'madam', a term of respect in the language of the Bard. Pray, how may I assist thee further?
 #+end_src
 
 * DALL-E org babel

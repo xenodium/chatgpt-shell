@@ -85,8 +85,8 @@ This function is called by `org-babel-execute-src-block'"
 
 (defun ob-chatgpt-shell--context (&optional context-name)
   "Return the context (what was asked and responded) for matching
-previous src blocks. Each must have a :context source block arg
-with a value matching `CONTEXT-NAME'."
+previous src blocks. If `CONTEXT-NAME' is provided each src block
+have a :context arg with a value matching the `CONTEXT-NAME'."
   (let ((context '()))
     (mapc
      (lambda (src-block)
@@ -126,7 +126,8 @@ with a value matching `CONTEXT-NAME'."
 
 (defun ob-chatgpt--relevant-source-blocks-before-current (context-name)
   "Return all previous source blocks relative to the current block with a
-:context arg with a value matching `CONTEXT-NAME'."
+:context arg with a value matching `CONTEXT-NAME'. If
+`CONTEXT-NAME' is nil then return all previous source blocks."
   (when-let ((current-block-pos (let ((element (org-element-context)))
                                   (when (eq (org-element-type element) 'src-block)
                                     (org-element-property :begin element)))))
