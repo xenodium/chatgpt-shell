@@ -521,17 +521,27 @@ or
 (defalias 'chatgpt-shell-mode #'text-mode)
 
 ;;;###autoload
-(defun chatgpt-shell (&optional no-focus)
-  "Start a ChatGPT shell.
+(defun chatgpt-shell (&optional new-session)
+  "Start a ChatGPT shell interactive command.
 
-With NO-FOCUS, start the shell without focus."
-  (interactive)
+With NEW-SESSION, start a new session."
+  (interactive "P")
+  (chatgpt-shell-start nil new-session))
+
+(defun chatgpt-shell-start (&optional no-focus new-session)
+  "Start a ChatGPT shell programmatically.
+
+Set NO-FOCUS to start in background.
+
+Set NEW-SESSION to start a separate new session."
   (setf (shell-maker-config-prompt chatgpt-shell--config)
         (car (chatgpt-shell--prompt-pair)))
   (setf (shell-maker-config-prompt-regexp chatgpt-shell--config)
         (cdr (chatgpt-shell--prompt-pair)))
-  (shell-maker-start chatgpt-shell--config no-focus
-                     chatgpt-shell-welcome-function)
+  (shell-maker-start chatgpt-shell--config
+                     no-focus
+                     chatgpt-shell-welcome-function
+                     new-session)
   (chatgpt-shell--update-prompt)
   ;; Disabling advice for now. It gets in the way.
   ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
@@ -1198,9 +1208,9 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    (chatgpt-shell (or (eq chatgpt-shell-prompt-query-response-style 'inline)
-                       (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                       handler))
+    (chatgpt-shell-start (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                             (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
+                             handler))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (with-current-buffer buffer (view-mode +1)
                            (setq view-exit-action 'kill-buffer)))

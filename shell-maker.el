@@ -118,12 +118,22 @@ For example:
 
 (defvar-local shell-maker--request-process nil)
 
-(defun shell-maker-start (config &optional no-focus welcome-function)
+(defvar-local shell-maker--buffer-name-override nil)
+
+(defun shell-maker-start (config &optional no-focus welcome-function new-session)
   "Start a shell with CONFIG.
 
-Specify NO-FOCUS if started shell should not be focused."
+Specify NO-FOCUS if started shell should not be focused.
+
+Set WELCOME-FUNCTION to create and show a welcome message.
+
+Set NEW-SESSION to start a new session."
   (let* ((old-point)
-         (buf-name (shell-maker-buffer-name config))
+         (buf-name (if new-session
+                       (generate-new-buffer-name
+                        (shell-maker--buffer-default-name
+                         (shell-maker-config-name config)))
+                     (shell-maker-buffer-name config)))
          (namespace (downcase (shell-maker-config-name config)))
          (welcome-message))
     ;; Alias with concrete shell symbols.
@@ -154,10 +164,13 @@ Specify NO-FOCUS if started shell should not be focused."
 
     (unless (comint-check-proc buf-name)
       (with-current-buffer (get-buffer-create buf-name)
+        (funcall (shell-maker-major-mode config))
         (setq-local shell-maker--busy nil)
+        (unless (equal (shell-maker-buffer-name config)
+                       buf-name)
+          (setq-local shell-maker--buffer-name-override buf-name))
         (unless (zerop (buffer-size))
           (setq old-point (point)))
-        (funcall (shell-maker-major-mode config))
         (when welcome-function
           (setq welcome-message
                 (funcall welcome-function config)))
@@ -181,6 +194,8 @@ Specify NO-FOCUS if started shell should not be focused."
 
 (defun shell-maker--initialize (config)
   "Initialize shell using CONFIG."
+  (unless (eq major-mode (shell-maker-major-mode config))
+    (user-error "Not in a shell"))
   (setq-local shell-maker-config config)
   (visual-line-mode +1)
   (goto-address-mode +1)
@@ -921,9 +936,13 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 
 (defun shell-maker-buffer-name (config)
   "Get buffer name from CONFIG."
-  (concat "*"
-          (downcase (shell-maker-config-name config))
-          "*"))
+  (if shell-maker--buffer-name-override
+      shell-maker--buffer-name-override
+    (shell-maker--buffer-default-name (shell-maker-config-name config))))
+
+(defun shell-maker--buffer-default-name (name)
+  "Make default buffer name from NAME."
+  (concat "*" (downcase name) "*"))
 
 (defun shell-maker-major-mode (config)
   "Get major mode from CONFIG."
