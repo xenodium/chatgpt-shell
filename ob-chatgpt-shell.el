@@ -159,13 +159,6 @@ have a :context arg with a value matching the `CONTEXT-NAME'."
                                (goto-char (org-babel-where-is-src-block-result))
                                (org-babel-read-result)))))))))
 
-(defun ob-chatgpt--string-to-plist (str)
-  "Convert `STR' to an plist.
-
-WARNING: This will do dangerous things with untrusted input --
-should likely avoid using the reader."
-  (read (concat "(" str ")")))
-
 (provide 'ob-chatgpt-shell)
 
 ;;; ob-chatgpt-shell.el ends here
