@@ -37,6 +37,7 @@
 
 (require 'esh-mode)
 (require 'eshell)
+(require 'find-func)
 (require 'ielm)
 (require 'shell-maker)
 
