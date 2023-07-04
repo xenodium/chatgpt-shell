@@ -511,7 +511,6 @@ NO-ANNOUNCEMENT skips announcing response when in background."
         (setq shell-maker--busy nil))
        ((string-equal "config" (string-trim input-string))
         (shell-maker--write-reply (shell-maker--dump-config shell-maker--config))
-        (setq shell-maker--busy nil)
         (setq shell-maker--busy nil))
        ((not (shell-maker--curl-version-supported))
         (shell-maker--write-reply "\nYou need curl version 7.76 or newer.\n\n")
