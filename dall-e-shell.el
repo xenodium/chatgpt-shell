@@ -123,7 +123,7 @@ or
 Set NO-DOWNLOAD to skip automatic downloading."
   (if-let ((parsed (shell-maker--json-parse-string-filtering
                     json "^curl:.*\n?"))
-           (buffer (shell-maker-buffer shell-maker-config)))
+           (buffer (shell-maker-buffer shell-maker--config)))
       (if-let* ((url (let-alist parsed
                        (let-alist (seq-first .data)
                          .url)))
