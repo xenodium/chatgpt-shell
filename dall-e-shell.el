@@ -173,7 +173,7 @@ Set NO-DOWNLOAD to skip automatic downloading."
 
 Optionally provide model VERSION or IMAGE-SIZE."
   (with-temp-buffer
-    (setq-local shell-maker-config
+    (setq-local shell-maker--config
                 dall-e-shell--config)
     (let* ((api-buffer (current-buffer))
            (command
