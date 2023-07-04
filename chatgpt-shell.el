@@ -612,7 +612,11 @@ Applies ORIG-FUN and ARGS."
 With prefix IGNORE-ITEM, do not mark as failed."
   (interactive "P")
   (with-current-buffer
-      (shell-maker-buffer-name chatgpt-shell--config)
+      (cond
+       ((eq major-mode 'chatgpt-shell-mode)
+        (current-buffer))
+       (t
+        (shell-maker-buffer-name chatgpt-shell--config)))
     (shell-maker-interrupt ignore-item)))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c (ignore-item)
@@ -1214,12 +1218,15 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    (chatgpt-shell-start (or (eq chatgpt-shell-prompt-query-response-style 'inline)
-                             (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                             handler))
+    ;; Ensuring there's at least one *chatgpt* buffer available to handle background requests.
+    (with-current-buffer (get-buffer-create (shell-maker-buffer-name chatgpt-shell--config))
+      (chatgpt-shell-start (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                               (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
+                               handler)))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (with-current-buffer buffer (view-mode +1)
-                           (setq view-exit-action 'kill-buffer)))
+      (with-current-buffer buffer
+        (view-mode +1)
+        (setq view-exit-action 'kill-buffer)))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
                      display-buffer-alist)
