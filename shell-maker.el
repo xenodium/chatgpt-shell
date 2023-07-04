@@ -144,6 +144,7 @@ Set NEW-SESSION to start a new session."
           #'shell-maker-save-session-transcript)
     (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
     (fset (intern (concat namespace "-shell-newline")) #'newline)
+    (fset (intern (concat namespace "-shell-rename-buffer")) #'shell-maker-rename-buffer)
     (eval
      (macroexpand
       `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
@@ -973,6 +974,18 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   (if (shell-maker-config-prompt config)
       (shell-maker-config-prompt config)
     (concat (shell-maker-config-name config) "> ")))
+
+(defun shell-maker-rename-buffer ()
+  "Rename current shell buffer."
+  (interactive)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
+    (user-error "Not in a shell"))
+  (let ((new-name (string-trim
+                   (read-string "Rename buffer: " (buffer-name (current-buffer))))))
+    (when (string-empty-p new-name)
+      (user-error "Name shouldn't be empty"))
+    (rename-buffer new-name t)
+    (setq shell-maker--buffer-name-override (buffer-name (current-buffer)))))
 
 (defun shell-maker-set-prompt (prompt prompt-regexp)
   "Set internal config's PROMPT and PROMPT-REGEXP."
