@@ -333,6 +333,8 @@ Or nil if none."
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
   (interactive)
+  (unless (eq major-mode 'chatgpt-shell-mode)
+    (user-error "Not in a shell"))
   (let ((choice (completing-read
                  "System prompt: "
                  (append
@@ -350,8 +352,8 @@ Or nil if none."
                            chatgpt-shell-system-prompts)))))
     (if (or (string-equal choice "None")
             (string-empty-p (string-trim choice)))
-        (setq chatgpt-shell-system-prompt nil)
-      (setq chatgpt-shell-system-prompt
+        (setq-local chatgpt-shell-system-prompt nil)
+      (setq-local chatgpt-shell-system-prompt
             (or (seq-position chatgpt-shell-system-prompts choice
                               (lambda (item prefix)
                                 ;; Some items are of the form:
@@ -407,14 +409,16 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
   (interactive)
-  (setq chatgpt-shell-model-version
-        (completing-read "Model version: "
-                         (if (> (length chatgpt-shell-model-versions) 1)
-                             (seq-remove
-                              (lambda (item)
-                                (string-equal item (chatgpt-shell-model-version)))
-                              chatgpt-shell-model-versions)
-                           chatgpt-shell-model-versions) nil t))
+  (unless (eq major-mode 'chatgpt-shell-mode)
+    (user-error "Not in a shell"))
+  (setq-local chatgpt-shell-model-version
+              (completing-read "Model version: "
+                               (if (> (length chatgpt-shell-model-versions) 1)
+                                   (seq-remove
+                                    (lambda (item)
+                                      (string-equal item (chatgpt-shell-model-version)))
+                                    chatgpt-shell-model-versions)
+                                 chatgpt-shell-model-versions) nil t))
   (chatgpt-shell--update-prompt)
   (chatgpt-shell-interrupt nil))
 
@@ -589,10 +593,11 @@ Set NEW-SESSION to start a separate new session."
 
 (defun chatgpt-shell--update-prompt ()
   "Update prompt and prompt regexp from `chatgpt-shell-model-versions'."
-  (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
-    (shell-maker-set-prompt
-     (car (chatgpt-shell--prompt-pair))
-     (cdr (chatgpt-shell--prompt-pair)))))
+  (unless (eq major-mode 'chatgpt-shell-mode)
+    (user-error "Not in a shell"))
+  (shell-maker-set-prompt
+   (car (chatgpt-shell--prompt-pair))
+   (cdr (chatgpt-shell--prompt-pair))))
 
 (defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
   "Advice around `keyboard-quit' interrupting active shell.
@@ -1333,7 +1338,7 @@ For example:
    (message \"%s\" error)))"
   (if (and callback error-callback)
       (with-temp-buffer
-        (setq-local shell-maker-config
+        (setq-local shell-maker--config
                     chatgpt-shell--config)
         (shell-maker-async-shell-command
          (chatgpt-shell--make-curl-request-command-list
@@ -1343,7 +1348,7 @@ For example:
          callback
          error-callback))
     (with-temp-buffer
-      (setq-local shell-maker-config
+      (setq-local shell-maker--config
                   chatgpt-shell--config)
       (let* ((buffer (current-buffer))
              (command
@@ -1519,7 +1524,7 @@ Very much EXPERIMENTAL."
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (let* ((path (read-file-name "Restore from: " nil nil t))
-         (prompt-regexp (shell-maker-prompt-regexp shell-maker-config))
+         (prompt-regexp (shell-maker-prompt-regexp shell-maker--config))
          (history (with-temp-buffer
                     (insert-file-contents path)
                     (chatgpt-shell--extract-history
@@ -1527,9 +1532,9 @@ Very much EXPERIMENTAL."
                       (point-min) (point-max))
                      prompt-regexp)))
          (execute-command (shell-maker-config-execute-command
-                           shell-maker-config))
+                           shell-maker--config))
          (validate-command (shell-maker-config-validate-command
-                            shell-maker-config))
+                            shell-maker--config))
          (command)
          (response)
          (failed))
@@ -1538,8 +1543,8 @@ Very much EXPERIMENTAL."
     ;; any other command.
     (unwind-protect
         (progn
-          (setf (shell-maker-config-validate-command shell-maker-config) nil)
-          (setf (shell-maker-config-execute-command shell-maker-config)
+          (setf (shell-maker-config-validate-command shell-maker--config) nil)
+          (setf (shell-maker-config-execute-command shell-maker--config)
                 (lambda (_command _history callback _error-callback)
                   (setq response (car history))
                   (setq history (cdr history))
@@ -1571,9 +1576,9 @@ Very much EXPERIMENTAL."
           (setq shell-maker--file nil)
         (setq shell-maker--file path))
       (setq shell-maker--busy nil)
-      (setf (shell-maker-config-validate-command shell-maker-config)
+      (setf (shell-maker-config-validate-command shell-maker--config)
             validate-command)
-      (setf (shell-maker-config-execute-command shell-maker-config)
+      (setf (shell-maker-config-execute-command shell-maker--config)
             execute-command)))
   (goto-char (point-max)))
 
@@ -1597,9 +1602,9 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
                                     (downcase (string-trim lang)))
                                    "-mode")))
         (string (buffer-substring-no-properties body-start body-end))
-        (buf (if (and (boundp 'shell-maker-config)
-                      shell-maker-config)
-                 (shell-maker-buffer shell-maker-config)
+        (buf (if (and (boundp 'shell-maker--config)
+                      shell-maker--config)
+                 (shell-maker-buffer shell-maker--config)
                (current-buffer)))
         (pos 0)
         (props)
@@ -1713,9 +1718,9 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (overlay-put (make-overlay body-end
                              (1+ body-end)) 'invisible 'chatgpt-shell)
   (overlay-put (make-overlay body-start body-end
-                             (if (and (boundp 'shell-maker-config)
-                                      shell-maker-config)
-                                 (shell-maker-buffer shell-maker-config)
+                             (if (and (boundp 'shell-maker--config)
+                                      shell-maker--config)
+                                 (shell-maker-buffer shell-maker--config)
                                (current-buffer)))
                'face 'font-lock-doc-markup-face))
 
@@ -1837,10 +1842,10 @@ If no LENGTH set, use 2048."
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
                                            (concat
-                                            (shell-maker-prompt shell-maker-config)
+                                            (shell-maker-prompt shell-maker--config)
                                             ;; Only the first line of prompt.
                                             (seq-first (split-string command "\n")))
-                                         (concat (shell-maker-prompt shell-maker-config)
+                                         (concat (shell-maker-prompt shell-maker--config)
                                                  "(no prompt)"))))
         (when (seq-empty-p items)
           (user-error "Nothing to view"))
