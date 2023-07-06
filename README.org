@@ -176,6 +176,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
 | chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                           |
 | chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`.                           |
+| chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of `git-commit`.                                              |
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                            |
 | chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.               |
 | chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`.                                         |
@@ -258,7 +259,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 #+RESULTS:
 | Binding         | Command                                            | Description                                                       |
 |-----------------+----------------------------------------------------+-------------------------------------------------------------------|
-|                 | chatgpt-shell                                      | Start a ChatGPT shell.                                            |
+|                 | chatgpt-shell                                      | Start a ChatGPT shell interactive command.                        |
 |                 | chatgpt-shell-rename-block-at-point                | Rename block at point (perhaps a different language).             |
 | C-M-h           | chatgpt-shell-mark-at-point-dwim                   | Mark source block if at point.  Mark all output otherwise.        |
 | C-<up> or M-p   | chatgpt-shell-previous-input                       | Cycle backwards through input history, saving input.              |
@@ -267,6 +268,8 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 | C-c C-p         | chatgpt-shell-previous-item                        | Go to previous item.                                              |
 |                 | chatgpt-shell-refresh-rendering                    | Refresh markdown rendering by re-applying to entire buffer.       |
 |                 | chatgpt-shell-explain-code                         | Describe code from region using ChatGPT.                          |
+|                 | chatgpt-shell-rename-buffer                        | Rename current shell buffer.                                      |
+|                 | chatgpt-shell-write-git-commit                     | Write commit from region using ChatGPT.                           |
 |                 | chatgpt-shell-prompt                               | Make a ChatGPT request from the minibuffer.                       |
 |                 | chatgpt-shell-remove-block-overlays                | Remove block overlays.  Handy for renaming blocks.                |
 |                 | chatgpt-shell-proofread-region                     | Proofread English from region using ChatGPT.                      |
@@ -276,7 +279,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-eshell-summarize-last-command-output | Ask ChatGPT to summarize the last command output.                 |
 |                 | chatgpt-shell-prompt-appending-kill-ring           | Make a ChatGPT request from the minibuffer appending kill ring.   |
 |                 | chatgpt-shell-describe-code                        | Describe code from region using ChatGPT.                          |
-|                 | chatgpt-shell-mode                                 | Major mode for editing text written for humans to read.           |
+|                 | chatgpt-shell-mode                                 | Major mode for ChatGPT shell.                                     |
 | C-c C-v         | chatgpt-shell-swap-model-version                   | Swap model version from `chatgpt-shell-model-versions'.           |
 |                 | chatgpt-shell-previous-source-block                | Move point to previous source block.                              |
 |                 | chatgpt-shell-refactor-code                        | Refactor code from region using ChatGPT.                          |

@@ -367,7 +367,7 @@ Or nil if none."
                                       nil ;; Different type / no matching.
                                     (string-prefix-p prefix item)))))
                 choice))))
-  (chatgpt-shell--update-prompt)
+  (chatgpt-shell--update-prompt t)
   (chatgpt-shell-interrupt nil))
 
 (defun chatgpt-shell-load-awesome-prompts ()
@@ -403,7 +403,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                           (split-string (buffer-string) "\n"))))))))
     (message "Loaded awesome-chatgpt-prompts")
     (setq chatgpt-shell-system-prompt nil)
-    (chatgpt-shell--update-prompt)
+    (chatgpt-shell--update-prompt t)
     (chatgpt-shell-interrupt nil)))
 
 (defun chatgpt-shell-swap-model-version ()
@@ -419,7 +419,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                       (string-equal item (chatgpt-shell-model-version)))
                                     chatgpt-shell-model-versions)
                                  chatgpt-shell-model-versions) nil t))
-  (chatgpt-shell--update-prompt)
+  (chatgpt-shell--update-prompt t)
   (chatgpt-shell-interrupt nil))
 
 (defcustom chatgpt-shell-streaming t
@@ -543,11 +543,16 @@ Set NEW-SESSION to start a separate new session."
         (car (chatgpt-shell--prompt-pair)))
   (setf (shell-maker-config-prompt-regexp chatgpt-shell--config)
         (cdr (chatgpt-shell--prompt-pair)))
-  (shell-maker-start chatgpt-shell--config
-                     no-focus
-                     chatgpt-shell-welcome-function
-                     new-session)
-  (chatgpt-shell--update-prompt)
+  (let ((shell-buffer
+         (shell-maker-start chatgpt-shell--config
+                            no-focus
+                            chatgpt-shell-welcome-function
+                            new-session
+                            (chatgpt-shell--buffer-name))))
+    (unless (chatgpt-shell--primary-buffer)
+      (chatgpt-shell--set-primary-buffer shell-buffer))
+    (with-current-buffer shell-buffer
+      (chatgpt-shell--update-prompt nil)))
   ;; Disabling advice for now. It gets in the way.
   ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
   (define-key chatgpt-shell-mode-map (kbd "C-M-h")
@@ -563,41 +568,89 @@ Set NEW-SESSION to start a separate new session."
   (define-key chatgpt-shell-mode-map (kbd "C-c C-n")
     #'chatgpt-shell-next-item))
 
+(defun chatgpt-shell--shrink-model-version (model-version)
+  "Shrink MODEL-VERSION.  gpt-3.5-turbo -> 3.5t."
+  (replace-regexp-in-string
+   "-turbo" "t"
+   (string-remove-prefix
+    "gpt-" (string-trim model-version))))
+
+(defun chatgpt-shell--shrink-system-prompt (prompt)
+  "Shrink PROMPT."
+  (if (consp prompt)
+      (car prompt)
+    (if (> (length (string-trim prompt)) 6)
+        (format "%s..."
+                (substring (string-trim prompt) 0 15))
+      (string-trim prompt))))
+
+(defun chatgpt-shell--shell-info ()
+  "Generate shell info for display."
+  (concat
+   (chatgpt-shell--shrink-model-version
+    (chatgpt-shell-model-version))
+   (cond ((and (integerp chatgpt-shell-system-prompt)
+               (nth chatgpt-shell-system-prompt
+                    chatgpt-shell-system-prompts))
+          (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                                                chatgpt-shell-system-prompts))))
+         ((stringp chatgpt-shell-system-prompt)
+          (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
+         (t
+          ""))))
+
 (defun chatgpt-shell--prompt-pair ()
   "Return a pair with prompt and prompt-regexp."
-  (cl-flet ((shrink-model-version (model-version) ;; gpt-3.5-turbo -> 3.5t
-                                  (replace-regexp-in-string
-                                   "-turbo" "t"
-                                   (string-remove-prefix
-                                    "gpt-" (string-trim model-version))))
-            (shrink-system-prompt (prompt)
-                                  (if (consp prompt)
-                                      (car prompt)
-                                    (if (> (length (string-trim prompt)) 6)
-                                        (format "%s..."
-                                                (substring (string-trim prompt) 0 15))
-                                      (string-trim prompt)))))
-    (cons
-     (format "ChatGPT(%s%s)> " (shrink-model-version
-                                (chatgpt-shell-model-version))
-             (cond ((and (integerp chatgpt-shell-system-prompt)
-                         (nth chatgpt-shell-system-prompt
-                              chatgpt-shell-system-prompts))
-                    (concat "/" (shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                                           chatgpt-shell-system-prompts))))
-                   ((stringp chatgpt-shell-system-prompt)
-                    (concat "/" (shrink-system-prompt chatgpt-shell-system-prompt)))
-                   (t
-                    "")))
-     (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
+  (cons
+   (format "ChatGPT(%s)> " (chatgpt-shell--shell-info))
+   (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n")))))
 
-(defun chatgpt-shell--update-prompt ()
-  "Update prompt and prompt regexp from `chatgpt-shell-model-versions'."
+(defun chatgpt-shell--shell-buffers ()
+  "Return a list of all shell buffers."
+  (seq-filter
+   (lambda (buffer)
+     (eq (buffer-local-value 'major-mode buffer)
+         'chatgpt-shell-mode))
+   (buffer-list)))
+
+(defun chatgpt-shell--set-primary-buffer (primary-shell-buffer)
+  "Set PRIMARY-SHELL-BUFFER as primary buffer."
+  (mapc (lambda (shell-buffer)
+          (with-current-buffer shell-buffer
+            (setq chatgpt-shell--is-primary-p nil)))
+        (chatgpt-shell--shell-buffers))
+  (with-current-buffer primary-shell-buffer
+    (setq chatgpt-shell--is-primary-p t)))
+
+(defun chatgpt-shell--primary-buffer ()
+  "Return the primary shell buffer (used for sending a prompt to in the background)."
+  (let ((primary-shell-buffer (seq-find
+                               (lambda (shell-buffer)
+                                 (with-current-buffer shell-buffer
+                                   chatgpt-shell--is-primary-p))
+                               (chatgpt-shell--shell-buffers))))
+    primary-shell-buffer))
+
+(defun chatgpt-shell--buffer-name ()
+  "Generate a buffer name using shell config info."
+  (format "%s %s"
+          (shell-maker-buffer-default-name
+           (shell-maker-config-name chatgpt-shell--config))
+          (chatgpt-shell--shell-info)))
+
+(defun chatgpt-shell--update-prompt (rename-buffer)
+  "Update prompt and prompt regexp from `chatgpt-shell-model-versions'.
+
+Set RENAME-BUFFER to also rename the buffer accordingly."
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (shell-maker-set-prompt
    (car (chatgpt-shell--prompt-pair))
-   (cdr (chatgpt-shell--prompt-pair))))
+   (cdr (chatgpt-shell--prompt-pair)))
+  (when rename-buffer
+    (shell-maker-set-buffer-name
+     (current-buffer)
+     (chatgpt-shell--buffer-name))))
 
 (defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
   "Advice around `keyboard-quit' interrupting active shell.
@@ -845,6 +898,8 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
        (group (*? anychar)) ;; body
        (one-or-more "\n")
        (group "```") (or "\n" eol)))
+
+(defvar-local chatgpt-shell--is-primary-p nil)
 
 (defun chatgpt-shell-next-source-block ()
   "Move point to previous source block."
@@ -1218,11 +1273,10 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
     (when (region-active-p)
       (setq marker (copy-marker (max (region-beginning)
                                      (region-end)))))
-    ;; Ensuring there's at least one *chatgpt* buffer available to handle background requests.
-    (with-current-buffer (get-buffer-create (shell-maker-buffer-name chatgpt-shell--config))
-      (chatgpt-shell-start (or (eq chatgpt-shell-prompt-query-response-style 'inline)
-                               (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                               handler)))
+    (chatgpt-shell-start (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                             (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
+                             handler)
+                         (not (chatgpt-shell--primary-buffer)))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (with-current-buffer buffer
         (view-mode +1)
@@ -1275,11 +1329,10 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
       (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
               (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
               handler)
-          (with-current-buffer (shell-maker-buffer chatgpt-shell--config)
+          (with-current-buffer (chatgpt-shell--primary-buffer)
             (goto-char (point-max))
             (send))
-        (with-selected-window
-            (get-buffer-window (shell-maker-buffer-name chatgpt-shell--config))
+        (with-selected-window (get-buffer-window (chatgpt-shell--primary-buffer))
           (send))))))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)

@@ -120,22 +120,24 @@ For example:
 
 (defvar-local shell-maker--buffer-name-override nil)
 
-(defun shell-maker-start (config &optional no-focus welcome-function new-session)
+(defun shell-maker-start (config &optional no-focus welcome-function new-session buffer-name)
   "Start a shell with CONFIG.
 
 Specify NO-FOCUS if started shell should not be focused.
 
 Set WELCOME-FUNCTION to create and show a welcome message.
 
-Set NEW-SESSION to start a new session."
+Set NEW-SESSION to start a new session.
+
+Set BUFFER-NAME to override the buffer name."
   (let* ((old-point)
-         (buf-name (if new-session
-                       (generate-new-buffer-name
-                        (shell-maker--buffer-default-name
-                         (shell-maker-config-name config)))
-                     (shell-maker-buffer-name config)))
          (namespace (downcase (shell-maker-config-name config)))
          (welcome-message))
+    (unless buffer-name
+      (setq buffer-name (shell-maker-buffer-default-name
+                         (shell-maker-config-name config))))
+    (when new-session
+      (setq buffer-name (generate-new-buffer-name buffer-name)))
     ;; Alias with concrete shell symbols.
     (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
     (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
@@ -163,13 +165,13 @@ Set NEW-SESSION to start a new session."
          (define-key ,(shell-maker-major-mode-map config)
            [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history))))
 
-    (unless (comint-check-proc buf-name)
-      (with-current-buffer (get-buffer-create buf-name)
+    (unless (comint-check-proc buffer-name)
+      (with-current-buffer (get-buffer-create buffer-name)
         (funcall (shell-maker-major-mode config))
         (setq-local shell-maker--busy nil)
         (unless (equal (shell-maker-buffer-name config)
-                       buf-name)
-          (setq-local shell-maker--buffer-name-override buf-name))
+                       buffer-name)
+          (setq-local shell-maker--buffer-name-override buffer-name))
         (unless (zerop (buffer-size))
           (setq old-point (point)))
         (when welcome-function
@@ -181,9 +183,10 @@ Set NEW-SESSION to start a new session."
                               'invisible (not shell-maker--show-invisible-markers))))
         (shell-maker--initialize config)))
     (unless no-focus
-      (funcall shell-maker-display-function buf-name))
+      (funcall shell-maker-display-function buffer-name))
     (when old-point
-      (push-mark old-point))))
+      (push-mark old-point))
+    (get-buffer buffer-name)))
 
 (defun shell-maker-welcome-message (config)
   "Return a welcome message to be printed using CONFIG."
@@ -942,9 +945,9 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   "Get buffer name from CONFIG."
   (if shell-maker--buffer-name-override
       shell-maker--buffer-name-override
-    (shell-maker--buffer-default-name (shell-maker-config-name config))))
+    (shell-maker-buffer-default-name (shell-maker-config-name config))))
 
-(defun shell-maker--buffer-default-name (name)
+(defun shell-maker-buffer-default-name (name)
   "Make default buffer name from NAME."
   (concat "*" (downcase name) "*"))
 
@@ -982,6 +985,11 @@ Uses PROCESS and STRING same as `comint-output-filter'."
     (user-error "Not in a shell"))
   (let ((new-name (string-trim
                    (read-string "Rename buffer: " (buffer-name (current-buffer))))))
+    (shell-maker-set-buffer-name (current-buffer) new-name)))
+
+(defun shell-maker-set-buffer-name (buffer new-name)
+  "Set the BUFFER NEW-NAME."
+  (with-current-buffer buffer
     (when (string-empty-p new-name)
       (user-error "Name shouldn't be empty"))
     (rename-buffer new-name t)
