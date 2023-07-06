@@ -997,6 +997,13 @@ Could be a prompt or a source block."
                 markdown-blocks))))
     (nreverse markdown-blocks)))
 
+(defun chatgpt-shell--minibuffer-prompt ()
+  "Construct a prompt for the minibuffer."
+  (if (chatgpt-shell--primary-buffer)
+      (concat (buffer-name (chatgpt-shell--primary-buffer)) "> ")
+    (shell-maker-prompt
+     chatgpt-shell--config)))
+
 (defun chatgpt-shell-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
@@ -1011,9 +1018,10 @@ If region is active, append to prompt."
                           (if (region-active-p)
                               "[appending region] "
                             "")
-                          (shell-maker-prompt
-                           chatgpt-shell--config))
+                          (chatgpt-shell--minibuffer-prompt))
                          'chatgpt-shell--prompt-history)))
+    (when (string-empty-p (string-trim prompt))
+      (user-error "Nothing to send"))
     (when (region-active-p)
       (setq prompt (concat prompt "\n\n"
                            (if overlay-blocks
@@ -1035,8 +1043,7 @@ If region is active, append to prompt."
   (let ((prompt (funcall shell-maker-read-string-function
                          (concat
                           "[appending kill ring] "
-                          (shell-maker-prompt
-                           chatgpt-shell--config))
+                          (chatgpt-shell--minibuffer-prompt))
                          'chatgpt-shell--prompt-history)))
     (chatgpt-shell-send-to-buffer
      (concat prompt "\n\n"
@@ -1902,6 +1909,8 @@ If no LENGTH set, use 2048."
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
                                            (concat
+                                            ;; TODO: Does it need to be replaced with
+                                            ;; (chatgpt-shell--minibuffer-prompt)?
                                             (shell-maker-prompt shell-maker--config)
                                             ;; Only the first line of prompt.
                                             (seq-first (split-string command "\n")))
