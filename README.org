@@ -298,6 +298,15 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 
 Browse all available via =M-x=.
 
+* Feature requests
+- Please go through this README to see if the feature is already supported.
+- Need custom behaviour? Check out existing [[https://github.com/xenodium/chatgpt-shell/issues?q=is%3Aissue+][issues/feature requests]]. You may find solutions in discussions.
+* Reporting bugs
+** Found runtime/elisp errors?
+Please enable =M-x toggle-debug-on-error=, reproduce the error, and share the stack trace.
+** Found unexpected behaviour?
+Please enable logging =(setq chatgpt-shell-logging t)= and share the content of the =*chatgpt-log*= buffer in the bug report.
+
 * dall-e-shell customizations
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Custom variable" "Description") :exports results
   (let ((rows))
