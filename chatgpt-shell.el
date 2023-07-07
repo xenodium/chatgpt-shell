@@ -548,7 +548,7 @@ Set NEW-SESSION to start a separate new session."
                             no-focus
                             chatgpt-shell-welcome-function
                             new-session
-                            (chatgpt-shell--buffer-name))))
+                            (chatgpt-shell--make-buffer-name))))
     (unless (chatgpt-shell--primary-buffer)
       (chatgpt-shell--set-primary-buffer shell-buffer))
     (with-current-buffer shell-buffer
@@ -632,7 +632,7 @@ Set NEW-SESSION to start a separate new session."
                                (chatgpt-shell--shell-buffers))))
     primary-shell-buffer))
 
-(defun chatgpt-shell--buffer-name ()
+(defun chatgpt-shell--make-buffer-name ()
   "Generate a buffer name using shell config info."
   (format "%s %s"
           (shell-maker-buffer-default-name
@@ -651,7 +651,7 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
   (when rename-buffer
     (shell-maker-set-buffer-name
      (current-buffer)
-     (chatgpt-shell--buffer-name))))
+     (chatgpt-shell--make-buffer-name))))
 
 (defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
   "Advice around `keyboard-quit' interrupting active shell.
@@ -1913,12 +1913,10 @@ If no LENGTH set, use 2048."
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
                                            (concat
-                                            ;; TODO: Does it need to be replaced with
-                                            ;; (chatgpt-shell--minibuffer-prompt)?
-                                            (shell-maker-prompt shell-maker--config)
+                                            (buffer-name (current-buffer)) "> "
                                             ;; Only the first line of prompt.
                                             (seq-first (split-string command "\n")))
-                                         (concat (shell-maker-prompt shell-maker--config)
+                                         (concat (buffer-name (current-buffer)) "> "
                                                  "(no prompt)"))))
         (when (seq-empty-p items)
           (user-error "Nothing to view"))
