@@ -1268,11 +1268,16 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                        ((eq chatgpt-shell-prompt-query-response-style 'inline)
                         (current-buffer))
                        ((eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                        (get-buffer-create
-                         (format "*%s> %s*" (shell-maker-config-name chatgpt-shell--config)
-                                 (truncate-string-to-width
-                                  (nth 0 (split-string text "\n"))
-                                  (window-body-width)))))
+                        (let* ((inhibit-read-only t)
+                               (other-buffer
+                                (get-buffer-create
+                                 (concat (chatgpt-shell--minibuffer-prompt)
+                                         (truncate-string-to-width
+                                          (nth 0 (split-string text "\n"))
+                                          (window-body-width))))))
+                          (with-current-buffer other-buffer
+                            (erase-buffer))
+                          other-buffer))
                        (t
                         nil)))
          (point (point))
