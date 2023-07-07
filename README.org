@@ -434,7 +434,7 @@ Use =:temperature= to set the [[https://platform.openai.com/docs/api-reference/c
 
 ** :context
 
-Use =:context t= to include any prior context in current buffer.
+Use =:context t= to include all prior context in current buffer.
 
 #+begin_src org
   ,#+begin_src chatgpt-shell
@@ -457,6 +457,36 @@ Use =:context t= to include any prior context in current buffer.
 
   ,#+RESULTS:
   The day I told you was Wednesday, and the greeting I used was "Ahoy there, me hearty! How be ye today?"
+#+end_src
+
+If you'd like to cherrypick which blocks are part of a given context, add
+=:context CONTEXT-NAME= to each block where CONTEXT-NAME is any string. When
+this form is used only source blocks with same =CONTEXT-NAME= will be included
+as opposed to every previous block when using =:context t=.
+
+The example below shows how two different contexts can be interleaved.
+
+#+begin_src org
+  ,#+begin_src chatgpt-shell :context shakespeare :system "alway speak like shakespeare"
+  How do you do?
+  ,#+end_src
+
+  #+RESULTS:
+  How dost thou fare?
+
+  ,#+begin_src chatgpt-shell :context robot :system "always speak like a sci fi movie robot"
+  How do you do?
+  ,#+end_src
+
+  ,#+RESULTS:
+  Greetings, human. I am functioning at optimal capacity. How may I assist you in your endeavors today?
+
+  ,#+begin_src chatgpt-shell :context shakespeare
+  What did you call me?
+  ,#+end_src
+
+  ,#+RESULTS:
+  Mine apologies if mine words hath caused confusion. I merely addressed thee as 'sir' or 'madam', a term of respect in the language of the Bard. Pray, how may I assist thee further?
 #+end_src
 
 * DALL-E org babel
