@@ -450,10 +450,10 @@ Use =:context t= to include all prior context in current buffer.
   The day I told you was Wednesday, and the greeting I used was "Ahoy there, me hearty! How be ye today?"
 #+end_src
 
-If you'd like to use multiple contexts instead of a single context you use
-=:context CONTEXT-NAME= where CONTEXT-NAME is any string. When this form is
-used only source blocks with same =CONTEXT-NAME= will be included as opposed to
-every previous block.
+If you'd like to cherrypick which blocks are part of a given context, add
+=:context CONTEXT-NAME= to each block where CONTEXT-NAME is any string. When
+this form is used only source blocks with same =CONTEXT-NAME= will be included
+as opposed to every previous block when using =:context t=.
 
 The example below shows how two different contexts can be interleaved.
 
