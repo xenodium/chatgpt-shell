@@ -90,9 +90,9 @@ For example:
   :type 'directory
   :group 'shell-maker)
 
-(defvar shell-maker--input nil)
+(defvar-local shell-maker--input nil)
 
-(defvar shell-maker--current-request-id 0)
+(defvar-local shell-maker--current-request-id 0)
 
 (defvar shell-maker--show-invisible-markers nil)
 
