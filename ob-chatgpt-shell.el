@@ -54,24 +54,47 @@
                                                       (:temperature . nil)
                                                       (:preflight . nil)))
 
+(defun org-chatgpt-shell--clean-messages (messages)
+  "Clean a list of MESSAGES into a vector, ensure that...
+
+1) if there is a system message it is the first message
+2) there is at most one system message"
+  (let* ((systems (seq-filter (lambda (x) (equal (map-elt x 'role) "system")) messages))
+         (non-systems (seq-filter (lambda (x) (not (equal (map-elt x 'role) "system"))) messages))
+         (first-system (seq-first systems))
+         (rest-systems (seq-rest systems)))
+    (seq-do (lambda (system)
+              (message "Warning: skipping extra system message \"%s\", using \"%s\""
+                       (truncate-string-to-width
+                        (map-elt system 'content) 48 nil nil "...")
+                       (truncate-string-to-width
+                        (map-elt first-system 'content) 48 nil nil "...")))
+            rest-systems)
+    (vconcat
+     (when first-system
+       (list first-system))
+     non-systems)))
+
 (defun org-babel-execute:chatgpt-shell (body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
-  (let ((messages (vconcat ;; Vector for json
-                   (when (map-elt params :system)
-                     (list
-                      (list
-                       (cons 'role "system")
-                       (cons 'content (map-elt params :system)))))
-                   (when-let ((context-name (map-elt params :context)))
-                     (if (string-equal context-name "t")
-                         ;; If the context is `t' then collect all previous contexts
-                         (ob-chatgpt-shell--context)
-                       ;; Otherwise only collect contexts with matching context-name
-                       (ob-chatgpt-shell--context context-name)))
-                   `(((role . "user")
-                      (content . ,body))))))
+  (let* ((messages  ;; Vector for json
+          (org-chatgpt-shell--clean-messages
+           (append
+            (when-let ((context-name (map-elt params :context)))
+              (if (string-equal context-name "t")
+                  ;; If the context is `t' then collect all previous contexts
+                  (ob-chatgpt-shell--context)
+                ;; Otherwise only collect contexts with matching context-name
+                (ob-chatgpt-shell--context context-name)))
+            (when (map-elt params :system)
+              (list
+               (list
+                (cons 'role "system")
+                (cons 'content (map-elt params :system)))))
+            `(((role . "user")
+               (content . ,body)))))))
     (if (map-elt params :preflight)
         (pp (chatgpt-shell-make-request-data
              messages
@@ -85,25 +108,18 @@ This function is called by `org-babel-execute-src-block'"
 
 (defun ob-chatgpt-shell--context (&optional context-name)
   "Return the context (what was asked and responded) for matching
-previous src blocks. If `CONTEXT-NAME' is provided each src block
-have a :context arg with a value matching the `CONTEXT-NAME'."
+previous src blocks. If CONTEXT-NAME is provided each src block
+have a :context arg with a value matching the CONTEXT-NAME."
   (let ((context '()))
     (mapc
      (lambda (src-block)
-       (when-let ((system (map-elt (map-elt src-block 'parameters '()) :system)))
-         (if-let ((first-system (seq-find
-                                 (lambda (x) (equal (map-elt x 'role) "system"))
-                                 context)))
-             (message "Warning: skipping extra system message \"%s\", using \"%s\""
-                      (truncate-string-to-width
-                       system 48 nil nil "...")
-                      (truncate-string-to-width
-                       (map-elt first-system 'content) 48 nil nil "..."))
-           (add-to-list
-            'context
-            (list
-             (cons 'role "system")
-             (cons 'content system)))))
+       (when-let ((system (or (map-elt (map-elt src-block 'parameters '()) :system)
+                              (map-elt org-babel-default-header-args:chatgpt-shell :system))))
+         (add-to-list
+          'context
+          (list
+           (cons 'role "system")
+           (cons 'content system))))
        (add-to-list
         'context
         (list
@@ -126,8 +142,8 @@ have a :context arg with a value matching the `CONTEXT-NAME'."
 
 (defun ob-chatgpt--relevant-source-blocks-before-current (context-name)
   "Return all previous source blocks relative to the current block with a
-:context arg with a value matching `CONTEXT-NAME'. If
-`CONTEXT-NAME' is nil then return all previous source blocks."
+:context arg with a value matching CONTEXT-NAME. If CONTEXT-NAME
+is nil then return all previous source blocks."
   (when-let ((current-block-pos (let ((element (org-element-context)))
                                   (when (eq (org-element-type element) 'src-block)
                                     (org-element-property :begin element)))))
