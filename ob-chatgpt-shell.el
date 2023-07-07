@@ -54,45 +54,25 @@
                                                       (:temperature . nil)
                                                       (:preflight . nil)))
 
-(defun org-chatgpt-shell--clean-messages (messages)
-  "Clean a list of MESSAGES into a vector, ensure that...
-
-1) if there is a system message it is the first message
-2) there is at most one system message"
-  (let* ((systems (seq-filter (lambda (x) (equal (map-elt x 'role) "system")) messages))
-         (non-systems (seq-filter (lambda (x) (not (equal (map-elt x 'role) "system"))) messages))
-         (first-system (seq-first systems))
-         (rest-systems (seq-rest systems)))
-    (seq-do (lambda (system)
-              (message "Warning: skipping extra system message \"%s\", using \"%s\""
-                       (truncate-string-to-width
-                        (map-elt system 'content) 48 nil nil "...")
-                       (truncate-string-to-width
-                        (map-elt first-system 'content) 48 nil nil "...")))
-            rest-systems)
-    (vconcat
-     (when first-system
-       (list first-system))
-     non-systems)))
-
 (defun org-babel-execute:chatgpt-shell (body params)
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
-  (let* ((messages  ;; Vector for json
-          (org-chatgpt-shell--clean-messages
+  (let* ((context
+          (when-let ((context-name (map-elt params :context)))
+            (if (string-equal context-name "t")
+                ;; If the context is `t' then collect all previous contexts
+                (ob-chatgpt-shell--context)
+              ;; Otherwise only collect contexts with matching context-name
+              (ob-chatgpt-shell--context context-name))))
+         (messages
+          (vconcat ;; Convert to vector for json
            (append
-            (when-let ((context-name (map-elt params :context)))
-              (if (string-equal context-name "t")
-                  ;; If the context is `t' then collect all previous contexts
-                  (ob-chatgpt-shell--context)
-                ;; Otherwise only collect contexts with matching context-name
-                (ob-chatgpt-shell--context context-name)))
-            (when (map-elt params :system)
-              (list
-               (list
-                (cons 'role "system")
-                (cons 'content (map-elt params :system)))))
+            (when (and (map-elt params :system)
+                       (not (map-elt params :context)))
+              `(((role . "system")
+                 (content . ,(map-elt params :system)))))
+            context
             `(((role . "user")
                (content . ,body)))))))
     (if (map-elt params :preflight)
@@ -113,23 +93,24 @@ have a :context arg with a value matching the CONTEXT-NAME."
   (let ((context '()))
     (mapc
      (lambda (src-block)
-       (when-let ((system (or (map-elt (map-elt src-block 'parameters '()) :system)
-                              (map-elt org-babel-default-header-args:chatgpt-shell :system))))
-         (add-to-list
-          'context
+       (when-let ((system (and (seq-empty-p context) ;; Add system only if first item.
+                               (or (map-elt (map-elt src-block 'parameters '()) :system)
+                                   (map-elt org-babel-default-header-args:chatgpt-shell :system)))))
+         (push
           (list
            (cons 'role "system")
-           (cons 'content system))))
-       (add-to-list
-        'context
+           (cons 'content system))
+          context))
+       (push
         (list
          (cons 'role "user")
-         (cons 'content (map-elt src-block 'body))))
-       (add-to-list
-        'context
+         (cons 'content (map-elt src-block 'body)))
+        context)
+       (push
         (list
          (cons 'role "assistant")
-         (cons 'content (map-elt src-block 'result)))))
+         (cons 'content (map-elt src-block 'result)))
+        context))
      (ob-chatgpt--relevant-source-blocks-before-current context-name))
     (nreverse context)))
 
