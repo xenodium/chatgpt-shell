@@ -539,20 +539,27 @@ With NEW-SESSION, start a new session."
 Set NO-FOCUS to start in background.
 
 Set NEW-SESSION to start a separate new session."
-  (setf (shell-maker-config-prompt chatgpt-shell--config)
-        (car (chatgpt-shell--prompt-pair)))
-  (setf (shell-maker-config-prompt-regexp chatgpt-shell--config)
-        (cdr (chatgpt-shell--prompt-pair)))
-  (let ((shell-buffer
-         (shell-maker-start chatgpt-shell--config
-                            no-focus
-                            chatgpt-shell-welcome-function
-                            new-session
-                            (chatgpt-shell--make-buffer-name))))
+  (let* ((chatgpt-shell--config
+          (let ((config (copy-sequence chatgpt-shell--config)))
+            (setf (shell-maker-config-prompt config)
+                  (car (chatgpt-shell--prompt-pair)))
+            (setf (shell-maker-config-prompt-regexp config)
+                  (cdr (chatgpt-shell--prompt-pair)))
+            config))
+         (shell-buffer
+          (shell-maker-start chatgpt-shell--config
+                             no-focus
+                             chatgpt-shell-welcome-function
+                             new-session
+                             (chatgpt-shell--make-buffer-name))))
     (unless (chatgpt-shell--primary-buffer)
       (chatgpt-shell--set-primary-buffer shell-buffer))
-    (with-current-buffer shell-buffer
-      (chatgpt-shell--update-prompt nil))
+    (let ((version chatgpt-shell-model-version)
+          (system-prompt chatgpt-shell-system-prompt))
+      (with-current-buffer shell-buffer
+        (setq-local chatgpt-shell-model-version version)
+        (setq-local chatgpt-shell-system-prompt system-prompt)
+        (chatgpt-shell--update-prompt nil)))
     ;; Disabling advice for now. It gets in the way.
     ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
     (define-key chatgpt-shell-mode-map (kbd "C-M-h")
@@ -633,7 +640,7 @@ Set NEW-SESSION to start a separate new session."
     primary-shell-buffer))
 
 (defun chatgpt-shell--make-buffer-name ()
-  "Generate a buffer name using shell config info."
+  "Generate a buffer name using current shell config info."
   (format "%s %s"
           (shell-maker-buffer-default-name
            (shell-maker-config-name chatgpt-shell--config))

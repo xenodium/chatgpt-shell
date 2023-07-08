@@ -130,63 +130,64 @@ Set WELCOME-FUNCTION to create and show a welcome message.
 Set NEW-SESSION to start a new session.
 
 Set BUFFER-NAME to override the buffer name."
-  (let* ((old-point)
-         (namespace (downcase (shell-maker-config-name config)))
-         (welcome-message))
-    (unless buffer-name
-      (setq buffer-name (shell-maker-buffer-default-name
-                         (shell-maker-config-name config))))
-    (when new-session
-      (setq buffer-name (generate-new-buffer-name buffer-name)))
-    ;; Alias with concrete shell symbols.
-    (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
-    (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
-    (fset (intern (concat namespace "-shell-submit")) #'shell-maker-submit)
-    (fset (intern (concat namespace "-shell-save-session-transcript"))
-          #'shell-maker-save-session-transcript)
-    (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
-    (fset (intern (concat namespace "-shell-newline")) #'newline)
-    (fset (intern (concat namespace "-shell-rename-buffer")) #'shell-maker-rename-buffer)
-    (eval
-     (macroexpand
-      `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
-         ,(shell-maker-config-name config)
-         ,(format "Major mode for %s shell." (shell-maker-config-name config))
-         (define-key ,(shell-maker-major-mode-map config)
-           [remap comint-send-input] 'shell-maker-submit)
-         (define-key ,(shell-maker-major-mode-map config)
-           (kbd "S-<return>") #'newline)
-         (define-key ,(shell-maker-major-mode-map config)
-           [remap comint-interrupt-subjob] 'shell-maker-interrupt)
-         (define-key ,(shell-maker-major-mode-map config)
-           (kbd "C-x C-s") 'shell-maker-save-session-transcript)
-         (define-key ,(shell-maker-major-mode-map config)
-           (kbd "C-M-h") 'shell-maker-mark-output)
-         (define-key ,(shell-maker-major-mode-map config)
-           [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history))))
+  (shell-maker--with-temp-buffer-if new-session ;; Avoid picking up buffer-local vars from current buffer
+    (let* ((old-point)
+           (namespace (downcase (shell-maker-config-name config)))
+           (welcome-message))
+      (unless buffer-name
+        (setq buffer-name (shell-maker-buffer-default-name
+                           (shell-maker-config-name config))))
+      (when new-session
+        (setq buffer-name (generate-new-buffer-name buffer-name)))
+      ;; Alias with concrete shell symbols.
+      (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
+      (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
+      (fset (intern (concat namespace "-shell-submit")) #'shell-maker-submit)
+      (fset (intern (concat namespace "-shell-save-session-transcript"))
+            #'shell-maker-save-session-transcript)
+      (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
+      (fset (intern (concat namespace "-shell-newline")) #'newline)
+      (fset (intern (concat namespace "-shell-rename-buffer")) #'shell-maker-rename-buffer)
+      (eval
+       (macroexpand
+        `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
+           ,(shell-maker-config-name config)
+           ,(format "Major mode for %s shell." (shell-maker-config-name config))
+           (define-key ,(shell-maker-major-mode-map config)
+             [remap comint-send-input] 'shell-maker-submit)
+           (define-key ,(shell-maker-major-mode-map config)
+             (kbd "S-<return>") #'newline)
+           (define-key ,(shell-maker-major-mode-map config)
+             [remap comint-interrupt-subjob] 'shell-maker-interrupt)
+           (define-key ,(shell-maker-major-mode-map config)
+             (kbd "C-x C-s") 'shell-maker-save-session-transcript)
+           (define-key ,(shell-maker-major-mode-map config)
+             (kbd "C-M-h") 'shell-maker-mark-output)
+           (define-key ,(shell-maker-major-mode-map config)
+             [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history))))
 
-    (unless (comint-check-proc buffer-name)
-      (with-current-buffer (get-buffer-create buffer-name)
-        (funcall (shell-maker-major-mode config))
-        (setq-local shell-maker--busy nil)
-        (unless (equal (shell-maker-buffer-name config)
-                       buffer-name)
-          (setq-local shell-maker--buffer-name-override buffer-name))
-        (unless (zerop (buffer-size))
-          (setq old-point (point)))
-        (when welcome-function
-          (setq welcome-message
-                (funcall welcome-function config)))
-        (when welcome-message
-          (insert welcome-message)
-          (insert (propertize "\n<shell-maker-failed-command>\n"
-                              'invisible (not shell-maker--show-invisible-markers))))
-        (shell-maker--initialize config)))
-    (unless no-focus
-      (funcall shell-maker-display-function buffer-name))
-    (when old-point
-      (push-mark old-point))
-    (get-buffer buffer-name)))
+      (unless (comint-check-proc buffer-name)
+        (with-current-buffer (get-buffer-create buffer-name)
+          (funcall (shell-maker-major-mode config))
+          (setq-local shell-maker--busy nil)
+          (unless (equal (shell-maker-buffer-name config)
+                         buffer-name)
+            (setq-local shell-maker--buffer-name-override buffer-name))
+          (unless (zerop (buffer-size))
+            (setq old-point (point)))
+          (when welcome-function
+            (setq welcome-message
+                  (funcall welcome-function config)))
+          (when welcome-message
+            (insert welcome-message)
+            (insert (propertize "\n<shell-maker-failed-command>\n"
+                                'invisible (not shell-maker--show-invisible-markers))))
+          (shell-maker--initialize config)))
+      (unless no-focus
+        (funcall shell-maker-display-function buffer-name))
+      (when old-point
+        (push-mark old-point))
+      (get-buffer buffer-name))))
 
 (defun shell-maker-welcome-message (config)
   "Return a welcome message to be printed using CONFIG."
@@ -196,11 +197,15 @@ Set BUFFER-NAME to override the buffer name."
           (propertize "help" 'font-lock-face 'italic)
           (shell-maker--propertize-key-binding "-shell-submit" config)))
 
+(defun shell-maker-local-config ()
+  "Return the shell buffer local config."
+  shell-maker--config)
+
 (defun shell-maker--initialize (config)
   "Initialize shell using CONFIG."
   (unless (eq major-mode (shell-maker-major-mode config))
     (user-error "Not in a shell"))
-  (setq-local shell-maker--config config)
+  (setq-local shell-maker--config (copy-sequence config))
   (visual-line-mode +1)
   (goto-address-mode +1)
   ;; Prevents fontifying streamed response as prompt.
@@ -1191,6 +1196,19 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
    (propertize "\n<shell-maker-failed-command>\n"
                'invisible (not shell-maker--show-invisible-markers))
    "\n\n"))
+
+(defmacro shell-maker--with-buffer-if (wrap buffer &rest body)
+  "If WRAP, wrap BODY `with-current-buffer' BUFFER."
+  `(if ,wrap
+       (with-current-buffer ,buffer ,@body)
+     ,@body))
+
+(defmacro shell-maker--with-temp-buffer-if (wrap &rest body)
+  "If WRAP, wrap BODY `with-temp-buffer'."
+  (declare (indent 1) (debug t))
+  `(if ,wrap
+       (with-temp-buffer ,@body)
+     ,@body))
 
 (provide 'shell-maker)
 
