@@ -1085,7 +1085,7 @@ If region is active, append to prompt."
                "")) nil)
     (when overlay-blocks
       (with-current-buffer
-          (shell-maker-buffer-name chatgpt-shell--config)
+          (chatgpt-shell--primary-buffer)
         (chatgpt-shell--put-source-block-overlays)))))
 
 (defun chatgpt-shell-send-region-with-header (header)
