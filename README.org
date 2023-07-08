@@ -266,6 +266,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-execute-babel-block-action-at-point  | Execute block as org babel.                                       |
 |                 | chatgpt-shell-eshell-whats-wrong-with-last-command | Ask ChatGPT what's wrong with the last eshell command.            |
 | C-c C-p         | chatgpt-shell-previous-item                        | Go to previous item.                                              |
+|                 | chatgpt-shell-set-as-primary-shell                 | Set as primary shell when there are multiple sessions.            |
 |                 | chatgpt-shell-refresh-rendering                    | Refresh markdown rendering by re-applying to entire buffer.       |
 |                 | chatgpt-shell-explain-code                         | Describe code from region using ChatGPT.                          |
 |                 | chatgpt-shell-rename-buffer                        | Rename current shell buffer.                                      |
