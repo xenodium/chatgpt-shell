@@ -551,7 +551,9 @@ Set NEW-SESSION to start a separate new session."
                              no-focus
                              chatgpt-shell-welcome-function
                              new-session
-                             (chatgpt-shell--make-buffer-name))))
+                             (if (chatgpt-shell--primary-buffer)
+                                 (buffer-name (chatgpt-shell--primary-buffer))
+                               (chatgpt-shell--make-buffer-name)))))
     (unless (chatgpt-shell--primary-buffer)
       (chatgpt-shell--set-primary-buffer shell-buffer))
     (let ((version chatgpt-shell-model-version)
@@ -559,7 +561,7 @@ Set NEW-SESSION to start a separate new session."
       (with-current-buffer shell-buffer
         (setq-local chatgpt-shell-model-version version)
         (setq-local chatgpt-shell-system-prompt system-prompt)
-        (chatgpt-shell--update-prompt nil)))
+        (chatgpt-shell--update-prompt t)))
     ;; Disabling advice for now. It gets in the way.
     ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
     (define-key chatgpt-shell-mode-map (kbd "C-M-h")
