@@ -614,6 +614,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
+  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
+    (user-error "Not in a shell"))
   (let* ((buffer (shell-maker-buffer shell-maker--config))
          (request-id (shell-maker--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
@@ -639,7 +641,8 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
         (set-process-filter
          request-process
          (lambda (_process output)
-           (when (and (eq request-id shell-maker--current-request-id)
+           (when (and (eq request-id (with-current-buffer buffer
+                                      (shell-maker--current-request-id)))
                       (buffer-live-p buffer))
              (shell-maker--write-output-to-log-buffer
               (format "// Filter output\n\n%s\n\n" output) config)
@@ -662,7 +665,8 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (let ((active (and (eq request-id shell-maker--current-request-id)
+         (let ((active (and (eq request-id (with-current-buffer buffer
+                                               (shell-maker--current-request-id)))
                             (buffer-live-p buffer)))
                (output (with-current-buffer (process-buffer process)
                          (buffer-string)))
@@ -704,10 +708,16 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
     json-object))
 
 (defun shell-maker--increment-request-id ()
-  "Increment `shell-maker--current-request-id'."
+  "Increment variable `shell-maker--current-request-id'."
   (if (= shell-maker--current-request-id most-positive-fixnum)
       (setq shell-maker--current-request-id 0)
     (setq shell-maker--current-request-id (1+ shell-maker--current-request-id))))
+
+(defun shell-maker--current-request-id ()
+  "Access variable `shell-maker--current-request-id' with right mode ensured."
+  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
+    (error "Not in a shell"))
+  shell-maker--current-request-id)
 
 (defun shell-maker--set-pm (pos)
   "Set the process mark in the current buffer to POS."
