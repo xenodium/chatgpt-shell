@@ -191,11 +191,16 @@ Set BUFFER-NAME to override the buffer name."
 
 (defun shell-maker-welcome-message (config)
   "Return a welcome message to be printed using CONFIG."
-  (format "Welcome to %s shell\n\n  Type %s and press %s for details.\n\n"
-          (propertize (shell-maker-config-name config)
-                      'font-lock-face 'font-lock-comment-face)
-          (propertize "help" 'font-lock-face 'italic)
-          (shell-maker--propertize-key-binding "-shell-submit" config)))
+  (format
+   "Welcome to %s shell\n\n  Type %s and press %s for details.\n\n  Like this package? Consider ✨%s✨\n\n"
+   (propertize (shell-maker-config-name config)
+               'font-lock-face 'font-lock-comment-face)
+   (propertize "help" 'font-lock-face 'italic)
+   (shell-maker--propertize-key-binding "-shell-submit" config)
+   (shell-maker-make-button-text "sponsoring"
+                                 (lambda ()
+                                   (browse-url "https://github.com/sponsors/xenodium")
+                                   (message "Thank you!")))))
 
 (defun shell-maker-local-config ()
   "Return the shell buffer local config."
@@ -1206,6 +1211,15 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
    (propertize "\n<shell-maker-failed-command>\n"
                'invisible (not shell-maker--show-invisible-markers))
    "\n\n"))
+
+(defun shell-maker-make-button-text (text action)
+  "Make button with TEXT and ACTION."
+  (with-temp-buffer
+    (insert-text-button text
+                        'action
+                        (lambda (_)
+                          (funcall action)))
+    (buffer-string)))
 
 (defmacro shell-maker--with-buffer-if (wrap buffer &rest body)
   "If WRAP, wrap BODY `with-current-buffer' BUFFER."
