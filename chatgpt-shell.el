@@ -623,6 +623,13 @@ Set NEW-SESSION to start a separate new session."
          'chatgpt-shell-mode))
    (buffer-list)))
 
+(defun chatgpt-shell-set-as-primary-shell ()
+  "Set as primary shell when there are multiple sessions."
+  (interactive)
+  (unless (eq major-mode 'chatgpt-shell-mode)
+    (user-error "Not in a shell"))
+  (chatgpt-shell--set-primary-buffer (current-buffer)))
+
 (defun chatgpt-shell--set-primary-buffer (primary-shell-buffer)
   "Set PRIMARY-SHELL-BUFFER as primary buffer."
   (mapc (lambda (shell-buffer)
