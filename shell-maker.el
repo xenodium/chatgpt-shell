@@ -120,6 +120,19 @@ For example:
 
 (defvar-local shell-maker--buffer-name-override nil)
 
+(defmacro shell-maker--with-buffer-if (wrap buffer &rest body)
+  "If WRAP, wrap BODY `with-current-buffer' BUFFER."
+  `(if ,wrap
+       (with-current-buffer ,buffer ,@body)
+     ,@body))
+
+(defmacro shell-maker--with-temp-buffer-if (wrap &rest body)
+  "If WRAP, wrap BODY `with-temp-buffer'."
+  (declare (indent 1) (debug t))
+  `(if ,wrap
+       (with-temp-buffer ,@body)
+     ,@body))
+
 (defun shell-maker-start (config &optional no-focus welcome-function new-session buffer-name)
   "Start a shell with CONFIG.
 
@@ -1220,19 +1233,6 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
                         (lambda (_)
                           (funcall action)))
     (buffer-string)))
-
-(defmacro shell-maker--with-buffer-if (wrap buffer &rest body)
-  "If WRAP, wrap BODY `with-current-buffer' BUFFER."
-  `(if ,wrap
-       (with-current-buffer ,buffer ,@body)
-     ,@body))
-
-(defmacro shell-maker--with-temp-buffer-if (wrap &rest body)
-  "If WRAP, wrap BODY `with-temp-buffer'."
-  (declare (indent 1) (debug t))
-  `(if ,wrap
-       (with-temp-buffer ,@body)
-     ,@body))
 
 (provide 'shell-maker)
 
