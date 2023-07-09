@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.31.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.41.1"))
+;; Version: 0.32.1
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -103,6 +103,8 @@ or
       #'dall-e-shell--extract-response
       callback
       error-callback))))
+
+(shell-maker-define-major-mode dall-e-shell--config)
 
 ;;;###autoload
 (defun dall-e-shell ()

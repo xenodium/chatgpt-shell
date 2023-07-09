@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.41.1
+;; Version: 0.42.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -201,6 +201,26 @@ Set BUFFER-NAME to override the buffer name."
       (when old-point
         (push-mark old-point))
       (get-buffer buffer-name))))
+
+(defun shell-maker-define-major-mode (config)
+  "Define the major mode for the shell using CONFIG."
+  (eval
+   (macroexpand
+    `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
+       ,(shell-maker-config-name config)
+       ,(format "Major mode for %s shell." (shell-maker-config-name config))
+       (define-key ,(shell-maker-major-mode-map config)
+         [remap comint-send-input] 'shell-maker-submit)
+       (define-key ,(shell-maker-major-mode-map config)
+         (kbd "S-<return>") #'newline)
+       (define-key ,(shell-maker-major-mode-map config)
+         [remap comint-interrupt-subjob] 'shell-maker-interrupt)
+       (define-key ,(shell-maker-major-mode-map config)
+         (kbd "C-x C-s") 'shell-maker-save-session-transcript)
+       (define-key ,(shell-maker-major-mode-map config)
+         (kbd "C-M-h") 'shell-maker-mark-output)
+       (define-key ,(shell-maker-major-mode-map config)
+         [remap comint-history-isearch-backward-regexp] 'shell-maker-search-history)))))
 
 (defun shell-maker-welcome-message (config)
   "Return a welcome message to be printed using CONFIG."
