@@ -39,7 +39,6 @@
 (require 'eshell)
 (require 'find-func)
 (require 'ielm)
-(require 'pcsv)
 (require 'shell-maker)
 
 (defcustom chatgpt-shell-openai-key nil
@@ -376,6 +375,7 @@ Or nil if none."
 
 Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
+  (require 'pcsv)
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
                    csv-path t)
