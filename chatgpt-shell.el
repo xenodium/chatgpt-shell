@@ -375,6 +375,7 @@ Or nil if none."
 
 Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
+  (require 'pcsv)
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
                    csv-path t)
@@ -384,23 +385,12 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
           (seq-sort (lambda (rhs lhs)
                       (string-lessp (car rhs)
                                     (car lhs)))
-                    (with-temp-buffer
-                      (insert-file-contents csv-path)
-                      (cdr
-                       (mapcar
-                        (lambda (row)
-                          (cons (car row)
-                                (cadr row)))
-                        (mapcar
-                         (lambda (line)
-                           (mapcar
-                            (lambda (s)
-                              (replace-regexp-in-string "\"" "" s))
-                            (split-string line ",")))
-                         (seq-filter
-                          (lambda (line)
-                            (not (string-empty-p line)))
-                          (split-string (buffer-string) "\n"))))))))
+                    (cdr
+                     (mapcar
+                      (lambda (row)
+                        (cons (car row)
+                              (cadr row)))
+                      (pcsv-parse-file csv-path)))))
     (message "Loaded awesome-chatgpt-prompts")
     (setq chatgpt-shell-system-prompt nil)
     (chatgpt-shell--update-prompt t)
