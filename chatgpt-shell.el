@@ -375,6 +375,8 @@ Or nil if none."
 
 Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
+  (unless (fboundp 'pcsv-parse-file)
+    (user-error "Please install pcsv"))
   (require 'pcsv)
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
