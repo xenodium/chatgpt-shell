@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.63.1
+;; Version: 0.64.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -416,6 +416,11 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-highlight-blocks t
+  "Whether or not to highlight source blocks."
   :type 'boolean
   :group 'chatgpt-shell)
 
@@ -1838,62 +1843,63 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
 
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
-  (let* ((source-blocks (chatgpt-shell--source-blocks))
-         (avoid-ranges (seq-map (lambda (block)
-                                 (map-elt block 'body))
-                               source-blocks)))
-    (dolist (overlay (overlays-in (point-min) (point-max)))
-      (delete-overlay overlay))
-    (dolist (block source-blocks)
-      (chatgpt-shell--fontify-source-block
-       (car (map-elt block 'start))
-       (cdr (map-elt block 'start))
-       (buffer-substring-no-properties (car (map-elt block 'language))
-                                       (cdr (map-elt block 'language)))
-       (car (map-elt block 'language))
-       (cdr (map-elt block 'language))
-       (car (map-elt block 'body))
-       (cdr (map-elt block 'body))
-       (car (map-elt block 'end))
-       (cdr (map-elt block 'end))))
-    (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
-      (chatgpt-shell--fontify-link
-       (map-elt link 'start)
-       (map-elt link 'end)
-       (car (map-elt link 'title))
-       (cdr (map-elt link 'title))
-       (car (map-elt link 'url))
-       (cdr (map-elt link 'url))))
-    (dolist (header (chatgpt-shell--markdown-headers avoid-ranges))
-      (chatgpt-shell--fontify-header
-       (map-elt header 'start)
-       (map-elt header 'end)
-       (car (map-elt header 'level))
-       (cdr (map-elt header 'level))
-       (car (map-elt header 'title))
-       (cdr (map-elt header 'title))))
-    (dolist (bold (chatgpt-shell--markdown-bolds avoid-ranges))
-      (chatgpt-shell--fontify-bold
-       (map-elt bold 'start)
-       (map-elt bold 'end)
-       (car (map-elt bold 'text))
-       (cdr (map-elt bold 'text))))
-    (dolist (italic (chatgpt-shell--markdown-italics avoid-ranges))
-      (chatgpt-shell--fontify-italic
-       (map-elt italic 'start)
-       (map-elt italic 'end)
-       (car (map-elt italic 'text))
-       (cdr (map-elt italic 'text))))
-    (dolist (strikethrough (chatgpt-shell--markdown-strikethroughs avoid-ranges))
-      (chatgpt-shell--fontify-strikethrough
-       (map-elt strikethrough 'start)
-       (map-elt strikethrough 'end)
-       (car (map-elt strikethrough 'text))
-       (cdr (map-elt strikethrough 'text))))
-    (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
-      (chatgpt-shell--fontify-inline-code
-       (car (map-elt inline-code 'body))
-       (cdr (map-elt inline-code 'body))))))
+  (when chatgpt-shell-highlight-blocks
+    (let* ((source-blocks (chatgpt-shell--source-blocks))
+           (avoid-ranges (seq-map (lambda (block)
+                                    (map-elt block 'body))
+                                  source-blocks)))
+      (dolist (overlay (overlays-in (point-min) (point-max)))
+        (delete-overlay overlay))
+      (dolist (block source-blocks)
+        (chatgpt-shell--fontify-source-block
+         (car (map-elt block 'start))
+         (cdr (map-elt block 'start))
+         (buffer-substring-no-properties (car (map-elt block 'language))
+                                         (cdr (map-elt block 'language)))
+         (car (map-elt block 'language))
+         (cdr (map-elt block 'language))
+         (car (map-elt block 'body))
+         (cdr (map-elt block 'body))
+         (car (map-elt block 'end))
+         (cdr (map-elt block 'end))))
+      (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
+        (chatgpt-shell--fontify-link
+         (map-elt link 'start)
+         (map-elt link 'end)
+         (car (map-elt link 'title))
+         (cdr (map-elt link 'title))
+         (car (map-elt link 'url))
+         (cdr (map-elt link 'url))))
+      (dolist (header (chatgpt-shell--markdown-headers avoid-ranges))
+        (chatgpt-shell--fontify-header
+         (map-elt header 'start)
+         (map-elt header 'end)
+         (car (map-elt header 'level))
+         (cdr (map-elt header 'level))
+         (car (map-elt header 'title))
+         (cdr (map-elt header 'title))))
+      (dolist (bold (chatgpt-shell--markdown-bolds avoid-ranges))
+        (chatgpt-shell--fontify-bold
+         (map-elt bold 'start)
+         (map-elt bold 'end)
+         (car (map-elt bold 'text))
+         (cdr (map-elt bold 'text))))
+      (dolist (italic (chatgpt-shell--markdown-italics avoid-ranges))
+        (chatgpt-shell--fontify-italic
+         (map-elt italic 'start)
+         (map-elt italic 'end)
+         (car (map-elt italic 'text))
+         (cdr (map-elt italic 'text))))
+      (dolist (strikethrough (chatgpt-shell--markdown-strikethroughs avoid-ranges))
+        (chatgpt-shell--fontify-strikethrough
+         (map-elt strikethrough 'start)
+         (map-elt strikethrough 'end)
+         (car (map-elt strikethrough 'text))
+         (cdr (map-elt strikethrough 'text))))
+      (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
+        (chatgpt-shell--fontify-inline-code
+         (car (map-elt inline-code 'body))
+         (cdr (map-elt inline-code 'body)))))))
 
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
