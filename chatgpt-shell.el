@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.66.1
+;; Version: 0.67.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -722,7 +722,8 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
   "Markdown start/end cons if point at block.  nil otherwise."
   (save-excursion
     (save-restriction
-      (shell-maker-narrow-to-prompt)
+      (when (eq major-mode 'chatgpt-shell-mode)
+        (shell-maker-narrow-to-prompt))
       (let* ((language)
              (language-start)
              (language-end)
@@ -1055,7 +1056,8 @@ If region is active, append to prompt."
 
 With PREFIX, append any region."
   (interactive "P")
-  (let* ((buffer-name "*chatgpt* compose")
+  (let* ((buffer-name (concat (chatgpt-shell--minibuffer-prompt)
+                              "compose"))
          (buffer (get-buffer-create buffer-name))
          (map (make-sparse-keymap))
          (region (when (region-active-p)
@@ -1065,7 +1067,7 @@ With PREFIX, append any region."
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
                                (propertize "C-c C-k" 'face 'help-key-binding)
-                               " to cancel. "))
+                               " to exit. "))
          (prompt))
     (add-to-list 'display-buffer-alist
                  (cons buffer
@@ -1083,6 +1085,13 @@ With PREFIX, append any region."
                      (lambda () (interactive)
                        (quit-window t (get-buffer-window buffer))
                        (message "exit")))
+      (local-set-key (kbd "C-M-h") (lambda ()
+                                     (interactive)
+                                     (when-let ((block (chatgpt-shell-markdown-block-at-point)))
+                                       (set-mark (map-elt block 'end))
+                                       (goto-char (map-elt block 'start)))))
+      (local-set-key (kbd "C-c C-n") #'chatgpt-shell-next-source-block)
+      (local-set-key (kbd "C-c C-p") #'chatgpt-shell-previous-source-block)
       (local-set-key (kbd "C-c C-c")
                      (lambda ()
                        (interactive)
