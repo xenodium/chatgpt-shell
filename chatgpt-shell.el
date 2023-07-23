@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.64.1
+;; Version: 0.65.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1049,6 +1049,49 @@ If region is active, append to prompt."
                                "\n```"
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil)))
+
+(defun chatgpt-shell-prompt-compose ()
+  "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer."
+  (interactive)
+  (let* ((buffer-name "*chatgpt* compose")
+         (buffer (get-buffer-create buffer-name))
+         (map (make-sparse-keymap))
+         (instructions (concat "Type "
+                               (propertize "C-c C-c" 'face 'help-key-binding)
+                               " to send prompt. "
+                               (propertize "C-c C-k" 'face 'help-key-binding)
+                               " to cancel. "))
+         (prompt))
+    (add-to-list 'display-buffer-alist
+                 (cons buffer
+                       '((display-buffer-below-selected)
+                         (split-window-sensibly))))
+    (with-current-buffer buffer
+      (view-mode -1)
+      (erase-buffer)
+      (local-set-key (kbd "C-c C-k")
+                     (lambda () (interactive)
+                       (quit-window t (get-buffer-window buffer))
+                       (message "exit")))
+      (local-set-key (kbd "C-c C-c")
+                     (lambda ()
+                       (interactive)
+                       (if view-mode
+                           (progn
+                             (view-mode -1)
+                             (erase-buffer)
+                             (message instructions))
+                         (setq prompt
+                               (buffer-substring-no-properties
+                                (point-min) (point-max)))
+                         (erase-buffer)
+                         (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+                         (view-mode +1)
+                         (setq view-exit-action 'kill-buffer)
+                         (let ((chatgpt-shell-prompt-query-response-style 'inline))
+                           (chatgpt-shell-send-to-buffer prompt)))))
+      (message instructions))
+    (pop-to-buffer buffer-name)))
 
 (defun chatgpt-shell-prompt-appending-kill-ring ()
   "Make a ChatGPT request from the minibuffer appending kill ring."

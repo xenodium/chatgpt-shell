@@ -296,6 +296,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                           |
 |                 | chatgpt-shell-restore-session-from-transcript      | Restore session from transcript.                                  |
 |                 | chatgpt-shell-generate-unit-test                   | Generate unit-test for the code from region using ChatGPT.        |
+|                 | chatgpt-shell-prompt-compose                       | Compose and send prompt (kbd "C-c C-c") from a dedicated buffer.  |
 |                 | chatgpt-shell-next-source-block                    | Move point to previous source block.                              |
 | C-c C-c         | chatgpt-shell-ctrl-c-ctrl-c                        | If point in source block, execute it.  Otherwise interrupt.       |
 |                 | chatgpt-shell-interrupt                            | Interrupt `chatgpt-shell' from any buffer.                        |
