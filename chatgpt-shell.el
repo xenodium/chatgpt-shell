@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.65.1
+;; Version: 0.66.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1050,12 +1050,17 @@ If region is active, append to prompt."
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil)))
 
-(defun chatgpt-shell-prompt-compose ()
-  "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer."
-  (interactive)
+(defun chatgpt-shell-prompt-compose (prefix)
+  "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer.
+
+With PREFIX, append any region."
+  (interactive "P")
   (let* ((buffer-name "*chatgpt* compose")
          (buffer (get-buffer-create buffer-name))
          (map (make-sparse-keymap))
+         (region (when (region-active-p)
+                   (buffer-substring (region-beginning)
+                                     (region-end))))
          (instructions (concat "Type "
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
@@ -1068,7 +1073,12 @@ If region is active, append to prompt."
                          (split-window-sensibly))))
     (with-current-buffer buffer
       (view-mode -1)
-      (erase-buffer)
+      (unless prefix
+        (erase-buffer))
+      (when region
+        (save-excursion
+          (goto-char (point-max))
+          (insert (concat "\n\n" region))))
       (local-set-key (kbd "C-c C-k")
                      (lambda () (interactive)
                        (quit-window t (get-buffer-window buffer))
