@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.69.1
+;; Version: 0.70.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1057,7 +1057,7 @@ If region is active, append to prompt."
   "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer.
 
 Appends any active region."
-  (interactive "P")
+  (interactive)
   (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
          (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
                               "compose"))
