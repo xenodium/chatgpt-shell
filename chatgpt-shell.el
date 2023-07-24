@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.67.1
+;; Version: 0.69.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -575,6 +575,8 @@ Set NEW-SESSION to start a separate new session."
       #'chatgpt-shell-previous-item)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-n")
       #'chatgpt-shell-next-item)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-e")
+      #'chatgpt-shell-prompt-compose)
     shell-buffer))
 
 (defun chatgpt-shell--shrink-model-version (model-version)
@@ -1051,12 +1053,13 @@ If region is active, append to prompt."
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil)))
 
-(defun chatgpt-shell-prompt-compose (prefix)
+(defun chatgpt-shell-prompt-compose ()
   "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer.
 
-With PREFIX, append any region."
+Appends any active region."
   (interactive "P")
-  (let* ((buffer-name (concat (chatgpt-shell--minibuffer-prompt)
+  (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
+         (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
                               "compose"))
          (buffer (get-buffer-create buffer-name))
          (map (make-sparse-keymap))
@@ -1067,15 +1070,15 @@ With PREFIX, append any region."
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
                                (propertize "C-c C-k" 'face 'help-key-binding)
-                               " to exit. "))
+                               " to cancel and exit. "))
          (prompt))
     (add-to-list 'display-buffer-alist
                  (cons buffer
                        '((display-buffer-below-selected)
                          (split-window-sensibly))))
     (with-current-buffer buffer
-      (view-mode -1)
-      (unless prefix
+      (when view-mode
+        (view-mode -1)
         (erase-buffer))
       (when region
         (save-excursion
@@ -1095,6 +1098,12 @@ With PREFIX, append any region."
       (local-set-key (kbd "C-c C-c")
                      (lambda ()
                        (interactive)
+                       (when (string-empty-p
+                              (string-trim
+                               (buffer-substring-no-properties
+                                (point-min) (point-max))))
+                         (erase-buffer)
+                         (user-error "Nothing to send"))
                        (if view-mode
                            (progn
                              (view-mode -1)
@@ -1107,8 +1116,13 @@ With PREFIX, append any region."
                          (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
                          (view-mode +1)
                          (setq view-exit-action 'kill-buffer)
-                         (let ((chatgpt-shell-prompt-query-response-style 'inline))
-                           (chatgpt-shell-send-to-buffer prompt)))))
+                         (if exit-on-submit
+                             (let ((view-exit-action nil)
+                                   (chatgpt-shell-prompt-query-response-style 'shell))
+                               (quit-window t (get-buffer-window buffer))
+                               (chatgpt-shell-send-to-buffer prompt))
+                           (let ((chatgpt-shell-prompt-query-response-style 'inline))
+                             (chatgpt-shell-send-to-buffer prompt))))))
       (message instructions))
     (pop-to-buffer buffer-name)))
 
