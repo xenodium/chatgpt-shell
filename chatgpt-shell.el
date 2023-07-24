@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.70.1
+;; Version: 0.71.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1116,6 +1116,9 @@ Appends any active region."
                          (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
                          (view-mode +1)
                          (setq view-exit-action 'kill-buffer)
+                         (when (string-equal prompt "clear")
+                           (view-mode -1)
+                           (erase-buffer))
                          (if exit-on-submit
                              (let ((view-exit-action nil)
                                    (chatgpt-shell-prompt-query-response-style 'shell))
