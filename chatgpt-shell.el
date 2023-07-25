@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.71.1
+;; Version: 0.72.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1077,6 +1077,7 @@ Appends any active region."
                        '((display-buffer-below-selected)
                          (split-window-sensibly))))
     (with-current-buffer buffer
+      (visual-line-mode +1)
       (when view-mode
         (view-mode -1)
         (erase-buffer))
