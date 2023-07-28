@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.73.1
+;; Version: 0.74.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1815,6 +1815,9 @@ Use START END TITLE-START TITLE-END URL-START URL-END."
   (overlay-put (make-overlay title-start title-end) 'face 'link)
   ;; Make RET open the URL
   (define-key (let ((map (make-sparse-keymap)))
+                (define-key map [mouse-1]
+                  (lambda () (interactive)
+                    (browse-url (buffer-substring-no-properties url-start url-end))))
                 (define-key map (kbd "RET")
                   (lambda () (interactive)
                     (browse-url (buffer-substring-no-properties url-start url-end))))
