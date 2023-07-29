@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.74.1
+;; Version: 0.75.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1063,9 +1063,11 @@ Appends any active region."
                               "compose"))
          (buffer (get-buffer-create buffer-name))
          (map (make-sparse-keymap))
-         (region (when (region-active-p)
-                   (buffer-substring (region-beginning)
-                                     (region-end))))
+         (region (when-let ((_ (region-active-p))
+                            (region (buffer-substring (region-beginning)
+                                                      (region-end))))
+                   (deactivate-mark)
+                   region))
          (instructions (concat "Type "
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
