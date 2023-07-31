@@ -307,6 +307,8 @@ Browse all available via =M-x=.
 - Please go through this README to see if the feature is already supported.
 - Need custom behaviour? Check out existing [[https://github.com/xenodium/chatgpt-shell/issues?q=is%3Aissue+][issues/feature requests]]. You may find solutions in discussions.
 * Reporting bugs
+** Setup isn't working?
+Please share the entire snippet you've used to set =chatgpt-shell= up (but redact your key). Share any errors you encountered. Read on for sharing additional details.
 ** Found runtime/elisp errors?
 Please enable =M-x toggle-debug-on-error=, reproduce the error, and share the stack trace.
 ** Found unexpected behaviour?
