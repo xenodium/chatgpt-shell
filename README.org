@@ -100,7 +100,7 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
 Same as ChatGPT, but use =dall-e-shell-openai-key= variable.
 * ChatGPT through proxy service
 
-If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like bellowing:
+If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like the following:
 
 #+begin_src emacs-lisp :lexical no
   (use-package chatgpt-shell
