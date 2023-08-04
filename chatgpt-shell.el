@@ -52,6 +52,12 @@
   :type '(repeat (string :tag "String"))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-curl-auth-header
+  "Authorization: Bearer "
+  "The authorization header that will prepend the API key for `curl`."
+  :type 'string
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
   :type 'integer
@@ -1595,7 +1601,8 @@ For example:
                 "--no-progress-meter"
                 "-m" (number-to-string chatgpt-shell-request-timeout)
                 "-H" "Content-Type: application/json"
-                "-H" (format "Authorization: Bearer %s"
+                "-H" (format "%s%s"
+                             chatgpt-shell-curl-auth-header
                              (cond ((stringp chatgpt-shell-openai-key)
                                     chatgpt-shell-openai-key)
                                    ((functionp chatgpt-shell-openai-key)
