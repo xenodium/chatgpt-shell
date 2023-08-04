@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.75.1
+;; Version: 0.76.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -50,6 +50,13 @@
 (defcustom chatgpt-shell-additional-curl-options nil
   "Additional options for `curl' command."
   :type '(repeat (string :tag "String"))
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-auth-header
+  (lambda ()
+    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+  "Function to generate the request's `Authorization' header string."
+  :type '(function :tag "Function")
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-request-timeout 600
@@ -1576,7 +1583,10 @@ For example:
   (cond ((stringp chatgpt-shell-openai-key)
          chatgpt-shell-openai-key)
         ((functionp chatgpt-shell-openai-key)
-         (funcall chatgpt-shell-openai-key))
+         (condition-case _err
+             (funcall chatgpt-shell-openai-key)
+           (error
+            "KEY-NOT-FOUND")))
         (t
          nil)))
 
@@ -1595,14 +1605,7 @@ For example:
                 "--no-progress-meter"
                 "-m" (number-to-string chatgpt-shell-request-timeout)
                 "-H" "Content-Type: application/json"
-                "-H" (format "Authorization: Bearer %s"
-                             (cond ((stringp chatgpt-shell-openai-key)
-                                    chatgpt-shell-openai-key)
-                                   ((functionp chatgpt-shell-openai-key)
-                                    (condition-case _err
-                                        (funcall chatgpt-shell-openai-key)
-                                      (error
-                                       "KEY-NOT-FOUND")))))
+                "-H" (funcall chatgpt-shell-auth-header)
                 "-d" (shell-maker--json-encode request-data))))
 
 (defun chatgpt-shell--make-payload (history)
