@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.76.1
+;; Version: 0.77.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -388,22 +388,25 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
                    csv-path t)
-    ;; Based on Daniel Gomez's parsing code from
-    ;; https://github.com/xenodium/chatgpt-shell/issues/104
     (setq chatgpt-shell-system-prompts
-          (seq-sort (lambda (rhs lhs)
-                      (string-lessp (car rhs)
-                                    (car lhs)))
-                    (cdr
-                     (mapcar
-                      (lambda (row)
-                        (cons (car row)
-                              (cadr row)))
-                      (pcsv-parse-file csv-path)))))
+         (map-merge 'list
+                    chatgpt-shell-system-prompts
+                    ;; Based on Daniel Gomez's parsing code from
+                    ;; https://github.com/xenodium/chatgpt-shell/issues/104
+                    (seq-sort (lambda (rhs lhs)
+                                (string-lessp (car rhs)
+                                              (car lhs)))
+                              (cdr
+                               (mapcar
+                                (lambda (row)
+                                  (cons (car row)
+                                        (cadr row)))
+                                (pcsv-parse-file csv-path))))))
     (message "Loaded awesome-chatgpt-prompts")
     (setq chatgpt-shell-system-prompt nil)
     (chatgpt-shell--update-prompt t)
-    (chatgpt-shell-interrupt nil)))
+    (chatgpt-shell-interrupt nil)
+    (chatgpt-shell-swap-system-prompt)))
 
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
