@@ -1607,7 +1607,7 @@ For example:
           (list "--fail-with-body"
                 "--no-progress-meter"
                 "-m" (number-to-string chatgpt-shell-request-timeout)
-                "-H" "Content-Type: application/json"
+                "-H" "Content-Type: application/json charset=utf-8"
                 "-H" (funcall chatgpt-shell-auth-header)
                 "-d" (shell-maker--json-encode request-data))))
 
