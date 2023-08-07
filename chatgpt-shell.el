@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.75.1
+;; Version: 0.77.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -50,6 +50,13 @@
 (defcustom chatgpt-shell-additional-curl-options nil
   "Additional options for `curl' command."
   :type '(repeat (string :tag "String"))
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-auth-header
+  (lambda ()
+    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+  "Function to generate the request's `Authorization' header string."
+  :type '(function :tag "Function")
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-request-timeout 600
@@ -381,22 +388,25 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
     (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
                    csv-path t)
-    ;; Based on Daniel Gomez's parsing code from
-    ;; https://github.com/xenodium/chatgpt-shell/issues/104
     (setq chatgpt-shell-system-prompts
-          (seq-sort (lambda (rhs lhs)
-                      (string-lessp (car rhs)
-                                    (car lhs)))
-                    (cdr
-                     (mapcar
-                      (lambda (row)
-                        (cons (car row)
-                              (cadr row)))
-                      (pcsv-parse-file csv-path)))))
+         (map-merge 'list
+                    chatgpt-shell-system-prompts
+                    ;; Based on Daniel Gomez's parsing code from
+                    ;; https://github.com/xenodium/chatgpt-shell/issues/104
+                    (seq-sort (lambda (rhs lhs)
+                                (string-lessp (car rhs)
+                                              (car lhs)))
+                              (cdr
+                               (mapcar
+                                (lambda (row)
+                                  (cons (car row)
+                                        (cadr row)))
+                                (pcsv-parse-file csv-path))))))
     (message "Loaded awesome-chatgpt-prompts")
     (setq chatgpt-shell-system-prompt nil)
     (chatgpt-shell--update-prompt t)
-    (chatgpt-shell-interrupt nil)))
+    (chatgpt-shell-interrupt nil)
+    (chatgpt-shell-swap-system-prompt)))
 
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
@@ -1576,7 +1586,10 @@ For example:
   (cond ((stringp chatgpt-shell-openai-key)
          chatgpt-shell-openai-key)
         ((functionp chatgpt-shell-openai-key)
-         (funcall chatgpt-shell-openai-key))
+         (condition-case _err
+             (funcall chatgpt-shell-openai-key)
+           (error
+            "KEY-NOT-FOUND")))
         (t
          nil)))
 
@@ -1594,15 +1607,8 @@ For example:
           (list "--fail-with-body"
                 "--no-progress-meter"
                 "-m" (number-to-string chatgpt-shell-request-timeout)
-                "-H" "Content-Type: application/json; charset=utf-8"
-                "-H" (format "Authorization: Bearer %s"
-                             (cond ((stringp chatgpt-shell-openai-key)
-                                    chatgpt-shell-openai-key)
-                                   ((functionp chatgpt-shell-openai-key)
-                                    (condition-case _err
-                                        (funcall chatgpt-shell-openai-key)
-                                      (error
-                                       "KEY-NOT-FOUND")))))
+                "-H" "Content-Type: application/json charset=utf-8"
+                "-H" (funcall chatgpt-shell-auth-header)
                 "-d" (shell-maker--json-encode request-data))))
 
 (defun chatgpt-shell--make-payload (history)
