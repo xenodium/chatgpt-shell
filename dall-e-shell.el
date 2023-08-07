@@ -263,7 +263,7 @@ ERROR-CALLBACK otherwise."
         "--fail-with-body"
         "--no-progress-meter"
         "-m" (number-to-string dall-e-shell-request-timeout)
-        "-H" "Content-Type: application/json"
+        "-H" "Content-Type: application/json; charset=utf-8"
         "-H" (format "Authorization: Bearer %s"
                      (cond ((stringp dall-e-shell-openai-key)
                             dall-e-shell-openai-key)
