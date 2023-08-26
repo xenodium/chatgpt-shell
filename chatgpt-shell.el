@@ -47,6 +47,12 @@
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-service 'openai
+  "Service to use. Either 'openai or 'azure-openai."
+  :type '(choice (const :tag "OpenAI" openai)
+                 (const :tag "Azure-OpenAI" azure-openai))
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-additional-curl-options nil
   "Additional options for `curl' command."
   :type '(repeat (string :tag "String"))
@@ -54,8 +60,13 @@
 
 (defcustom chatgpt-shell-auth-header
   (lambda ()
-    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-  "Function to generate the request's `Authorization' header string."
+    (cond
+     ((eq chatgpt-shell-service 'openai)
+      (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+     ((eq chatgpt-shell-service 'azure-openai)
+      (format "api-key: %s" (chatgpt-shell-openai-key)))
+     (t (error "Unknown service"))))
+  "Function to generate the request's `Authorization' header string for OpenAI and api-key header for Azure."
   :type '(function :tag "Function")
   :group 'chatgpt-shell)
 
@@ -465,7 +476,7 @@ window."
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
-
+   For Azure, set it to https://your-instance.openai.azure.com
 `chatgpt-shell--api-url' =
    `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'
 
@@ -473,6 +484,21 @@ If you use ChatGPT through a proxy service, change the URL base."
   :type 'string
   :safe #'stringp
   :group 'chatgpt-shell)
+
+
+(defcustom chatgpt-shell-azure-openai-deployment "azure-openai-deployment-name"
+  "Deployment name for Azure-OpenAI API."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
+
+(defcustom chatgpt-shell-azure-openai-api-version "2023-03-15-preview"
+  "API version for Azure-OpenAI."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
 
 (defcustom chatgpt-shell-api-url-path "/v1/chat/completions"
   "OpenAI API's URL path.
@@ -1593,12 +1619,20 @@ For example:
         (t
          nil)))
 
-(defun chatgpt-shell--api-url ()
-  "The complete URL OpenAI's API.
 
-`chatgpt-shell--api-url' =
-   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
-  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path))
+(defun chatgpt-shell--api-url ()
+  "The complete URL for OpenAI's API.
+  
+Based on the selected service, construct the appropriate API URL."
+  (concat chatgpt-shell-api-url-base
+          (cond
+           ((eq chatgpt-shell-service 'openai)
+            chatgpt-shell-api-url-path)
+           ((eq chatgpt-shell-service 'azure-openai)
+            (format "/openai/deployments/%s/chat/completions?api-version=%s" 
+                    chatgpt-shell-azure-openai-deployment chatgpt-shell-azure-openai-api-version))
+           (t (error "Unknown service")))))
+
 
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
