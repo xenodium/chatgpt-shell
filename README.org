@@ -183,6 +183,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-system-prompts                                     | List of system prompts to choose from.                                      |
 | chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
 | chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                           |
+| chatgpt-shell-auth-header                                        | Function to generate the request's `Authorization' header string.           |
 | chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`.                           |
 | chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of `git-commit`.                                              |
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                            |
@@ -199,6 +200,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to
 | chatgpt-shell-prompt-header-describe-code                        | Prompt header of `describe-code`.                                           |
 | chatgpt-shell-api-url-base                                       | OpenAI API's base URL.                                                      |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                               |
+| chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                  |
 | chatgpt-shell-language-mapping                                   | Maps external language names to Emacs names.                                |
 | chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of `generate-unit-test`.                                      |
 | chatgpt-shell-request-timeout                                    | How long to wait for a request to time out in seconds.                      |
