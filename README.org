@@ -51,12 +51,12 @@ If using [[https://github.com/jwiegley/use-package][use-package]], you can insta
 =chatgpt-shell= depends on =shell-maker=. This dependency is resolved without issues on MELPA but seems to run into issues with =straight=. I'm not familiar with =straight= but users have reported the following to work.
 
 #+begin_src emacs-lisp :lexical no
-(use-package shell-maker
-  :straight (:host github :repo "xenodium/chatgpt-shell" :files ("shell-maker.el")))
+  (use-package shell-maker
+    :straight (:host github :repo "xenodium/chatgpt-shell" :files ("shell-maker.el")))
 
-(use-package chatgpt-shell
-  :requires shell-maker
-  :straight (:host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell.el")))
+  (use-package chatgpt-shell
+    :requires shell-maker
+    :straight (:host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell.el")))
 #+end_src
 
 If you have a better =straight= solution, please send a pull request or open an issue with a suggestion.
@@ -123,7 +123,7 @@ If you use ChatGPT through a HTTP proxy (for example you are in a corporate netw
 you need to tell =curl= to use the proxy via the curl option =-x http://your_proxy=.
 One way to do this is to set the proxy url via the customizable variable =chatgpt-shell-additional-curl-options=. If you set this variable via the Emacs Customize interface you should insert two
 separate items =-x= and =http://your_proxy=. See the curl manpage for more details and further options.
- 
+
 * Launch
 
 Launch with =M-x chatgpt-shell= or =dall-e-shell=.
