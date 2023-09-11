@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.78.1
+;; Version: 0.79.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -175,6 +175,7 @@ Objective-C -> (\"objective-c\" . \"objc\")"
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-babel-headers '(("dot" . ((:file . "<temp-file>.png")))
+                                         ("plantuml" . ((:file . "<temp-file>.png")))
                                          ("ditaa" . ((:file . "<temp-file>.png")))
                                          ("objc" . ((:results . "output")))
                                          ("python" . ((:python . "python3")))
