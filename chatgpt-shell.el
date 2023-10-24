@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.79.1
+;; Version: 0.80.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1064,11 +1064,11 @@ If region is active, append to prompt."
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil)))
 
-(defun chatgpt-shell-prompt-compose ()
+(defun chatgpt-shell-prompt-compose (prefix)
   "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer.
 
-Appends any active region."
-  (interactive)
+With PREFIX, clear existing history. Appends any active region."
+  (interactive "P")
   (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
          (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
                               "compose"))
@@ -1098,6 +1098,9 @@ Appends any active region."
         (save-excursion
           (goto-char (point-max))
           (insert (concat "\n\n" region))))
+      (when prefix
+        (let ((chatgpt-shell-prompt-query-response-style 'inline))
+                             (chatgpt-shell-send-to-buffer "clear")))
       (local-set-key (kbd "C-c C-k")
                      (lambda () (interactive)
                        (quit-window t (get-buffer-window buffer))
