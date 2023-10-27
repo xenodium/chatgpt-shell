@@ -312,7 +312,8 @@ For example:
 
 Or nil if none."
   :type '(choice (string :tag "String")
-                 (integer :tag "Integer"))
+                 (integer :tag "Integer")
+                 (const :tag "No Prompt" nil))
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-model-version ()
