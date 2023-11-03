@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.85.1
+;; Version: 0.86.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1114,6 +1114,20 @@ With PREFIX, clear existing history. Appends any active region."
           (define-key region-bindings-mode-map "n" nil))
         (when (lookup-key region-bindings-mode-map "p")
           (define-key region-bindings-mode-map "p" nil)))
+      (define-key view-mode-map (kbd "g")
+                  (lambda ()
+                    (interactive)
+                    (when-let ((prompt (with-current-buffer (chatgpt-shell--primary-buffer)
+                                         (seq-first (delete-dups
+                                                     (seq-filter
+                                                      (lambda (item)
+                                                        (not (string-empty-p item)))
+                                                      (ring-elements comint-input-ring))))))
+                               (inhibit-read-only t)
+                               (chatgpt-shell-prompt-query-response-style 'inline))
+                      (erase-buffer)
+                      (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+                      (chatgpt-shell-send-to-buffer prompt))))
       (define-key view-mode-map (kbd "n")
                   (lambda ()
                     (interactive)
