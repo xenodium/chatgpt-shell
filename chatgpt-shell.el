@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.83.1
+;; Version: 0.84.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1105,8 +1105,20 @@ With PREFIX, clear existing history. Appends any active region."
         (let ((chatgpt-shell-prompt-query-response-style 'inline))
           (chatgpt-shell-send-to-buffer "clear")))
       (make-local-variable 'view-mode-map)
-      (define-key view-mode-map (kbd "n") #'chatgpt-shell-next-source-block)
-      (define-key view-mode-map (kbd "p") #'chatgpt-shell-previous-source-block)
+      (define-key view-mode-map (kbd "n")
+                  (lambda ()
+                    (interactive)
+                    (call-interactively #'chatgpt-shell-next-source-block)
+                    (when-let ((block (chatgpt-shell-markdown-block-at-point)))
+                      (set-mark (map-elt block 'end))
+                      (goto-char (map-elt block 'start)))))
+      (define-key view-mode-map (kbd "p")
+                  (lambda ()
+                    (interactive)
+                    (call-interactively #'chatgpt-shell-previous-source-block)
+                    (when-let ((block (chatgpt-shell-markdown-block-at-point)))
+                      (set-mark (map-elt block 'end))
+                      (goto-char (map-elt block 'start)))))
       (define-key view-mode-map (kbd "e")
                   (lambda ()
                     (interactive)
