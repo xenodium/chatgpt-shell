@@ -1139,7 +1139,15 @@ With PREFIX, clear existing history. Appends any active region."
                     (when-let ((block (chatgpt-shell-markdown-block-at-point)))
                       (set-mark (map-elt block 'end))
                       (goto-char (map-elt block 'start)))))
-      (define-key view-mode-map (kbd "e")
+      (define-key view-mode-map (kbd "r") ;; reply
+                  (lambda ()
+                    (interactive)
+                    (with-current-buffer (chatgpt-shell--primary-buffer)
+                      (when shell-maker--busy
+                        (user-error "Busy, please wait")))
+                    (view-mode -1)
+                    (erase-buffer)))
+      (define-key view-mode-map (kbd "e") ;; show entire snippet
                   (lambda ()
                     (interactive)
                     (with-current-buffer (chatgpt-shell--primary-buffer)
