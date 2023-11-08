@@ -204,7 +204,8 @@ Can be used compile or run source block at point."
     "gpt-3.5-turbo-16k"
     "gpt-3.5-turbo-16k-0613"
     "gpt-4"
-    "gpt-4-0613")
+    "gpt-4-0613"
+    "gpt-4-1106-preview")
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
