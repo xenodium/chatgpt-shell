@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.86.1
+;; Version: 0.87.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1108,12 +1108,9 @@ With PREFIX, clear existing history. Appends any active region."
       ;; TODO: Find a better alternative to prevent clash.
       ;; Disable "n"/"p" for region-bindings-mode-map, so it doesn't
       ;; clash with "n"/"p" selection binding.
-      (when (boundp 'region-bindings-mode-map)
-        (make-local-variable 'region-bindings-mode-map)
-        (when (lookup-key region-bindings-mode-map "n")
-          (define-key region-bindings-mode-map "n" nil))
-        (when (lookup-key region-bindings-mode-map "p")
-          (define-key region-bindings-mode-map "p" nil)))
+      (when (boundp 'region-bindings-mode-disable-predicates)
+        (add-to-list 'region-bindings-mode-disable-predicates
+                     (lambda () buffer-read-only)))
       (define-key view-mode-map (kbd "g")
                   (lambda ()
                     (interactive)
