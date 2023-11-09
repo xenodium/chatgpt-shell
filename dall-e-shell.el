@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.33.1
+;; Version: 0.34.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -47,11 +47,6 @@
   "The default size of the requested image as a string.
 
 For example: \"1024x1024\""
-  :type 'string
-  :group 'dall-e-shell)
-
-(defcustom dall-e-shell-model-version "image-alpha-001"
-  "The used DALL-E OpenAI model."
   :type 'string
   :group 'dall-e-shell)
 
@@ -114,8 +109,7 @@ or
 
 (defun dall-e-shell--make-payload (history)
   "Create the request payload from HISTORY."
-  (let ((request-data `((model . ,dall-e-shell-model-version)
-                        (prompt . ,(car (car (last history)))))))
+  (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
     request-data))
