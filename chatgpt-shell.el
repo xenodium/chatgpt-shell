@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.87.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
+;; Version: 0.88.1
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1627,8 +1627,8 @@ Set SAVE-EXCURSION to prevent point from moving."
    (chatgpt-shell-parse-elisp-code code)))
 
 
-(defun chatgpt-shell-make-request-data (messages &optional version temperature)
-  "Make request data from MESSAGES, VERSION, and TEMPERATURE."
+(defun chatgpt-shell-make-request-data (messages &optional version temperature other-params)
+  "Make request data from MESSAGES, VERSION, TEMPERATURE, and OTHER-PARAMS."
   (let ((request-data `((model . ,(or version
                                       (chatgpt-shell-model-version)))
                         (messages . ,(vconcat ;; Vector for json
@@ -1636,11 +1636,16 @@ Set SAVE-EXCURSION to prevent point from moving."
     (when (or temperature chatgpt-shell-model-temperature)
       (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
             request-data))
+    (when other-params
+      (push other-params
+            request-data))
     request-data))
 
-(defun chatgpt-shell-post-messages (messages &optional version callback error-callback temperature)
+(defun chatgpt-shell-post-messages (messages &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with MESSAGES.
-Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, and TEMPERATURE.
+Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE and OTHER-PARAMS.
+
+OTHER-PARAMS are appended to the json object at the top level.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
@@ -1655,16 +1660,19 @@ For example:
  (lambda (error)
    (message \"%s\" error)))"
   (if (and callback error-callback)
-      (with-temp-buffer
-        (setq-local shell-maker--config
-                    chatgpt-shell--config)
-        (shell-maker-async-shell-command
-         (chatgpt-shell--make-curl-request-command-list
-          (chatgpt-shell-make-request-data messages version temperature))
-         nil ;; streaming
-         #'chatgpt-shell--extract-chatgpt-response
-         callback
-         error-callback))
+      (progn
+        (unless (boundp 'shell-maker--current-request-id)
+          (defvar-local shell-maker--current-request-id 0))
+        (with-temp-buffer
+          (setq-local shell-maker--config
+                      chatgpt-shell--config)
+          (shell-maker-async-shell-command
+           (chatgpt-shell--make-curl-request-command-list
+            (chatgpt-shell-make-request-data messages version temperature other-params))
+           nil ;; streaming
+           #'chatgpt-shell--extract-chatgpt-response
+           callback
+           error-callback)))
     (with-temp-buffer
       (setq-local shell-maker--config
                   chatgpt-shell--config)
@@ -1677,6 +1685,9 @@ For example:
                                                    messages)))))
                  (when (or temperature chatgpt-shell-model-temperature)
                    (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
+                         request-data))
+                 (when other-params
+                   (push other-params
                          request-data))
                  request-data)))
              (config chatgpt-shell--config)
@@ -1695,11 +1706,67 @@ For example:
         (shell-maker--write-output-to-log-buffer "\n\n" config)
         response))))
 
-(defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback)
+(defun chatgpt-shell-vision-send-prompt-for-dired-or-buffer-file ()
+  (interactive)
+  (let* ((file (chatgpt-shell--current-file))
+         (extension (downcase (file-name-extension file))))
+    (unless (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
+      (user-error "Must be user either .jpg, .jpeg, .png, .webp or .gif file."))
+    (chatgpt-shell-vision-make-request
+     (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
+     file)))
+
+(defun chatgpt-shell--current-file ()
+  "Return buffer file (if available) or dired selected file."
+  (when (use-region-p)
+    (user-error "No region selection supported"))
+  (if (buffer-file-name)
+      (buffer-file-name)
+    (let* ((dired-files (dired-get-marked-files))
+           (file (seq-first dired-files)))
+      (unless dired-files
+        (user-error "No file selected"))
+      (when (> (length dired-files) 1)
+        (user-error "Only one file selection supported"))
+      file)))
+
+(defun chatgpt-shell-vision-make-request (prompt url-path)
+  "Make a vision request using PROMPT and URL-PATH.
+
+PROMPT can be somethign like: \"Describe the image in detail\".
+URL-PATH can be either a local file path or an http:// URL."
+  (let* ((url (if (string-prefix-p "http" url-path)
+                  url-path
+                (concat "data:image/jpeg;base64,"
+                        (with-temp-buffer
+                          (insert-file-contents-literally url-path)
+                          (base64-encode-region (point-min) (point-max) t)
+                          (buffer-string)))))
+         (messages
+          (vconcat ;; Convert to vector for json
+           (append
+            `(((role . "user")
+               (content . ,(vconcat
+                            `(((type . "text")
+                               (text . ,prompt))
+                              ((type . "image_url")
+                               (image_url . ,url)))))))))))
+    (message "Request in progress...")
+    (chatgpt-shell-post-messages
+     messages "gpt-4-vision-preview"
+     (lambda (response)
+       (message response))
+     (lambda (error)
+       (message error))
+     nil '(max_tokens . 300))))
+
+(defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with PROMPT.
-Optioally pass model VERSION, CALLBACK, and ERROR-CALLBACK.
+Optioally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE, and OTHER-PARAMS.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
+
+OTHER-PARAMS are appended to the json object at the top level.
 
 For example:
 
@@ -1713,7 +1780,10 @@ For example:
   (chatgpt-shell-post-messages `(((role . "user")
                                   (content . ,prompt)))
                                version
-                               callback error-callback))
+                               callback
+                               error-callback
+                               temperature
+                               other-params))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
