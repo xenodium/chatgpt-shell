@@ -1642,7 +1642,7 @@ Set SAVE-EXCURSION to prevent point from moving."
             request-data))
     request-data))
 
-(defun chatgpt-shell-post-messages (messages &optional version callback error-callback temperature other-params)
+(defun chatgpt-shell-post-messages (messages response-extractor &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with MESSAGES.
 Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE and OTHER-PARAMS.
 
@@ -1671,7 +1671,7 @@ For example:
            (chatgpt-shell--make-curl-request-command-list
             (chatgpt-shell-make-request-data messages version temperature other-params))
            nil ;; streaming
-           #'chatgpt-shell--extract-chatgpt-response
+           (or response-extractor #'chatgpt-shell--extract-chatgpt-response)
            callback
            error-callback)))
     (with-temp-buffer
@@ -1755,14 +1755,18 @@ URL-PATH can be either a local file path or an http:// URL."
     (message "Requesting...")
     (chatgpt-shell-post-messages
      messages
+     #'chatgpt-shell--extract-chatgpt-response
      "gpt-4-vision-preview"
-     (or on-success (lambda (response)
-                      (message response)))
+     (if on-success
+         (lambda (response _partial)
+           (funcall on-success response))
+       (lambda (response _partial)
+         (message response)))
      (or on-failure (lambda (error)
                       (message error)))
      nil '(max_tokens . 300))))
 
-(defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback temperature other-params)
+(defun chatgpt-shell-post-prompt (prompt &optional response-extractor version callback error-callback temperature other-params)
   "Make a single ChatGPT request with PROMPT.
 Optioally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE, and OTHER-PARAMS.
 
@@ -1781,6 +1785,7 @@ For example:
    (message \"%s\" error)))"
   (chatgpt-shell-post-messages `(((role . "user")
                                   (content . ,prompt)))
+                               (or response-extractor #'chatgpt-shell--extract-chatgpt-response)
                                version
                                callback
                                error-callback

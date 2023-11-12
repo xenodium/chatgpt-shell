@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.43.1
+;; Version: 0.44.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -714,7 +714,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
            (shell-maker--write-output-to-log-buffer output config)
            (shell-maker--write-output-to-log-buffer "\n\n" config)
            (with-current-buffer buffer
-             (if (and active (= exit-status 0))
+             (if (= exit-status 0)
                  (funcall callback
                           (if (string-empty-p (string-trim output))
                               output
