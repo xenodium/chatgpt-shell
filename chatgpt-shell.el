@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.88.1
+;; Version: 0.89.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'esh-mode)
 (require 'eshell)
 (require 'find-func)
@@ -1730,7 +1731,7 @@ For example:
         (user-error "Only one file selection supported"))
       file)))
 
-(defun chatgpt-shell-vision-make-request (prompt url-path)
+(cl-defun chatgpt-shell-vision-make-request (prompt url-path &key callback error-callback)
   "Make a vision request using PROMPT and URL-PATH.
 
 PROMPT can be somethign like: \"Describe the image in detail\".
@@ -1751,14 +1752,14 @@ URL-PATH can be either a local file path or an http:// URL."
                                (text . ,prompt))
                               ((type . "image_url")
                                (image_url . ,url)))))))))))
-    (message "Request in progress...")
+    (message "Requesting...")
     (chatgpt-shell-post-messages
      messages "gpt-4-vision-preview"
-     (lambda (response)
-       (message response))
-     (lambda (error)
-       (message error))
-     nil '(max_tokens . 300))))
+     (or callback (lambda (response)
+                    (message response)))
+     (or error-callback (lambda (error)
+                          (message error)))
+     '(max_tokens . 300))))
 
 (defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with PROMPT.
@@ -1770,7 +1771,7 @@ OTHER-PARAMS are appended to the json object at the top level.
 
 For example:
 
-\(chatgpt-shell-request-oneof-prompt
+\(chatgpt-shell-post-prompt
  \"hello\"
  \"gpt-3.5-turbo\"
  (lambda (response)
