@@ -43,6 +43,11 @@
                  (string :tag "String"))
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-additional-curl-options nil
+  "Additional options for `curl' command."
+  :type '(repeat (string :tag "String"))
+  :group 'dall-e-shell)
+
 (defcustom dall-e-shell-image-size nil
   "The default size of the requested image as a string.
 
@@ -253,20 +258,21 @@ ERROR-CALLBACK otherwise."
 
 (defun dall-e-shell--make-curl-request-command-list (request-data)
   "Build DALL-E curl command list using REQUEST-DATA."
-  (list "curl" dall-e-shell--url
-        "--fail-with-body"
-        "--no-progress-meter"
-        "-m" (number-to-string dall-e-shell-request-timeout)
-        "-H" "Content-Type: application/json; charset=utf-8"
-        "-H" (format "Authorization: Bearer %s"
-                     (cond ((stringp dall-e-shell-openai-key)
-                            dall-e-shell-openai-key)
-                           ((functionp dall-e-shell-openai-key)
-                            (condition-case _err
-                                (funcall dall-e-shell-openai-key)
-                              (error
-                               "KEY-NOT-FOUND")))))
-        "-d" (shell-maker--json-encode request-data)))
+  (append (list "curl" dall-e-shell--url)
+          dall-e-shell-additional-curl-options
+          (list "--fail-with-body"
+                "--no-progress-meter"
+                "-m" (number-to-string dall-e-shell-request-timeout)
+                "-H" "Content-Type: application/json; charset=utf-8"
+                "-H" (format "Authorization: Bearer %s"
+                             (cond ((stringp dall-e-shell-openai-key)
+                                    dall-e-shell-openai-key)
+                                   ((functionp dall-e-shell-openai-key)
+                                    (condition-case _err
+                                        (funcall dall-e-shell-openai-key)
+                                      (error
+                                       "KEY-NOT-FOUND")))))
+                "-d" (shell-maker--json-encode request-data))))
 
 (provide 'dall-e-shell)
 
