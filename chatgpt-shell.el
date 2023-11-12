@@ -1731,7 +1731,7 @@ For example:
         (user-error "Only one file selection supported"))
       file)))
 
-(cl-defun chatgpt-shell-vision-make-request (prompt url-path &key callback error-callback)
+(cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
   "Make a vision request using PROMPT and URL-PATH.
 
 PROMPT can be somethign like: \"Describe the image in detail\".
@@ -1754,12 +1754,13 @@ URL-PATH can be either a local file path or an http:// URL."
                                (image_url . ,url)))))))))))
     (message "Requesting...")
     (chatgpt-shell-post-messages
-     messages "gpt-4-vision-preview"
-     (or callback (lambda (response)
-                    (message response)))
-     (or error-callback (lambda (error)
-                          (message error)))
-     '(max_tokens . 300))))
+     messages
+     "gpt-4-vision-preview"
+     (or on-success (lambda (response)
+                      (message response)))
+     (or on-failure (lambda (error)
+                      (message error)))
+     nil '(max_tokens . 300))))
 
 (defun chatgpt-shell-post-prompt (prompt &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with PROMPT.
