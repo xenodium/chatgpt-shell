@@ -1738,6 +1738,8 @@ PROMPT can be somethign like: \"Describe the image in detail\".
 URL-PATH can be either a local file path or an http:// URL."
   (let* ((url (if (string-prefix-p "http" url-path)
                   url-path
+                (unless (file-exists-p url-path)
+                  (error "file not found"))
                 (concat "data:image/jpeg;base64,"
                         (with-temp-buffer
                           (insert-file-contents-literally url-path)
