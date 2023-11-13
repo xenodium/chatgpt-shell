@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.42.1
+;; Version: 0.44.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -652,8 +652,6 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
-  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
-    (user-error "Not in a shell"))
   (let* ((buffer (shell-maker-buffer shell-maker--config))
          (request-id (shell-maker--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
@@ -716,7 +714,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
            (shell-maker--write-output-to-log-buffer output config)
            (shell-maker--write-output-to-log-buffer "\n\n" config)
            (with-current-buffer buffer
-             (if (and active (= exit-status 0))
+             (if (= exit-status 0)
                  (funcall callback
                           (if (string-empty-p (string-trim output))
                               output
@@ -753,9 +751,10 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
 
 (defun shell-maker--current-request-id ()
   "Access variable `shell-maker--current-request-id' with right mode ensured."
-  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
-    (error "Not in a shell"))
-  shell-maker--current-request-id)
+  (if (or (boundp 'shell-maker--current-request-id)
+          (eq major-mode (shell-maker-major-mode shell-maker--config)))
+      shell-maker--current-request-id
+    (error "Not in a shell")))
 
 (defun shell-maker--set-pm (pos)
   "Set the process mark in the current buffer to POS."

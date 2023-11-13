@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.33.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.42.1"))
+;; Version: 0.34.1
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -43,15 +43,15 @@
                  (string :tag "String"))
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-additional-curl-options nil
+  "Additional options for `curl' command."
+  :type '(repeat (string :tag "String"))
+  :group 'dall-e-shell)
+
 (defcustom dall-e-shell-image-size nil
   "The default size of the requested image as a string.
 
 For example: \"1024x1024\""
-  :type 'string
-  :group 'dall-e-shell)
-
-(defcustom dall-e-shell-model-version "image-alpha-001"
-  "The used DALL-E OpenAI model."
   :type 'string
   :group 'dall-e-shell)
 
@@ -114,8 +114,7 @@ or
 
 (defun dall-e-shell--make-payload (history)
   "Create the request payload from HISTORY."
-  (let ((request-data `((model . ,dall-e-shell-model-version)
-                        (prompt . ,(car (car (last history)))))))
+  (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
     request-data))
@@ -259,20 +258,21 @@ ERROR-CALLBACK otherwise."
 
 (defun dall-e-shell--make-curl-request-command-list (request-data)
   "Build DALL-E curl command list using REQUEST-DATA."
-  (list "curl" dall-e-shell--url
-        "--fail-with-body"
-        "--no-progress-meter"
-        "-m" (number-to-string dall-e-shell-request-timeout)
-        "-H" "Content-Type: application/json; charset=utf-8"
-        "-H" (format "Authorization: Bearer %s"
-                     (cond ((stringp dall-e-shell-openai-key)
-                            dall-e-shell-openai-key)
-                           ((functionp dall-e-shell-openai-key)
-                            (condition-case _err
-                                (funcall dall-e-shell-openai-key)
-                              (error
-                               "KEY-NOT-FOUND")))))
-        "-d" (shell-maker--json-encode request-data)))
+  (append (list "curl" dall-e-shell--url)
+          dall-e-shell-additional-curl-options
+          (list "--fail-with-body"
+                "--no-progress-meter"
+                "-m" (number-to-string dall-e-shell-request-timeout)
+                "-H" "Content-Type: application/json; charset=utf-8"
+                "-H" (format "Authorization: Bearer %s"
+                             (cond ((stringp dall-e-shell-openai-key)
+                                    dall-e-shell-openai-key)
+                                   ((functionp dall-e-shell-openai-key)
+                                    (condition-case _err
+                                        (funcall dall-e-shell-openai-key)
+                                      (error
+                                       "KEY-NOT-FOUND")))))
+                "-d" (shell-maker--json-encode request-data))))
 
 (provide 'dall-e-shell)
 
