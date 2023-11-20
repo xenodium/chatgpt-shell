@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.89.1
+;; Version: 0.90.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1853,7 +1853,7 @@ For example:
     request-data))
 
 (defun chatgpt-shell--approximate-context-length (model messages)
-  "Approximate the contenxt length using MODEL and MESSAGES."
+  "Approximate the context length using MODEL and MESSAGES."
   (let* ((tokens-per-message)
          (max-tokens)
          (original-length (floor (/ (length messages) 2)))
