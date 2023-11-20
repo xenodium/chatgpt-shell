@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.30.1
+;; Version: 0.31.1
 ;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.88.1"))
 
 ;;; License:
@@ -106,11 +106,12 @@ have a :context arg with a value matching the CONTEXT-NAME."
          (cons 'role "user")
          (cons 'content (map-elt src-block 'body)))
         context)
-       (push
-        (list
-         (cons 'role "assistant")
-         (cons 'content (map-elt src-block 'result)))
-        context))
+       (when (map-elt src-block 'result)
+         (push
+          (list
+           (cons 'role "assistant")
+           (cons 'content (map-elt src-block 'result)))
+          context)))
      (ob-chatgpt--relevant-source-blocks-before-current context-name))
     (nreverse context)))
 
