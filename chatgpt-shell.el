@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.90.1
+;; Version: 0.91.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -200,13 +200,13 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '("gpt-3.5-turbo"
-    "gpt-3.5-turbo-0613"
-    "gpt-3.5-turbo-16k"
-    "gpt-3.5-turbo-16k-0613"
-    "gpt-4"
+  '("gpt-4-1106-preview"
     "gpt-4-0613"
-    "gpt-4-1106-preview")
+    "gpt-4"
+    "gpt-3.5-turbo-16k-0613"
+    "gpt-3.5-turbo-16k"
+    "gpt-3.5-turbo-0613"
+    "gpt-3.5-turbo")
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
