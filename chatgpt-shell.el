@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.91.1
+;; Version: 0.92.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1858,6 +1858,8 @@ For example:
          (max-tokens)
          (original-length (floor (/ (length messages) 2)))
          (context-length original-length))
+    ;; Remove "ft:" from fine-tuned models and recognize as usual
+    (setq model (string-remove-prefix "ft:" model))
     (cond
      ((string-prefix-p "gpt-3.5" model)
       (setq tokens-per-message 4
