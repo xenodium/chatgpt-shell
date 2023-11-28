@@ -353,7 +353,7 @@ Please enable logging =(setq chatgpt-shell-logging t)= and share the content of 
 | dall-e-shell-image-size              | The default size of the requested image as a string.                        |
 | dall-e-shell-read-string-function    | Function to read strings from user.                                         |
 | dall-e-shell-request-timeout         | How long to wait for a request to time out.                                 |
-| dall-e-shell-model-version           | The used DALL-E OpenAI model.                                               |
+| dall-e-shell-model-version           | The used DALL-E OpenAI model.  For Dall-E 3, use "dall-e-3".                |
 | dall-e-shell-display-function        | Function to display the shell.  Set to `display-buffer' or custom function. |
 | dall-e-shell-additional-curl-options | Additional options for `curl' command.                                      |
 | dall-e-shell-image-output-directory  | Output directory for the generated image.                                   |
