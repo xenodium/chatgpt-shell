@@ -324,7 +324,8 @@ Please share the entire snippet you've used to set =chatgpt-shell= up (but redac
 Please enable =M-x toggle-debug-on-error=, reproduce the error, and share the stack trace.
 ** Found unexpected behaviour?
 Please enable logging =(setq chatgpt-shell-logging t)= and share the content of the =*chatgpt-log*= buffer in the bug report.
-
+** Babel issues?
+Please also share the entire org snippet.
 * dall-e-shell customizations
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Custom variable" "Description") :exports results
   (let ((rows))
