@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.34.1
+;; Version: 0.35.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -52,6 +52,11 @@
   "The default size of the requested image as a string.
 
 For example: \"1024x1024\""
+  :type 'string
+  :group 'dall-e-shell)
+
+(defcustom dall-e-shell-model-version nil
+  "The used DALL-E OpenAI model.  For Dall-E 3, use \"dall-e-3\"."
   :type 'string
   :group 'dall-e-shell)
 
@@ -117,6 +122,9 @@ or
   (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
+    (when dall-e-shell-model-version
+      (push `(model . ,dall-e-shell-model-version)
+            request-data))
     request-data))
 
 (defun dall-e-shell--extract-response (json &optional no-download)
@@ -179,11 +187,12 @@ Optionally provide model VERSION or IMAGE-SIZE."
     (let* ((api-buffer (current-buffer))
            (command
             (dall-e-shell--make-curl-request-command-list
-             (let ((request-data `((model . ,(or version
-                                                 dall-e-shell-model-version))
-                                   (prompt . ,prompt))))
+             (let ((request-data `((prompt . ,prompt))))
                (when (or image-size dall-e-shell-image-size)
                  (push `(size . ,(or image-size dall-e-shell-image-size))
+                       request-data))
+               (when (or version dall-e-shell-model-version)
+                 (push `(model . ,(or version dall-e-shell-model-version))
                        request-data))
                request-data)))
            (_status (condition-case err
