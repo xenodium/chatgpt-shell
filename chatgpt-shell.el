@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.92.1
+;; Version: 0.93.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1708,7 +1708,12 @@ For example:
         (shell-maker--write-output-to-log-buffer "\n\n" config)
         response))))
 
-(defun chatgpt-shell-vision-send-prompt-for-dired-or-buffer-file ()
+(defun chatgpt-shell-describe-image ()
+  "Request OpenAI to describe image.
+
+When visiting a buffer with an image, send that.
+
+If in a `dired' buffer, use selection (single image only for now)."
   (interactive)
   (let* ((file (chatgpt-shell--current-file))
          (extension (downcase (file-name-extension file))))

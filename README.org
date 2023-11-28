@@ -301,6 +301,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-load-awesome-prompts                 | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts. |
 | RET             | chatgpt-shell-submit                               | Submit current input.                                             |
 | C-c C-n         | chatgpt-shell-next-item                            | Go to next item.                                                  |
+|                 | chatgpt-shell-describe-image                       | Request OpenAI to describe image.                                 |
 |                 | chatgpt-shell-execute-block-action-at-point        | Execute block at point.                                           |
 |                 | chatgpt-shell-view-at-point                        | View prompt and output at point in a separate buffer.             |
 |                 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                           |
