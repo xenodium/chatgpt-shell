@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.30.1
-;; Package-Requires: ((emacs "27.1") (dall-e-shell "0.35.1"))
+;; Version: 0.31.1
+;; Package-Requires: ((emacs "27.1") (dall-e-shell "0.37.1"))
 
 ;;; License:
 
@@ -53,7 +53,9 @@
   "Execute a block of DALL-E prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing DALL-E source code block")
-  (dall-e-shell-post-prompt body (map-elt params :version)))
+  (dall-e-shell-post-prompt body
+                            (map-elt params :version) nil
+                            (seq-contains-p (map-elt params :result-params) "both")))
 
 (defun ob-dall-e-shell-setup ()
   "Set up babel DALL-E support."

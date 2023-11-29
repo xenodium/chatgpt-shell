@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.36.1
+;; Version: 0.37.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -147,7 +147,8 @@ Set NO-DOWNLOAD to skip automatic downloading."
           (if no-download
               `((url . ,url)
                 (created . ,created)
-                (path . ,path))
+                (path . ,path)
+                (revised_prompt . ,revised-prompt))
             (progn
               (dall-e-shell--download-image
                url path
@@ -184,10 +185,12 @@ Set NO-DOWNLOAD to skip automatic downloading."
         (let-alist parsed
           .error.message))))
 
-(defun dall-e-shell-post-prompt (prompt &optional version image-size)
+(defun dall-e-shell-post-prompt (prompt &optional version image-size show-revised-prompt)
   "Make a single DALL-E request with PROMPT.
 
-Optionally provide model VERSION or IMAGE-SIZE."
+Optionally provide model VERSION or IMAGE-SIZE.
+
+Set SHOW-REVISED-PROMPT to include in returned value."
   (with-temp-buffer
     (setq-local shell-maker--config
                 dall-e-shell--config)
@@ -230,7 +233,11 @@ Optionally provide model VERSION or IMAGE-SIZE."
                              (buffer-string))))
               (message "outcome: %s" output)
               (if (= status 0)
-                  (map-elt response 'path)
+                  (if (and show-revised-prompt
+                           (map-elt response 'revised_prompt))
+                      (concat (map-elt response 'path)
+                              (format "\n\n%s" (map-elt response 'revised_prompt)))
+                    (map-elt response 'path))
                 output)))
         (or response (with-current-buffer api-buffer
                        (buffer-string)))))))

@@ -527,6 +527,10 @@ Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
 
 Use =:version= to set the model, for example: "dall-e-3".
 
+** :results
+
+For DALL-E 3, use =:results both= to also output the revised prompt.
+
 * shell-maker
 
 There are currently two shell implementations (ChatGPT and DALL-E). Other services (local or cloud) can be brought to Emacs as shells. =shell-maker= can help with that.
