@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.35.1
+;; Version: 0.36.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -139,7 +139,11 @@ Set NO-DOWNLOAD to skip automatic downloading."
                 (created (number-to-string (let-alist parsed
                                              .created)))
                 (path (expand-file-name (concat created ".png")
-                                        dall-e-shell-image-output-directory)))
+                                        dall-e-shell-image-output-directory))
+                (revised-prompt (or (let-alist parsed
+                                      (let-alist (seq-first .data)
+                                        .revised_prompt))
+                                    "")))
           (if no-download
               `((url . ,url)
                 (created . ,created)
@@ -173,7 +177,10 @@ Set NO-DOWNLOAD to skip automatic downloading."
                    (with-current-buffer buffer
                      (remove-text-properties start end '(face nil))
                      (add-text-properties start end `(display ,error))))))
-              (propertize path 'display "[downloading...]")))
+              (if (string-empty-p revised-prompt)
+                  (propertize path 'display "[downloading...]")
+                (concat (propertize path 'display "[downloading...]")
+                        (format "\n\n%s" revised-prompt)))))
         (let-alist parsed
           .error.message))))
 
