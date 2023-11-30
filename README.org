@@ -146,7 +146,7 @@ Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgp
 
 =chatgpt-shell= can either wait until the entire response is received before displaying, or it can progressively display as chunks arrive (streaming).
 
-Streaming is enabled by default. =(setq chatgpt-shell-chatgpt-streaming nil)= to disable it.
+Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable it.
 
 * chatgpt-shell customizations
 
