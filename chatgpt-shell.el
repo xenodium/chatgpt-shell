@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.93.1
+;; Version: 0.94.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -308,7 +308,7 @@ For example:
 
 \(\"Translating\" . \"You are a helpful English to Spanish assistant.\")\"
 \(\"Programming\" . \"The user is a programmer with very limited time...\")"
-  :type '(repeat (choice (cons string string) string))
+  :type '(repeat (cons string string))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-system-prompt 1 ;; Concise
@@ -343,43 +343,35 @@ Or nil if none."
         (t
          nil)))
 
+(defun chatgpt-shell-duplicate-map-keys (map)
+  "Return duplicate keys in MAP."
+  (let ((keys (map-keys map))
+        (seen '())
+        (duplicates '()))
+    (dolist (key keys)
+      (if (member key seen)
+          (push key duplicates)
+        (push key seen)))
+    duplicates))
+
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (let ((choice (completing-read
-                 "System prompt: "
-                 (append
-                  (list "None")
-                  (seq-map (lambda (item)
-                             (if (consp item)
-                                 (concat
-                                  (car item)
-                                  (propertize (concat "<<prompt>>"
-                                                      (cdr item))
-                                              'invisible t))
-                               (truncate-string-to-width
-                                (nth 0 (split-string item "\n"))
-                                (window-body-width))))
-                           chatgpt-shell-system-prompts)))))
+  (when-let ((duplicates (chatgpt-shell-duplicate-map-keys chatgpt-shell-system-prompts)))
+    (user-error "Duplicate prompt names found %s. Please remove." duplicates))
+  (let* ((choices (append (list "None")
+                          (map-keys chatgpt-shell-system-prompts)))
+         (choice (completing-read "System prompt: " choices))
+         (choice-pos (seq-position choices choice)))
     (if (or (string-equal choice "None")
-            (string-empty-p (string-trim choice)))
+            (string-empty-p (string-trim choice))
+            (not choice-pos))
         (setq-local chatgpt-shell-system-prompt nil)
       (setq-local chatgpt-shell-system-prompt
-            (or (seq-position chatgpt-shell-system-prompts choice
-                              (lambda (item prefix)
-                                ;; Some items are of the form:
-                                ;;   Programing<<prompt>>The user is a programmer.
-                                (if-let ((parts (split-string choice "<<prompt>>"))
-                                         (prompt (when (> (length parts) 1)
-                                                   (cons (nth 0 parts)
-                                                         (nth 1 parts)))))
-                                    (equal item prompt)
-                                  (if (consp item)
-                                      nil ;; Different type / no matching.
-                                    (string-prefix-p prefix item)))))
-                choice))))
+                  ;; -1 to disregard None
+                  (1- (seq-position choices choice)))))
   (chatgpt-shell--update-prompt t)
   (chatgpt-shell-interrupt nil))
 
