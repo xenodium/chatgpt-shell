@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.94.1
+;; Version: 0.95.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -568,7 +568,8 @@ Set NEW-SESSION to start a separate new session."
       (with-current-buffer shell-buffer
         (setq-local chatgpt-shell-model-version version)
         (setq-local chatgpt-shell-system-prompt system-prompt)
-        (chatgpt-shell--update-prompt t)))
+        (chatgpt-shell--update-prompt t)
+        (chatgpt-shell--add-menus)))
     ;; Disabling advice for now. It gets in the way.
     ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
     (define-key chatgpt-shell-mode-map (kbd "C-M-h")
@@ -663,6 +664,36 @@ Set NEW-SESSION to start a separate new session."
           (shell-maker-buffer-default-name
            (shell-maker-config-name chatgpt-shell--config))
           (chatgpt-shell--shell-info)))
+
+(defun chatgpt-shell--add-menus ()
+  "Add ChatGPT shell menu items."
+  (unless (eq major-mode 'chatgpt-shell-mode)
+    (user-error "Not in a shell"))
+  (when-let ((duplicates (chatgpt-shell-duplicate-map-keys chatgpt-shell-system-prompts)))
+    (user-error "Duplicate prompt names found %s. Please remove." duplicates))
+  (easy-menu-define chatgpt-shell-system-prompts-menu (current-local-map) "ChatGPT"
+    `("ChatGPT"
+      ("Versions"
+       ,@(mapcar (lambda (version)
+                   `[,version
+                     (lambda ()
+                       (interactive)
+                       (setq-local chatgpt-shell-model-version
+                                   (seq-position chatgpt-shell-model-versions ,version))
+                       (chatgpt-shell--update-prompt t)
+                       (chatgpt-shell-interrupt nil))])
+                 chatgpt-shell-model-versions))
+      ("Prompts"
+       ,@(mapcar (lambda (prompt)
+                   `[,(car prompt)
+                     (lambda ()
+                       (interactive)
+                       (setq-local chatgpt-shell-system-prompt
+                                   (seq-position (map-keys chatgpt-shell-system-prompts) ,(car prompt)))
+                       (chatgpt-shell--update-prompt t)
+                       (chatgpt-shell-interrupt nil))])
+                 chatgpt-shell-system-prompts))))
+  (easy-menu-add chatgpt-shell-system-prompts-menu))
 
 (defun chatgpt-shell--update-prompt (rename-buffer)
   "Update prompt and prompt regexp from `chatgpt-shell-model-versions'.
