@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.37.1
+;; Version: 0.38.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 ;; Support the work https://github.com/sponsors/xenodium
 
 (require 'shell-maker)
+(require 'seq)
 
 ;;; Code:
 
@@ -58,6 +59,17 @@ For example: \"1024x1024\""
 (defcustom dall-e-shell-model-version nil
   "The used DALL-E OpenAI model.  For Dall-E 3, use \"dall-e-3\"."
   :type 'string
+  :group 'dall-e-shell)
+
+(defcustom dall-e-shell-model-versions
+  '("dall-e-3"
+    "dall-e-2")
+  "The list of Dall-EAI models to swap from.
+
+The list of models supported by /v1/chat/completions endpoint is
+documented at
+https://platform.openai.com/docs/models/model-endpoint-compatibility."
+  :type '(repeat string)
   :group 'dall-e-shell)
 
 (defcustom dall-e-shell-request-timeout 60
@@ -112,10 +124,96 @@ or
 (shell-maker-define-major-mode dall-e-shell--config)
 
 ;;;###autoload
-(defun dall-e-shell ()
-  "Start a DALL-E shell."
+(defun dall-e-shell (&optional new-session)
+  "Start a DALL-E shell.
+
+With NEW-SESSION, start a new session."
+  (interactive "P")
+  (let* ((dall-e-shell--config
+          (let ((config (copy-sequence dall-e-shell--config)))
+            (setf (shell-maker-config-prompt config)
+                  (car (dall-e-shell--prompt-pair)))
+            (setf (shell-maker-config-prompt-regexp config)
+                  (cdr (dall-e-shell--prompt-pair)))
+            config))
+         (shell-buffer (shell-maker-start dall-e-shell--config
+                                          nil
+                                          dall-e-shell-welcome-function
+                                          new-session
+                                          (when (dall-e-shell--shell-buffers)
+                                            (buffer-name (seq-first (dall-e-shell--shell-buffers)))))))
+    (with-current-buffer
+        ;; TODO: Add menus. See `chatgpt-shell--add-menus'.
+        (dall-e-shell--update-prompt t))
+    (define-key dall-e-shell-mode-map (kbd "C-c C-v")
+                #'dall-e-shell-swap-model-version)))
+
+(defun dall-e-shell--update-prompt (rename-buffer)
+  "Update prompt and prompt regexp from `dall-e-shell-model-versions'.
+
+Set RENAME-BUFFER to also rename the buffer accordingly."
+  (unless (eq major-mode 'dall-e-shell-mode)
+    (user-error "Not in a shell"))
+  (shell-maker-set-prompt
+   (car (dall-e-shell--prompt-pair))
+   (cdr (dall-e-shell--prompt-pair)))
+  (when rename-buffer
+    (shell-maker-set-buffer-name
+     (current-buffer)
+     (dall-e-shell--make-buffer-name))))
+
+(defun dall-e-shell--make-buffer-name ()
+  "Generate a buffer name using current shell config info."
+  (format "%s v%s"
+          (shell-maker-buffer-default-name
+           (shell-maker-config-name dall-e-shell--config))
+          (dall-e-shell--shrink-model-version
+           (dall-e-shell-model-version))))
+
+(defun dall-e-shell--prompt-pair ()
+  "Return a pair with prompt and prompt-regexp."
+  (cons
+   (format "DALL-E(v%s)> " (dall-e-shell--shrink-model-version
+                           (dall-e-shell-model-version)))
+   (rx (seq bol "DALL-E" (one-or-more (not (any "\n"))) ">" (or space "\n")))))
+
+(defun dall-e-shell--shell-buffers ()
+  "Return a list of all shell buffers."
+  (seq-filter
+   (lambda (buffer)
+     (eq (buffer-local-value 'major-mode buffer)
+         'dall-e-shell-mode))
+   (buffer-list)))
+
+(defun dall-e-shell--shrink-model-version (model-version)
+  "Shrink MODEL-VERSION.  dall-e-3 -> 3."
+  (string-remove-prefix "dall-e-" (string-trim model-version)))
+
+(defun dall-e-shell-model-version ()
+  "Return active model version."
+  (cond ((stringp dall-e-shell-model-version)
+         dall-e-shell-model-version)
+        ((integerp dall-e-shell-model-version)
+         (nth dall-e-shell-model-version
+              dall-e-shell-model-versions))
+        (t
+         (seq-first dall-e-shell-model-versions))))
+
+(defun dall-e-shell-swap-model-version ()
+  "Swap model version from `dall-e-shell-model-versions'."
   (interactive)
-  (shell-maker-start dall-e-shell--config nil dall-e-shell-welcome-function))
+  (unless (eq major-mode 'dall-e-shell-mode)
+    (user-error "Not in a shell"))
+  (setq-local dall-e-shell-model-version
+              (completing-read "Model version: "
+                               (if (> (length dall-e-shell-model-versions) 1)
+                                   (seq-remove
+                                    (lambda (item)
+                                      (string-equal item (dall-e-shell-model-version)))
+                                    dall-e-shell-model-versions)
+                                 dall-e-shell-model-versions) nil t))
+  (dall-e-shell--update-prompt t)
+  (dall-e-shell-interrupt nil))
 
 (defun dall-e-shell--make-payload (history)
   "Create the request payload from HISTORY."
@@ -126,6 +224,19 @@ or
       (push `(model . ,dall-e-shell-model-version)
             request-data))
     request-data))
+
+(defun dall-e-shell-interrupt (ignore-item)
+  "Interrupt `dall-e-shell' from any buffer.
+
+With prefix IGNORE-ITEM, do not mark as failed."
+  (interactive "P")
+  (with-current-buffer
+      (cond
+       ((eq major-mode 'dall-e-shell-mode)
+        (current-buffer))
+       (t
+        (shell-maker-buffer-name dall-e-shell--config)))
+    (shell-maker-interrupt ignore-item)))
 
 (defun dall-e-shell--extract-response (json &optional no-download)
   "Extract DALL-E response from JSON.
