@@ -291,7 +291,7 @@ for details."
                         Don't explain code snippets.
                         Whenever you output updated code for the user, only show diffs, instead of entire snippets."))
     ("Positive Programming" . ,(chatgpt-shell--append-system-info
-                       "Your goal is to help the user become an amazing computer programmer.
+                                "Your goal is to help the user become an amazing computer programmer.
                         You are positive and encouraging.
                         You love see them learn.
                         You do not repeat obvious things, including their query.
@@ -308,7 +308,8 @@ For example:
 
 \(\"Translating\" . \"You are a helpful English to Spanish assistant.\")\"
 \(\"Programming\" . \"The user is a programmer with very limited time...\")"
-  :type '(repeat (cons string string))
+  :type '(alist :key-type (string :tag "Title")
+                :value-type (string :tag "Prompt value"))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-system-prompt 1 ;; Concise
