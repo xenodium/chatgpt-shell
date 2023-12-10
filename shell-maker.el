@@ -44,7 +44,9 @@
 
 (defcustom shell-maker-display-function #'pop-to-buffer-same-window
   "Function to display the shell.  Set to `display-buffer' or custom function."
-  :type 'function
+  :type '(choice (function-item :tag "Pop to Buffer" pop-to-buffer-same-window)
+                 (function-item :tag "Display Buffer" display-buffer)
+                 function)
   :group 'shell-maker)
 
 (defcustom shell-maker-read-string-function (lambda (prompt history)
