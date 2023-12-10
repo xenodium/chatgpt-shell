@@ -172,7 +172,8 @@ For example:
 
                   lowercase      Emacs mode (without -mode)
 Objective-C -> (\"objective-c\" . \"objc\")"
-  :type '(repeat (cons string string))
+  :type '(alist :key-type (string :tag "Language Name/Alias")
+                :value-type (string :tag "Mode Name (without -mode)"))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-babel-headers '(("dot" . ((:file . "<temp-file>.png")))
