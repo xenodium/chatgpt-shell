@@ -194,9 +194,9 @@ Please submit contributions so more things work out of the box."
   "Block actions for known languages.
 
 Can be used compile or run source block at point."
-  :type '(list (cons string
-                     (list (cons 'primary-action-confirmation string)
-                           (cons 'primary-action function))))
+  :type '(alist :key-type (string :tag "Language")
+                :value-type (list (cons (const 'primary-action-confirmation) (string :tag "Confirmation Prompt:"))
+                                  (cons (const 'primary-action) (function :tag "Action:"))))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
