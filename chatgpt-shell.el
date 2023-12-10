@@ -185,8 +185,14 @@ Objective-C -> (\"objective-c\" . \"objc\")"
                                          ("c" . ((:results . "raw"))))
   "Additional headers to make babel blocks work.
 
+Entries are of the form (language . headers).  Headers should
+conform to the types of `org-babel-default-header-args', which
+see.
+
 Please submit contributions so more things work out of the box."
-  :type '(repeat (cons string string))
+  :type '(alist :key-type (string :tag "Language")
+                :value-type (alist :key-type (restricted-sexp :match-alternatives (keywordp) :tag "Argument Name")
+                                   :value-type (string :tag "Value")))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-source-block-actions
