@@ -64,7 +64,7 @@ For example: \"1024x1024\""
 (defcustom dall-e-shell-model-versions
   '("dall-e-3"
     "dall-e-2")
-  "The list of Dall-EAI models to swap from.
+  "The list of Dall-E OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
 documented at

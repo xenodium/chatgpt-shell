@@ -356,6 +356,7 @@ Please also share the entire org snippet.
 | dall-e-shell-request-timeout         | How long to wait for a request to time out.                                 |
 | dall-e-shell-model-version           | The used DALL-E OpenAI model.  For Dall-E 3, use "dall-e-3".                |
 | dall-e-shell-display-function        | Function to display the shell.  Set to `display-buffer' or custom function. |
+| dall-e-shell-model-versions          | The list of Dall-E OpenAI models to swap from.                              |
 | dall-e-shell-additional-curl-options | Additional options for `curl' command.                                      |
 | dall-e-shell-image-output-directory  | Output directory for the generated image.                                   |
 
@@ -396,9 +397,11 @@ Please also share the entire org snippet.
 #+RESULTS:
 | C-<up> or M-p   | dall-e-shell-previous-input          | Cycle backwards through input history, saving input.       |
 |                 | dall-e-shell                         | Start a DALL-E shell.                                      |
+|                 | dall-e-shell-interrupt               | Interrupt `dall-e-shell' from any buffer.                  |
 | S-<return>      | dall-e-shell-newline                 | Insert a newline, and move to left margin of the new line. |
 | RET             | dall-e-shell-submit                  | Submit current input.                                      |
 | C-x C-s         | dall-e-shell-save-session-transcript | Save shell transcript to file.                             |
+| C-c C-v         | dall-e-shell-swap-model-version      | Swap model version from `dall-e-shell-model-versions'.     |
 |                 | dall-e-shell-mode                    | Major mode for DALL-E shell.                               |
 | C-<down> or M-n | dall-e-shell-next-input              | Cycle forwards through input history.                      |
 | M-r             | dall-e-shell-search-history          | Search previous input history.                             |
