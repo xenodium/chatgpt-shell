@@ -1103,7 +1103,41 @@ If region is active, append to prompt."
 (defun chatgpt-shell-prompt-compose (prefix)
   "Compose and send prompt (kbd \"C-c C-c\") from a dedicated buffer.
 
-With PREFIX, clear existing history. Appends any active region."
+With PREFIX, clear existing history (wipe asociated shell history).
+
+Whenever `chatgpt-shell-prompt-compose' is invoked, appends any active
+region to compose buffer.
+
+The compose buffer always shows the latest interaction, but it's
+backed by the shell history. You can always switch to the shell buffer
+to view the history.
+
+Note: There's a fair bit of functionality packed in the compose buffer
+and fairly experimental (implementation needs plenty of cleaning up),
+but I'm finding it fairly useful. I need to split it out into a
+separate major mode, but I'll list the current functionality in case
+folks want to try it out.
+
+Editing: While in edit mode, it offers a couple of magit-like commit
+buffer.
+
+ `C-c C-c' to send the buffer query.
+ `C-c C-k' to cancel compose buffer.
+ `M-r' search through history.
+ `M-p' cycle through previous item in history.
+ `M-n' cycle through next item in history.
+
+Read-only: After sending a query, the buffer becomes read-only and
+enables additional key bindings.
+
+ `C-c C-c' After sending offers to abort query in-progress.
+ `g' Refresh (re-send the query). Useful to retry on disconnects.
+ `n' Jump to next source block.
+ `p' Jump to next previous block.
+ `r' Reply to follow-up with additional questions.
+ `e' Send \"Show entire snippet\" query (useful to request alternative
+to diffs).
+ `C-M-h' Mark block block at point."
   (interactive "P")
   (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
          (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
