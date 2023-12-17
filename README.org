@@ -359,6 +359,7 @@ Please also share the entire org snippet.
 | dall-e-shell-model-versions          | The list of Dall-E OpenAI models to swap from.                              |
 | dall-e-shell-additional-curl-options | Additional options for `curl' command.                                      |
 | dall-e-shell-image-output-directory  | Output directory for the generated image.                                   |
+| dall-e-shell-image-quality           | Image quality: `standard' or `hd' (DALL-E 3 only feature).                  |
 
 * dall-e-shell commands
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results

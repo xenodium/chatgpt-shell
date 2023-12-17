@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.38.1
+;; Version: 0.39.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -57,8 +57,10 @@ For example: \"1024x1024\""
   :group 'dall-e-shell)
 
 (defcustom dall-e-shell-image-quality nil
-  "If using Dall-E 3, quality attribute can be set to either `standard' or `hd'"
-  :type 'string
+  "Image quality: `standard' or `hd' (DALL-E 3 only feature)."
+  :type '(choice (const :tag "None" nil)
+                 (string :tag "Standard" "standard")
+                 (string :tag "HD" "hd"))
   :group 'dall-e-shell)
 
 (defcustom dall-e-shell-model-version nil
@@ -225,8 +227,10 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
   (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
-    (when dall-e-shell-image-quality
-      (push `(quality . ,dall-e-shell-image-quality) request-data))
+    (if (and dall-e-shell-image-quality
+             (equal (dall-e-shell-model-version) "dall-e-3"))
+        (push `(quality . ,dall-e-shell-image-quality) request-data)
+      (user-error "`dall-e-shell-image-quality' must be used with \"dall-e-3\""))
     (when dall-e-shell-model-version
       (push `(model . ,dall-e-shell-model-version)
             request-data))
