@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.95.1
+;; Version: 0.96.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1142,6 +1142,7 @@ Read-only: After sending a query, the buffer becomes read-only and
 enables additional key bindings.
 
  `C-c C-c' After sending offers to abort query in-progress.
+ `q' Exits the read-only buffer.
  `g' Refresh (re-send the query). Useful to retry on disconnects.
  `n' Jump to next source block.
  `p' Jump to next previous block.
@@ -1150,6 +1151,13 @@ enables additional key bindings.
 to diffs).
  `C-M-h' Mark block block at point."
   (interactive "P")
+  (unless (chatgpt-shell--primary-buffer)
+    (chatgpt-shell--set-primary-buffer
+     (shell-maker-start chatgpt-shell--config
+                        t
+                        chatgpt-shell-welcome-function
+                        t
+                        (chatgpt-shell--make-buffer-name))))
   (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
          (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
                               "compose"))
