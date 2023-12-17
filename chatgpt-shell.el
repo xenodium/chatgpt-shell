@@ -800,6 +800,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                 (cons 'start start)
                 (cons 'end end)))))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-headers (&optional avoid-ranges)
   "Extract markdown headers with AVOID-RANGES."
   (let ((headers '())
@@ -826,6 +827,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              headers)))))
     (nreverse headers)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-links (&optional avoid-ranges)
   "Extract markdown links with AVOID-RANGES."
   (let ((links '())
@@ -855,6 +857,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              links)))))
     (nreverse links)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-bolds (&optional avoid-ranges)
   "Extract markdown bolds with AVOID-RANGES."
   (let ((bolds '())
@@ -882,6 +885,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              bolds)))))
     (nreverse bolds)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-strikethroughs (&optional avoid-ranges)
   "Extract markdown strikethroughs with AVOID-RANGES."
   (let ((strikethroughs '())
@@ -906,6 +910,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              strikethroughs)))))
     (nreverse strikethroughs)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-italics (&optional avoid-ranges)
   "Extract markdown italics with AVOID-RANGES."
   (let ((italics '())
@@ -938,6 +943,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              italics)))))
     (nreverse italics)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--markdown-inline-codes (&optional avoid-ranges)
   "Get a list of all inline markdown code in buffer with AVOID-RANGES."
   (let ((codes '())
@@ -958,6 +964,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
               'body (cons (match-beginning 1) (match-end 1))) codes)))))
     (nreverse codes)))
 
+;; TODO: Move to shell-maker.
 (defvar chatgpt-shell--source-block-regexp
   (rx  bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
        (group (zero-or-more (or alphanumeric "-" "+"))) ;; language
@@ -1037,6 +1044,7 @@ Could be a prompt or a source block."
             (chatgpt-shell--match-source-block)))))
     (goto-char (car (map-elt previous-block 'body)))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--match-source-block ()
   "Return a matched source block by the previous search/regexp operation."
   (list
@@ -1050,6 +1058,7 @@ Could be a prompt or a source block."
                      (match-end 2)))
    'body (cons (match-beginning 3) (match-end 3))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--source-blocks ()
   "Get a list of all source blocks in buffer."
   (let ((markdown-blocks '())
@@ -2052,6 +2061,7 @@ Very much EXPERIMENTAL."
             execute-command)))
   (goto-char (point-max)))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
 lang-start lang-end body-start body-end quotes2-start quotes2-end)
   "Fontify a source block.
@@ -2104,6 +2114,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
       (overlay-put (make-overlay body-start body-end buf)
                    'face 'font-lock-doc-markup-face))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-link (start end title-start title-end url-start url-end)
   "Fontify a markdown link.
 Use START END TITLE-START TITLE-END URL-START URL-END."
@@ -2125,6 +2136,7 @@ Use START END TITLE-START TITLE-END URL-START URL-END."
   ;; Hide markup after
   (overlay-put (make-overlay title-end end) 'invisible 'chatgpt-shell))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-bold (start end text-start text-end)
   "Fontify a markdown bold.
 Use START END TEXT-START TEXT-END."
@@ -2135,6 +2147,7 @@ Use START END TEXT-START TEXT-END."
   ;; Hide markup after
   (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-header (start _end level-start level-end title-start title-end)
   "Fontify a markdown header.
 Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
@@ -2161,6 +2174,7 @@ Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
                      (t
                       'org-level-1))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-italic (start end text-start text-end)
   "Fontify a markdown italic.
 Use START END TEXT-START TEXT-END."
@@ -2171,6 +2185,7 @@ Use START END TEXT-START TEXT-END."
   ;; Hide markup after
   (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-strikethrough (start end text-start text-end)
   "Fontify a markdown strikethrough.
 Use START END TEXT-START TEXT-END."
@@ -2181,6 +2196,7 @@ Use START END TEXT-START TEXT-END."
   ;; Hide markup after
   (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-inline-code (body-start body-end)
   "Fontify a source block.
 Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
@@ -2223,6 +2239,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (interactive)
   (chatgpt-shell--put-source-block-overlays))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
   (when chatgpt-shell-highlight-blocks
@@ -2283,6 +2300,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
          (car (map-elt inline-code 'body))
          (cdr (map-elt inline-code 'body)))))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--unpaired-length (length)
   "Expand LENGTH to include paired responses.
 
@@ -2382,6 +2400,7 @@ CALLBACK can be like:
                   (buffer-string))
          (kill-buffer buffer))))))
 
+;; TODO: Move to shell-maker.
 (defun chatgpt-shell--resolve-internal-language (language)
   "Resolve external LANGUAGE to internal.
 
