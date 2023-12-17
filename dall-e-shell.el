@@ -56,6 +56,11 @@ For example: \"1024x1024\""
   :type 'string
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-image-quality nil
+  "If using Dall-E 3, quality attribute can be set to either `standard' or `hd'"
+  :type 'string
+  :group 'dall-e-shell)
+
 (defcustom dall-e-shell-model-version nil
   "The used DALL-E OpenAI model.  For Dall-E 3, use \"dall-e-3\"."
   :type 'string
@@ -220,6 +225,8 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
   (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
+    (when dall-e-shell-image-quality
+      (push `(quality . ,dall-e-shell-image-quality) request-data))
     (when dall-e-shell-model-version
       (push `(model . ,dall-e-shell-model-version)
             request-data))
