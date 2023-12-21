@@ -1148,7 +1148,7 @@ enables additional key bindings.
  `p' Jump to next previous block.
  `r' Reply to follow-up with additional questions.
  `e' Send \"Show entire snippet\" query (useful to request alternative
-to diffs).
+ `o' Jump to other buffer (ie. the shell itself).
  `C-M-h' Mark block block at point."
   (interactive "P")
   (unless (chatgpt-shell--primary-buffer)
@@ -1244,6 +1244,10 @@ to diffs).
                       (erase-buffer)
                       (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
                       (chatgpt-shell-send-to-buffer prompt))))
+      (define-key view-mode-map (kbd "o") ;; show other buffer (ie. the shell)
+                  (lambda ()
+                    (interactive)
+                    (switch-to-buffer (chatgpt-shell--primary-buffer))))
       (local-set-key (kbd "C-c C-k")
                      (lambda ()
                        (interactive)
