@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.96.1
+;; Version: 0.97.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1991,13 +1991,12 @@ For example:
   "Extract ChatGPT response from JSON."
   (if (eq (type-of json) 'cons)
       (let-alist json ;; already parsed
-        (if (and .choices (not (seq-empty-p .choices)))
-            (or (unless (seq-empty-p .choices)
-                  (let-alist (seq-first .choices)
-                    (or .delta.content
-                        .message.content)))
-                "")
-          ""))
+        (or (unless (seq-empty-p .choices)
+              (let-alist (seq-first .choices)
+                (or .delta.content
+                    .message.content)))
+            .error.message
+            ""))
     (if-let (parsed (shell-maker--json-parse-string json))
         (string-trim
          (let-alist parsed
@@ -2007,8 +2006,7 @@ For example:
       (if-let (parsed-error (shell-maker--json-parse-string-filtering
                              json "^curl:.*\n?"))
           (let-alist parsed-error
-            .error.message)
-        ""))))
+            .error.message)))))
 
 ;; FIXME: Make shell agnostic or move to chatgpt-shell.
 (defun chatgpt-shell-restore-session-from-transcript ()
