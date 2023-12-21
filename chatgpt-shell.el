@@ -1987,20 +1987,24 @@ For example:
   "Extract ChatGPT response from JSON."
   (if (eq (type-of json) 'cons)
       (let-alist json ;; already parsed
-        (or (let-alist (seq-first .choices)
-              (or .delta.content
-                  .message.content))
-            .error.message
-            ""))
+        (if (and .choices (not (seq-empty-p .choices)))
+            (or (unless (seq-empty-p .choices)
+                  (let-alist (seq-first .choices)
+                    (or .delta.content
+                        .message.content)))
+                "")
+          ""))
     (if-let (parsed (shell-maker--json-parse-string json))
         (string-trim
          (let-alist parsed
-           (let-alist (seq-first .choices)
-             .message.content)))
+           (unless (seq-empty-p .choices)
+             (let-alist (seq-first .choices)
+               .message.content))))
       (if-let (parsed-error (shell-maker--json-parse-string-filtering
                              json "^curl:.*\n?"))
           (let-alist parsed-error
-            .error.message)))))
+            .error.message)
+        ""))))
 
 ;; FIXME: Make shell agnostic or move to chatgpt-shell.
 (defun chatgpt-shell-restore-session-from-transcript ()
