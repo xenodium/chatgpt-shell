@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.39.1
+;; Version: 0.40.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -227,10 +227,10 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
   (let ((request-data `((prompt . ,(car (car (last history)))))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
-    (if (and dall-e-shell-image-quality
-             (equal (dall-e-shell-model-version) "dall-e-3"))
-        (push `(quality . ,dall-e-shell-image-quality) request-data)
-      (user-error "`dall-e-shell-image-quality' must be used with \"dall-e-3\""))
+    (when dall-e-shell-image-quality
+      (if (equal (dall-e-shell-model-version) "dall-e-3")
+          (push `(quality . ,dall-e-shell-image-quality) request-data)
+        (user-error "`dall-e-shell-image-quality' must be used with \"dall-e-3\"")))
     (when dall-e-shell-model-version
       (push `(model . ,dall-e-shell-model-version)
             request-data))
