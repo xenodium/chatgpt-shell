@@ -1244,7 +1244,7 @@ enables additional key bindings.
                       (erase-buffer)
                       (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
                       (chatgpt-shell-send-to-buffer prompt))))
-      (define-key view-mode-map (kbd "o") ;; show other buffer (ie. the shell)
+      (define-key view-mode-map (kbd "o") ;; show other buffer (ie. the shell itself)
                   (lambda ()
                     (interactive)
                     (switch-to-buffer (chatgpt-shell--primary-buffer))))
