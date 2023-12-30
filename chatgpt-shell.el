@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.97.1
+;; Version: 0.98.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1876,8 +1876,9 @@ For example:
 
 \(chatgpt-shell-post-prompt
  \"hello\"
+ nil
  \"gpt-3.5-turbo\"
- (lambda (response)
+ (lambda (response more-pending)
    (message \"%s\" response))
  (lambda (error)
    (message \"%s\" error)))"
