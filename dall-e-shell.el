@@ -421,33 +421,25 @@ ERROR-CALLBACK otherwise."
                                        "KEY-NOT-FOUND")))))
                 "-d" (shell-maker--json-encode request-data))))
 
-(defun dall-e-shell-generate-image (prompt text)
-  "Generate image from text using DALL-E given prompt."
-  (let* ((question (concat prompt text))
-         (png-output (dall-e-shell-post-prompt question)))
-    png-output))
-
-(defun dall-e-shell-generate-image-from-region-0 (prompt)
-  "Generate image from region using DALL-E given prompt."
-  (let* ((text (buffer-substring-no-properties (region-beginning) (region-end)))
-         (png-output (dall-e-shell-generate-image prompt text)))
-    ;; if the current buffer is org-mode, insert a org-mode image link; if it is markdown mode, insert a markdown image link; otherwise, just insert the image
-    (cond ((eq major-mode 'org-mode)
-           (insert (concat "[[file:" png-output "]]\n")))
-          ((eq major-mode 'markdown-mode)
-           (insert (concat "![](" png-output ")\n" )))
-          (t (progn
-               (insert (concat png-output "\n"))
-                (insert-image
-                 (create-image png-output
-                                'png nil :width 400 :height 400)))))
-    ))
-
-(defun dall-e-shell-generate-image-from-region ()
-  "Generate image from region using DALL-E with default prompt."
+(defun dall-e-shell-insert-image-from-region-description ()
+  "Generate and insert an image using current region as description."
   (interactive)
-  (let ((prompt "Please generate image for the following text: "))
-    (dall-e-shell-generate-image-from-region-0 prompt)))
+  (unless (region-active-p)
+    (user-error "No active region"))
+  (save-excursion
+    (let* ((image-description (buffer-substring-no-properties (region-beginning) (region-end)))
+           (png-output (dall-e-shell-post-prompt
+                        (concat "Please generate image for the following text: " image-description))))
+      (goto-char (region-end))
+      (cond ((eq major-mode 'org-mode)
+             (insert (concat "\n\n[[file:" png-output "]]\n")))
+            ((eq major-mode 'markdown-mode)
+             (insert (concat "\n\n![](" png-output ")\n" )))
+            (t (progn
+                 (insert (concat png-output "\n"))
+                 (insert-image
+                  (create-image png-output
+                                'png nil :width 400 :height 400))))))))
 
 (provide 'dall-e-shell)
 
