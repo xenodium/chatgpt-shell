@@ -319,12 +319,14 @@ Set SHOW-REVISED-PROMPT to include in returned value."
     (let* ((api-buffer (current-buffer))
            (command
             (dall-e-shell--make-curl-request-command-list
-             (let ((request-data `((prompt . ,prompt))))
-               (when (or image-size dall-e-shell-image-size)
-                 (push `(size . ,(or image-size dall-e-shell-image-size))
+             (let* ((request-data `((prompt . ,prompt)))
+                    (image-size-fallback (or image-size dall-e-shell-image-size))
+                    (version-fallback (or version dall-e-shell-model-version)))
+               (when image-size-fallback
+                 (push `(size . ,image-size-fallback)
                        request-data))
-               (when (or version dall-e-shell-model-version)
-                 (push `(model . ,(or version dall-e-shell-model-version))
+               (when version-fallback
+                 (push `(model . ,version-fallback)
                        request-data))
                request-data)))
            (_status (condition-case err
@@ -418,6 +420,26 @@ ERROR-CALLBACK otherwise."
                                       (error
                                        "KEY-NOT-FOUND")))))
                 "-d" (shell-maker--json-encode request-data))))
+
+(defun dall-e-shell-insert-image-from-region-description ()
+  "Generate and insert an image using current region as description."
+  (interactive)
+  (unless (region-active-p)
+    (user-error "No active region"))
+  (save-excursion
+    (let* ((image-description (buffer-substring-no-properties (region-beginning) (region-end)))
+           (png-output (dall-e-shell-post-prompt
+                        (concat "Please generate image for the following text: " image-description))))
+      (goto-char (region-end))
+      (cond ((eq major-mode 'org-mode)
+             (insert (concat "\n\n[[file:" png-output "]]\n")))
+            ((eq major-mode 'markdown-mode)
+             (insert (concat "\n\n![](" png-output ")\n" )))
+            (t (progn
+                 (insert (concat png-output "\n"))
+                 (insert-image
+                  (create-image png-output
+                                'png nil :width 400 :height 400))))))))
 
 (provide 'dall-e-shell)
 
