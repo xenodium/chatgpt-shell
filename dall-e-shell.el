@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.40.1
+;; Version: 0.41.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.44.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -142,13 +142,13 @@ With NEW-SESSION, start a new session."
                   (car (dall-e-shell--prompt-pair)))
             (setf (shell-maker-config-prompt-regexp config)
                   (cdr (dall-e-shell--prompt-pair)))
-            config))
-         (shell-buffer (shell-maker-start dall-e-shell--config
-                                          nil
-                                          dall-e-shell-welcome-function
-                                          new-session
-                                          (when (dall-e-shell--shell-buffers)
-                                            (buffer-name (seq-first (dall-e-shell--shell-buffers)))))))
+            config)))
+    (shell-maker-start dall-e-shell--config
+                       nil
+                       dall-e-shell-welcome-function
+                       new-session
+                       (when (dall-e-shell--shell-buffers)
+                         (buffer-name (seq-first (dall-e-shell--shell-buffers)))))
     (with-current-buffer
         ;; TODO: Add menus. See `chatgpt-shell--add-menus'.
         (dall-e-shell--update-prompt t))
