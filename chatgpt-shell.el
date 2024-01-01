@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.98.1
+;; Version: 0.99.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.43.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -286,7 +286,8 @@ for details."
                  (emacs-version)))))
 
 (defcustom chatgpt-shell-system-prompts
-  `(("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
+  `(("tl;dr" . "Be as succint but informative as possible and respond in tl;dr form to my queries")
+    ("General" . "You use markdown liberally to structure responses. Always show code snippets in markdown blocks with language labels.")
     ;; Based on https://github.com/benjamin-asdf/dotfiles/blob/8fd18ff6bd2a1ed2379e53e26282f01dcc397e44/mememacs/.emacs-mememacs.d/init.el#L768
     ("Programming" . ,(chatgpt-shell--append-system-info
                        "The user is a programmer with very limited time.
