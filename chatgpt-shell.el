@@ -1130,7 +1130,7 @@ separate major mode, but I'll list the current functionality in case
 folks want to try it out.
 
 Editing: While in edit mode, it offers a couple of magit-like commit
-buffer.
+buffer bindings.
 
  `C-c C-c' to send the buffer query.
  `C-c C-k' to cancel compose buffer.
@@ -1149,7 +1149,7 @@ enables additional key bindings.
  `r' Reply to follow-up with additional questions.
  `e' Send \"Show entire snippet\" query (useful to request alternative
  `o' Jump to other buffer (ie. the shell itself).
- `C-M-h' Mark block block at point."
+ `C-M-h' Mark block at point."
   (interactive "P")
   (unless (chatgpt-shell--primary-buffer)
     (chatgpt-shell--set-primary-buffer
@@ -1172,6 +1172,11 @@ enables additional key bindings.
                                " to send prompt. "
                                (propertize "C-c C-k" 'face 'help-key-binding)
                                " to cancel and exit. "))
+         (erase-buffer (or prefix
+                           (not region)
+                           ;; view-mode = old query, erase for new one.
+                           (with-current-buffer buffer
+                             view-mode)))
          (prompt))
     (add-to-list 'display-buffer-alist
                  (cons buffer
@@ -1181,11 +1186,16 @@ enables additional key bindings.
       (visual-line-mode +1)
       (when view-mode
         (view-mode -1))
-      (erase-buffer)
+      (when erase-buffer
+        (erase-buffer))
       (when region
         (save-excursion
-          (goto-char (point-max))
-          (insert (concat "\n\n" region))))
+          (goto-char (point-min))
+          (let ((insert-trailing-newlines (not (looking-at-p "\n\n"))))
+            (insert "\n\n")
+            (insert region)
+            (when insert-trailing-newlines
+              (insert "\n\n")))))
       (when prefix
         (let ((chatgpt-shell-prompt-query-response-style 'inline))
           (chatgpt-shell-send-to-buffer "clear")))
