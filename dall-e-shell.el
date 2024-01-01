@@ -319,12 +319,14 @@ Set SHOW-REVISED-PROMPT to include in returned value."
     (let* ((api-buffer (current-buffer))
            (command
             (dall-e-shell--make-curl-request-command-list
-             (let ((request-data `((prompt . ,prompt))))
-               (when (or image-size dall-e-shell-image-size)
-                 (push `(size . ,(or image-size dall-e-shell-image-size))
+             (let* ((request-data `((prompt . ,prompt)))
+                    (image-size-fallback (or image-size dall-e-shell-image-size))
+                    (version-fallback (or version dall-e-shell-model-version)))
+               (when image-size-fallback
+                 (push `(size . ,image-size-fallback)
                        request-data))
-               (when (or version dall-e-shell-model-version)
-                 (push `(model . ,(or version dall-e-shell-model-version))
+               (when version-fallback
+                 (push `(model . ,version-fallback)
                        request-data))
                request-data)))
            (_status (condition-case err
@@ -418,6 +420,34 @@ ERROR-CALLBACK otherwise."
                                       (error
                                        "KEY-NOT-FOUND")))))
                 "-d" (shell-maker--json-encode request-data))))
+
+(defun dall-e-shell-generate-image (prompt text)
+  "Generate image from text using DALL-E given prompt."
+  (let* ((question (concat prompt text))
+         (png-output (dall-e-shell-post-prompt question)))
+    png-output))
+
+(defun dall-e-shell-generate-image-from-region-0 (prompt)
+  "Generate image from region using DALL-E given prompt."
+  (let* ((text (buffer-substring-no-properties (region-beginning) (region-end)))
+         (png-output (dall-e-shell-generate-image prompt text)))
+    ;; if the current buffer is org-mode, insert a org-mode image link; if it is markdown mode, insert a markdown image link; otherwise, just insert the image
+    (cond ((eq major-mode 'org-mode)
+           (insert (concat "[[file:" png-output "]]\n")))
+          ((eq major-mode 'markdown-mode)
+           (insert (concat "![](" png-output ")\n" )))
+          (t (progn
+               (insert (concat png-output "\n"))
+                (insert-image
+                 (create-image png-output
+                                'png nil :width 400 :height 400)))))
+    ))
+
+(defun dall-e-shell-generate-image-from-region ()
+  "Generate image from region using DALL-E with default prompt."
+  (interactive)
+  (let ((prompt "Please generate image for the following text: "))
+    (dall-e-shell-generate-image-from-region-0 prompt)))
 
 (provide 'dall-e-shell)
 
