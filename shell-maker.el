@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.44.1
+;; Version: 0.45.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -615,8 +615,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                                       input-string response nil t))
                            (funcall (shell-maker-config-on-command-finished shell-maker--config)
                                     input-string
-                                    (shell-maker-last-output))
-                           (goto-char (point-max))))
+                                    (shell-maker-last-output)))
+                         (goto-char (point-max)))
                      (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
                      (setq shell-maker--busy nil)
                      (unless no-announcement
