@@ -584,3 +584,9 @@ Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implement
 - [[https://github.com/xenodium/company-org-block][company-org-block]]
 - [[https://github.com/xenodium/org-block-capf][org-block-capf]]
 - [[https://github.com/xenodium/ob-swiftui][ob-swiftui]]
+
+#+HTML: <a href="https://github.com/xenodium/chatgpt-shell/graphs/contributors">
+#+HTML:   <img src="https://contrib.rocks/image?repo=xenodium/chatgpt-shell" />
+#+HTML: </a>
+
+Made with [[https://contrib.rocks][contrib.rocks]].
