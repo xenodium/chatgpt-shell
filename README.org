@@ -574,16 +574,23 @@ Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implement
 #+end_src
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/greeter.gif" width="50%" />
+* Support my work
 
-* Other packages
+👉 Find my work useful? [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]] or [[https://apps.apple.com/us/developer/xenodium-ltd/id304568690][buy my iOS apps]].
 
-👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
+* My other utilities, packages, apps, writing...
 
 - [[https://xenodium.com/][Blog (xenodium.com)]]
-- [[https://github.com/xenodium/dwim-shell-command][dwim-shell-command]]
-- [[https://github.com/xenodium/company-org-block][company-org-block]]
-- [[https://github.com/xenodium/org-block-capf][org-block-capf]]
-- [[https://github.com/xenodium/ob-swiftui][ob-swiftui]]
+- [[https://plainorg.com][Plain Org]] (iOS)
+- [[https://flathabits.com][Flat Habits]] (iOS)
+- [[https://apps.apple.com/us/app/scratch/id1671420139][Scratch]] (iOS)
+- [[https://github.com/xenodium/macosrec][macosrec]] (macOS)
+- [[https://github.com/xenodium/dwim-shell-command][dwim-shell-command]] (Emacs)
+- [[https://github.com/xenodium/company-org-block][company-org-block]] (Emacs)
+- [[https://github.com/xenodium/org-block-capf][org-block-capf]] (Emacs)
+- [[https://github.com/xenodium/ob-swiftui][ob-swiftui]] (Emacs)
+
+* Contributors
 
 #+HTML: <a href="https://github.com/xenodium/chatgpt-shell/graphs/contributors">
 #+HTML:   <img src="https://contrib.rocks/image?repo=xenodium/chatgpt-shell" />
