@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.45.1
+;; Version: 0.46.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -251,6 +251,7 @@ Set BUFFER-NAME to override the buffer name."
   ;; Prevents fontifying streamed response as prompt.
   (setq comint-prompt-regexp
         (shell-maker-prompt-regexp config))
+  (add-to-list 'kill-buffer-query-functions #'shell-maker-kill-buffer-query)
   (setq-local paragraph-separate "\\'")
   (setq-local paragraph-start comint-prompt-regexp)
   (setq comint-input-sender 'shell-maker--input-sender)
@@ -1143,6 +1144,13 @@ Type %s and press %s to clear all content.
                         ((string= (nth 0 a) "") nil)
                         ((string= (nth 0 b) "") t)
                         (t (string> (nth 0 a) (nth 0 b)))))) 3))))))
+
+(defun shell-maker-kill-buffer-query ()
+  "Added to `kill-buffer-query-functions' to prevent losing unsaved transcripts."
+  (when (and shell-maker--config
+             (y-or-n-p (format "Save transcript for %s?" (buffer-name))))
+    (shell-maker-save-session-transcript))
+  t)
 
 (defun shell-maker-echo (text &optional keep-in-history)
   "Echo TEXT to shell.
