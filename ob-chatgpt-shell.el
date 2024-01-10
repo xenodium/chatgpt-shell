@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.31.1
+;; Version: 0.32.1
 ;; Package-Requires: ((emacs "27.1") (chatgpt-shell "0.88.1"))
 
 ;;; License:
@@ -47,7 +47,7 @@
 (require 'ob)
 (require 'org-element)
 
-(defvar org-babel-default-header-args:chatgpt-shell '((:results . "raw")
+(defvar org-babel-default-header-args:chatgpt-shell '((:results . "output")
                                                       (:version . nil)
                                                       (:system . nil)
                                                       (:context . nil)
