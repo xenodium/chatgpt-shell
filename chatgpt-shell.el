@@ -1180,9 +1180,12 @@ enables additional key bindings.
                              view-mode)))
          (prompt))
     (add-to-list 'display-buffer-alist
-                 (cons buffer
-                       '((display-buffer-below-selected)
-                         (split-window-sensibly))))
+                 (cons (regexp-quote (buffer-name buffer))
+                       '((display-buffer-reuse-window display-buffer-in-direction)
+                         (dedicated . t)
+                         (reusable-frames . visible)
+                         (direction . left)
+                         (window-width . 0.35))))
     (with-current-buffer buffer
       (visual-line-mode +1)
       (when view-mode
