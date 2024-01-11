@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 0.41.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.46.1"))
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.47.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

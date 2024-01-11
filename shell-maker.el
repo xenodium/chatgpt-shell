@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.46.1
+;; Version: 0.47.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -285,7 +285,8 @@ Set BUFFER-NAME to override the buffer name."
     (set-marker comint-last-input-start (shell-maker--pm))
     (set-process-filter (get-buffer-process
                          (shell-maker-buffer config))
-                        'shell-maker--output-filter)))
+                        'shell-maker--output-filter)
+    (set-buffer-modified-p nil)))
 
 (defun shell-maker--write-reply (reply &optional failed)
   "Write REPLY to prompt.  Set FAILED to record failure."
@@ -896,7 +897,8 @@ Very much EXPERIMENTAL."
             (path shell-maker--file))
         (with-temp-buffer
           (insert content)
-          (write-file path nil)))
+          (write-file path nil))
+        (set-buffer-modified-p nil))
     (when-let ((path (read-file-name "Write file: "
 				     (when shell-maker-transcript-default-path
                                        (file-name-as-directory shell-maker-transcript-default-path))
@@ -905,7 +907,8 @@ Very much EXPERIMENTAL."
       (with-temp-buffer
         (insert content)
         (write-file path t))
-      (setq shell-maker--file path))))
+      (setq shell-maker--file path)
+      (set-buffer-modified-p nil))))
 
 (defun shell-maker--extract-history (text prompt-regexp)
   "Extract all commands and respective output in TEXT with PROMPT-REGEXP.
@@ -1148,6 +1151,7 @@ Type %s and press %s to clear all content.
 (defun shell-maker-kill-buffer-query ()
   "Added to `kill-buffer-query-functions' to prevent losing unsaved transcripts."
   (when (and shell-maker--config
+             (buffer-modified-p)
              (y-or-n-p (format "Save transcript for %s?" (buffer-name))))
     (shell-maker-save-session-transcript))
   t)
