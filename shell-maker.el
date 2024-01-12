@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.47.1
+;; Version: 0.48.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -681,56 +681,60 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
       (when streaming
         (set-process-filter
          request-process
-         (lambda (_process output)
-           (when (and (eq request-id (with-current-buffer buffer
-                                      (shell-maker--current-request-id)))
-                      (buffer-live-p buffer))
-             (shell-maker--write-output-to-log-buffer
-              (format "// Filter output\n\n%s\n\n" output) config)
-             (setq remaining-text (concat remaining-text output))
-             (setq preparsed (shell-maker--preparse-json remaining-text))
-             (if (car preparsed)
-                 (mapc (lambda (obj)
-                         (with-current-buffer buffer
-                           (funcall callback (funcall response-extractor obj) t)))
-                       (car preparsed))
-               (with-current-buffer buffer
-                 (let ((curl-exit-code (shell-maker--curl-exit-status-from-error-string (cdr preparsed))))
-                   (cond ((eq 0 curl-exit-code)
-                          (funcall callback (cdr preparsed) t))
-                         ((numberp curl-exit-code)
-                          (funcall error-callback (string-trim (cdr preparsed))))
-                         (t
-                          (funcall callback (cdr preparsed) t))))))
-             (setq remaining-text (cdr preparsed))))))
+         (lambda (process output)
+           (condition-case nil
+               (when (and (eq request-id (with-current-buffer buffer
+                                           (shell-maker--current-request-id)))
+                          (buffer-live-p buffer))
+                 (shell-maker--write-output-to-log-buffer
+                  (format "// Filter output\n\n%s\n\n" output) config)
+                 (setq remaining-text (concat remaining-text output))
+                 (setq preparsed (shell-maker--preparse-json remaining-text))
+                 (if (car preparsed)
+                     (mapc (lambda (obj)
+                             (with-current-buffer buffer
+                               (funcall callback (funcall response-extractor obj) t)))
+                           (car preparsed))
+                   (with-current-buffer buffer
+                     (let ((curl-exit-code (shell-maker--curl-exit-status-from-error-string (cdr preparsed))))
+                       (cond ((eq 0 curl-exit-code)
+                              (funcall callback (cdr preparsed) t))
+                             ((numberp curl-exit-code)
+                              (funcall error-callback (string-trim (cdr preparsed))))
+                             (t
+                              (funcall callback (cdr preparsed) t))))))
+                 (setq remaining-text (cdr preparsed)))
+             (error (delete-process process))))))
       (set-process-sentinel
        request-process
        (lambda (process _event)
-         (let ((active (and (eq request-id (with-current-buffer buffer
-                                               (shell-maker--current-request-id)))
-                            (buffer-live-p buffer)))
-               (output (with-current-buffer (process-buffer process)
-                         (buffer-string)))
-               (exit-status (process-exit-status process)))
-           (shell-maker--write-output-to-log-buffer
-            (format "// Response (%s)\n\n" (if active "active" "inactive")) config)
-           (shell-maker--write-output-to-log-buffer
-            (format "Exit status: %d\n\n" exit-status) config)
-           (shell-maker--write-output-to-log-buffer output config)
-           (shell-maker--write-output-to-log-buffer "\n\n" config)
-           (with-current-buffer buffer
-             (if (= exit-status 0)
-                 (funcall callback
-                          (if (string-empty-p (string-trim output))
-                              output
-                            (funcall response-extractor output))
-                          nil)
-               (if-let ((error (if (string-empty-p (string-trim output))
-                                   output
-                                 (funcall response-extractor output))))
-                   (funcall error-callback error)
-                 (funcall error-callback output)))))
-         (kill-buffer output-buffer))))))
+         (condition-case nil
+             (let ((active (and (eq request-id (with-current-buffer buffer
+                                                 (shell-maker--current-request-id)))
+                                (buffer-live-p buffer)))
+                   (output (with-current-buffer (process-buffer process)
+                             (buffer-string)))
+                   (exit-status (process-exit-status process)))
+               (shell-maker--write-output-to-log-buffer
+                (format "// Response (%s)\n\n" (if active "active" "inactive")) config)
+               (shell-maker--write-output-to-log-buffer
+                (format "Exit status: %d\n\n" exit-status) config)
+               (shell-maker--write-output-to-log-buffer output config)
+               (shell-maker--write-output-to-log-buffer "\n\n" config)
+               (with-current-buffer buffer
+                 (if (= exit-status 0)
+                     (funcall callback
+                              (if (string-empty-p (string-trim output))
+                                  output
+                                (funcall response-extractor output))
+                              nil)
+                   (if-let ((error (if (string-empty-p (string-trim output))
+                                       output
+                                     (funcall response-extractor output))))
+                       (funcall error-callback error)
+                     (funcall error-callback output)))))
+           (kill-buffer output-buffer)
+           (error (delete-process process))))))))
 
 (defun shell-maker--json-parse-string-filtering (json regexp)
   "Attempt to parse JSON.  If unsuccessful, attempt after removing REGEXP."
