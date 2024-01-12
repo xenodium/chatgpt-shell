@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.48.1
+;; Version: 0.49.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -65,6 +65,11 @@ To use `completing-read', it can be done with something like:
   "Logging disabled by default (slows things down).
 
 Enable it for troubleshooting issues."
+  :type 'boolean
+  :group 'shell-maker)
+
+(defcustom shell-maker-prompt-before-killing-buffer t
+  "If t, confirm killing buffer without saving."
   :type 'boolean
   :group 'shell-maker)
 
@@ -1155,7 +1160,8 @@ Type %s and press %s to clear all content.
 
 (defun shell-maker-kill-buffer-query ()
   "Added to `kill-buffer-query-functions' to prevent losing unsaved transcripts."
-  (when (and shell-maker--config
+  (when (and shell-maker-prompt-before-killing-buffer
+             shell-maker--config
              (buffer-modified-p)
              (y-or-n-p (format "Save transcript for %s?" (buffer-name))))
     (shell-maker-save-session-transcript))
