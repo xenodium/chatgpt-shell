@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.99.1
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.49.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1662,29 +1662,30 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                                (eq chatgpt-shell-prompt-query-response-style 'inline))
                            (lambda (_command output error finished)
                              (setq output (or output ""))
-                             (with-current-buffer buffer
-                               (if error
-                                   (unless (string-empty-p (string-trim output))
-                                     (message "%s" output))
-                                 (let ((inhibit-read-only t))
-                                   (save-excursion
-                                     (if orig-region-active
-                                         (progn
-                                           (goto-char marker)
-                                           (when (eq (marker-position marker)
-                                                     point)
-                                             (insert "\n\n")
-                                             (set-marker marker (+ 2 (marker-position marker))))
-                                           (insert output)
-                                           (set-marker marker (+ (length output)
-                                                                 (marker-position marker))))
-                                       (goto-char marker)
-                                       (insert output)
-                                       (set-marker marker (+ (length output)
-                                                             (marker-position marker)))))))
-                               (when (and finished
-                                          (eq chatgpt-shell-prompt-query-response-style 'other-buffer))
-                                 (chatgpt-shell--put-source-block-overlays))))
+                             (when (buffer-live-p buffer)
+                               (with-current-buffer buffer
+                                 (if error
+                                     (unless (string-empty-p (string-trim output))
+                                       (message "%s" output))
+                                   (let ((inhibit-read-only t))
+                                     (save-excursion
+                                       (if orig-region-active
+                                           (progn
+                                             (goto-char marker)
+                                             (when (eq (marker-position marker)
+                                                       point)
+                                               (insert "\n\n")
+                                               (set-marker marker (+ 2 (marker-position marker))))
+                                             (insert output)
+                                             (set-marker marker (+ (length output)
+                                                                   (marker-position marker))))
+                                         (goto-char marker)
+                                         (insert output)
+                                         (set-marker marker (+ (length output)
+                                                               (marker-position marker)))))))
+                                 (when (and finished
+                                            (eq chatgpt-shell-prompt-query-response-style 'other-buffer))
+                                   (chatgpt-shell--put-source-block-overlays)))))
                          (or handler (lambda (_command _output _error _finished))))
                        t))))
       (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
