@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.1
+;; Version: 1.0.2
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.49.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1182,7 +1182,6 @@ enables additional key bindings.
     (add-to-list 'display-buffer-alist
                  (cons (regexp-quote (buffer-name buffer))
                        '((display-buffer-reuse-window display-buffer-in-direction)
-                         (dedicated . t)
                          (reusable-frames . visible)
                          (direction . left)
                          (window-width . 0.35))))
