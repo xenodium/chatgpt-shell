@@ -207,7 +207,9 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '("gpt-4-1106-preview"
+  '("gpt-4-0125-preview"
+    "gpt-4-turbo-preview"
+    "gpt-4-1106-preview"
     "gpt-4-0613"
     "gpt-4"
     "gpt-3.5-turbo-16k-0613"
