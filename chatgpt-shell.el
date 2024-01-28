@@ -257,35 +257,22 @@ for details."
 
 (defun chatgpt-shell--append-system-info (text)
   "Append system info to TEXT."
-  (cond ((eq system-type 'darwin)
-         (concat text
-                 "\n# System info\n"
-                 "\n## OS details\n"
-                 (string-trim (shell-command-to-string "sw_vers"))
-                 "\n## Editor\n"
-                 (emacs-version)))
-        ((or (eq system-type 'gnu/linux)
-             (eq system-type 'gnu/kfreebsd))
-         (concat text
-                 "\n# System info\n"
-                 "\n## OS details\n"
-                 (string-trim (shell-command-to-string "uname -a"))
-                 "\n## Editor\n"
-                 (emacs-version)))
-        ((eq system-type 'windows-nt)
-         (concat text
-                 "\n# System info\n"
-                 "\n## OS details\n"
-                 (string-trim (shell-command-to-string "ver"))
-                 "\n## Editor\n"
-                 (emacs-version)))
-        (t
-         (concat text
-                 "\n# System info\n"
-                 "\n## OS details\n"
-                 (format "%s" system-type)
-                 "\n## Editor\n"
-                 (emacs-version)))))
+  (cl-labels ((chatgpt-shell--get-system-info-command
+               ()
+               (cond ((eq system-type 'darwin) "sw_vers")
+                     ((or (eq system-type 'gnu/linux)
+                          (eq system-type 'gnu/kfreebsd)) "uname -a")
+                     ((eq system-type 'windows-nt) "ver")
+                     (t (format "%s" system-type)))))
+    (let ((system-info (string-trim
+                        (shell-command-to-string
+                         (chatgpt-shell--get-system-info-command)))))
+      (concat text
+              "\n# System info\n"
+              "\n## OS details\n"
+              system-info
+              "\n## Editor\n"
+              (emacs-version)))))
 
 (defcustom chatgpt-shell-system-prompts
   `(("tl;dr" . "Be as succint but informative as possible and respond in tl;dr form to my queries")
@@ -1418,15 +1405,30 @@ enables additional key bindings.
           (chatgpt-shell--primary-buffer)
         (chatgpt-shell--put-source-block-overlays)))))
 
+(defun remove-leading-non-alphanumeric (str)
+  "Remove leading non-alphanumeric characters from the string STR."
+  (if (string-match "^[^a-zA-Z0-9]*\\(.*\\)$" str)
+      (match-string 1 str)
+    str))
+
+(defun chatgpt-shell-ask-chatgpt-region ()
+  "Send text from region using ChatGPT"
+  (interactive)
+  (unless (region-active-p)
+    (user-error "No region active"))
+  (let* ((region-text (buffer-substring (region-beginning) (region-end)))
+         (trim-leading (remove-leading-non-alphanumeric region-text)))
+    (chatgpt-shell-send-to-buffer trim-leading nil)))
+
 (defun chatgpt-shell-send-region-with-header (header)
   "Send text with HEADER from region using ChatGPT."
   (unless (region-active-p)
     (user-error "No region active"))
-  (chatgpt-shell-send-to-buffer
-   (concat header
-           "\n\n"
-           (buffer-substring (region-beginning) (region-end)))
-   nil))
+  (let* ((region-text (buffer-substring (region-beginning) (region-end)))
+         (trim-leading (remove-leading-non-alphanumeric region-text))
+
+         (question (concat header "\n\n" region-text)))
+    (chatgpt-shell-send-to-buffer question nil)))
 
 (defun chatgpt-shell-refactor-code ()
   "Refactor code from region using ChatGPT."
@@ -1476,11 +1478,12 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
-  (let ((chatgpt-shell-prompt-query-response-style 'shell))
+  (let* ((chatgpt-shell-prompt-query-response-style 'shell)
+         (region-text (buffer-substring (region-beginning) (region-end))))
     (chatgpt-shell-send-to-buffer
      (if review
-         (concat "\n\n" (buffer-substring (region-beginning) (region-end)))
-       (buffer-substring (region-beginning) (region-end))) review)))
+         (concat "\n\n" region-text)
+       region-text) review)))
 
 (defun chatgpt-shell-send-and-review-region ()
   "Send region to ChatGPT, review before submitting."
