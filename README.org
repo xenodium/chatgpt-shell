@@ -95,6 +95,11 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
   (setq chatgpt-shell-openai-key "my key")
 #+end_src
 
+*** As an ENV variable
+#+begin_src emacs-lisp
+(setq chatgpt-shell-openai-key (getenv "OPENAI_API_KEY"))
+#+end_src
+
 ** DALL-E key
 
 Same as ChatGPT, but use =dall-e-shell-openai-key= variable.
