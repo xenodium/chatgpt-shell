@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.4
+;; Version: 1.0.5
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.49.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 
 ;;; Code:
 
+(provide 'flymake)
 (require 'cl-lib)
 (require 'esh-mode)
 (require 'eshell)
@@ -1120,7 +1121,7 @@ If region is active, append to prompt."
 With PREFIX, clear existing history (wipe asociated shell history).
 
 Whenever `chatgpt-shell-prompt-compose' is invoked, appends any active
-region to compose buffer.
+region (or flymake issue at point) to compose buffer.
 
 The compose buffer always shows the latest interaction, but it's
 backed by the shell history. You can always switch to the shell buffer
@@ -1165,11 +1166,13 @@ enables additional key bindings.
          (buffer-name (concat (chatgpt-shell--minibuffer-prompt)
                               "compose"))
          (buffer (get-buffer-create buffer-name))
-         (region (when-let ((region-active (region-active-p))
-                            (region (buffer-substring (region-beginning)
-                                                      (region-end))))
-                   (deactivate-mark)
-                   region))
+         (region (or (when-let ((region-active (region-active-p))
+                                (region (buffer-substring (region-beginning)
+                                                          (region-end))))
+                       (deactivate-mark)
+                       region)
+                     (when-let ((diagnostic (flymake-diagnostics (point))))
+                       (mapconcat #'flymake-diagnostic-text diagnostic "\n"))))
          (instructions (concat "Type "
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
