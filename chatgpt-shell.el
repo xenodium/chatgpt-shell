@@ -1417,7 +1417,7 @@ enables additional key bindings.
   (unless (region-active-p)
     (user-error "No region active"))
   (let* ((region-text (buffer-substring (region-beginning) (region-end)))
-         (trim-leading (remove-leading-non-alphanumeric region-text)))
+         )
     (chatgpt-shell-send-to-buffer trim-leading nil)))
 
 (defun chatgpt-shell-send-region-with-header (header)
@@ -1425,8 +1425,6 @@ enables additional key bindings.
   (unless (region-active-p)
     (user-error "No region active"))
   (let* ((region-text (buffer-substring (region-beginning) (region-end)))
-         (trim-leading (remove-leading-non-alphanumeric region-text))
-
          (question (concat header "\n\n" region-text)))
     (chatgpt-shell-send-to-buffer question nil)))
 
