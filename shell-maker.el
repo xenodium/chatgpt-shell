@@ -1034,7 +1034,7 @@ Uses PROCESS and STRING same as `comint-output-filter'."
   (downcase (shell-maker-config-name config)))
 
 (defun shell-maker-history-file-path (config)
-  "Get process name from CONFIG."
+  "Get history file path from CONFIG."
   (expand-file-name (concat
                      (file-name-as-directory
                       (downcase (shell-maker-config-name config)))
