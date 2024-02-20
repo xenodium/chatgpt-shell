@@ -35,7 +35,7 @@
 
 ;;; Code:
 
-(provide 'flymake)
+(require 'flymake)
 (require 'cl-lib)
 (require 'esh-mode)
 (require 'eshell)
