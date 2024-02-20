@@ -44,17 +44,3 @@
               (equal (chatgpt-shell--append-system-info "foo")
                      "foo\n# System info\n\n## OS details\nmocked system info\n## Editor\nmocked emacs version")))
             ))
-
-;; remove-leading-non-alphanumeric
-
-(ert-deftest test-remove-leading-non-alphanumeric ()
-  ;; empty-string
-  (should (equal (remove-leading-non-alphanumeric "") ""))
-  ;; basic
-  (should (equal (remove-leading-non-alphanumeric "abc123") "abc123"))
-  (should (equal (remove-leading-non-alphanumeric "!@#abc123") "abc123"))
-  ;; all-special
-  (should (equal (remove-leading-non-alphanumeric "!@#$%^&*()") ""))
-  ;; numbers-and-special
-  (should (equal (remove-leading-non-alphanumeric "123!@#abc") "123!@#abc"))
-  )

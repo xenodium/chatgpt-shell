@@ -1405,12 +1405,6 @@ enables additional key bindings.
           (chatgpt-shell--primary-buffer)
         (chatgpt-shell--put-source-block-overlays)))))
 
-(defun remove-leading-non-alphanumeric (str)
-  "Remove leading non-alphanumeric characters from the string STR."
-  (if (string-match "^[^a-zA-Z0-9]*\\(.*\\)$" str)
-      (match-string 1 str)
-    str))
-
 (defun chatgpt-shell-ask-chatgpt-region ()
   "Send text from region using ChatGPT"
   (interactive)
