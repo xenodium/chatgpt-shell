@@ -22,12 +22,11 @@
 
 (ert-deftest test-chatgpt-shell--append-system-info-smoke-test ()
   (let ((output (chatgpt-shell--append-system-info "abc")))
-    (should-not (null output))
-    ))
+    (should-not (null output))))
 
 (defun mock-shell-command-to-string (command)
   "A mock version of `shell-command-to-string` for testing purposes."
-  (concat "mocked system info"))
+  "mocked system info")
 
 (defun mock-emacs-version ()
   "A mock version of `emacs-version` for testing purposes."
