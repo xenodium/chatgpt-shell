@@ -41,5 +41,4 @@
                      "foo\n# System info\n\n## OS details\nmocked system info\n## Editor\nmocked emacs version")))
     (should (let ((system-type 'gnu/linux))
               (equal (chatgpt-shell--append-system-info "foo")
-                     "foo\n# System info\n\n## OS details\nmocked system info\n## Editor\nmocked emacs version")))
-            ))
+                     "foo\n# System info\n\n## OS details\nmocked system info\n## Editor\nmocked emacs version")))))
