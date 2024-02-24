@@ -1418,8 +1418,7 @@ enables additional key bindings.
   "Send text with HEADER from region using ChatGPT."
   (unless (region-active-p)
     (user-error "No region active"))
-  (let* ((region-text (buffer-substring (region-beginning) (region-end)))
-         (question (concat header "\n\n" region-text)))
+  (let ((question (concat header "\n\n" (buffer-substring (region-beginning) (region-end)))))
     (chatgpt-shell-send-to-buffer question nil)))
 
 (defun chatgpt-shell-refactor-code ()
@@ -1470,8 +1469,8 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (interactive "P")
   (unless (region-active-p)
     (user-error "No region active"))
-  (let* ((chatgpt-shell-prompt-query-response-style 'shell)
-         (region-text (buffer-substring (region-beginning) (region-end))))
+  (let ((chatgpt-shell-prompt-query-response-style 'shell)
+        (region-text (buffer-substring (region-beginning) (region-end))))
     (chatgpt-shell-send-to-buffer
      (if review
          (concat "\n\n" region-text)
