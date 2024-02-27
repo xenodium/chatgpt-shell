@@ -1744,7 +1744,9 @@ Set SAVE-EXCURSION to prevent point from moving."
     request-data))
 
 (defun chatgpt-shell-post-messages (messages response-extractor &optional version callback error-callback temperature other-params)
-  "Make a single ChatGPT request with MESSAGES.
+  "Make a single ChatGPT request with MESSAGES and RESPONSE-EXTRACTOR.
+
+`chatgpt-shell--extract-chatgpt-response' typically used as extractor.
 
 Optionally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE
 and OTHER-PARAMS.
@@ -1843,7 +1845,15 @@ If in a `dired' buffer, use selection (single image only for now)."
   "Make a vision request using PROMPT and URL-PATH.
 
 PROMPT can be somethign like: \"Describe the image in detail\".
-URL-PATH can be either a local file path or an http:// URL."
+URL-PATH can be either a local file path or an http:// URL.
+
+Optionally pass ON-SUCCESS and ON-FAILURE, like:
+
+\(lambda (response)
+  (message response))
+
+\(lambda (error)
+  (message error))"
   (let* ((url (if (string-prefix-p "http" url-path)
                   url-path
                 (unless (file-exists-p url-path)
@@ -1878,8 +1888,10 @@ URL-PATH can be either a local file path or an http:// URL."
 
 (defun chatgpt-shell-post-prompt (prompt &optional response-extractor version callback error-callback temperature other-params)
   "Make a single ChatGPT request with PROMPT.
-Optioally pass model VERSION, CALLBACK, ERROR-CALLBACK, TEMPERATURE,
-and OTHER-PARAMS.
+Optionally pass model RESPONSE-EXTRACTOR, VERSION, CALLBACK,
+ERROR-CALLBACK, TEMPERATURE, and OTHER-PARAMS.
+
+`chatgpt-shell--extract-chatgpt-response' typically used as extractor.
 
 If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
@@ -1894,7 +1906,7 @@ For example:
  (lambda (response more-pending)
    (message \"%s\" response))
  (lambda (error)
-   (message \"%s\" error)))"
+   (message \"%s\" error)))."
   (chatgpt-shell-post-messages `(((role . "user")
                                   (content . ,prompt)))
                                (or response-extractor #'chatgpt-shell--extract-chatgpt-response)
