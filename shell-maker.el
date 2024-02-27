@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.49.1
+;; Version: 0.50.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -92,8 +92,8 @@ For example:
   :type 'function
   :group 'shell-maker)
 
-(defcustom shell-maker-history-path user-emacs-directory
-  "Root path to the location for storing history files."
+(defcustom shell-maker-root-path user-emacs-directory
+  "Root path location to store internal shell files."
   :type 'directory
   :group 'shell-maker)
 
@@ -1035,10 +1035,17 @@ Uses PROCESS and STRING same as `comint-output-filter'."
 
 (defun shell-maker-history-file-path (config)
   "Get history file path from CONFIG."
+  (concat
+   (file-name-as-directory
+    (shell-maker-files-path config))
+   "history"))
+
+(defun shell-maker-files-path (config)
+  "Get shell internal files path from CONFIG."
   (expand-file-name (concat
                      (file-name-as-directory
-                      (downcase (shell-maker-config-name config)))
-                     "history") shell-maker-history-path))
+                      (downcase (shell-maker-config-name config))))
+                    shell-maker-root-path))
 
 (defun shell-maker-prompt (config)
   "Get prompt from CONFIG."

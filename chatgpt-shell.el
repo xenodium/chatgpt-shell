@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.5
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.49.1"))
+;; Version: 1.0.6
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1935,17 +1935,18 @@ For example:
    `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
   (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path))
 
+(defun chatgpt-shell--json-request-file ()
+  "JSON request written to this file prior to sending."
+  (concat
+   (file-name-as-directory
+    (shell-maker-files-path shell-maker--config))
+   "request.json"))
+
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
-  (let ((json (shell-maker--json-encode request-data))
-        (json-path))
-    ;; Calculated as a rough UTF-8 estimate.
-    ;; expr $(getconf ARG_MAX) / 4
-    (when (> (length json) 262144)
-      (setq json-path (make-temp-file "chatgpt-shell-request" nil ".json"))
-      ;; JSON size is too big for command. Write to file instead.
-      (with-temp-file json-path
-        (insert json)))
+  (let ((json-path (chatgpt-shell--json-request-file)))
+    (with-temp-file json-path
+      (insert (shell-maker--json-encode request-data)))
     (append (list "curl" (chatgpt-shell--api-url))
             chatgpt-shell-additional-curl-options
             (list "--fail-with-body"
@@ -1953,9 +1954,7 @@ For example:
                   "-m" (number-to-string chatgpt-shell-request-timeout)
                   "-H" "Content-Type: application/json; charset=utf-8"
                   "-H" (funcall chatgpt-shell-auth-header)
-                  "-d" (if json-path
-                           (format "@%s" json-path)
-                         json)))))
+                  "-d" (format "@%s" json-path)))))
 
 (defun chatgpt-shell--make-payload (history)
   "Create the request payload from HISTORY."
