@@ -2053,7 +2053,9 @@ Very much EXPERIMENTAL."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (let* ((path (read-file-name "Restore from: " (file-name-as-directory shell-maker-transcript-default-path) nil t))
+  (let* ((dir (and shell-maker-transcript-default-path
+                   (file-name-as-directory shell-maker-transcript-default-path)))
+         (path (read-file-name "Restore from: " dir nil t))
          (prompt-regexp (shell-maker-prompt-regexp shell-maker--config))
          (history (with-temp-buffer
                     (insert-file-contents path)
