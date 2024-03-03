@@ -2053,8 +2053,8 @@ Very much EXPERIMENTAL."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (let* ((dir (and shell-maker-transcript-default-path
-                   (file-name-as-directory shell-maker-transcript-default-path)))
+  (let* ((dir (when shell-maker-transcript-default-path
+                (file-name-as-directory shell-maker-transcript-default-path)))
          (path (read-file-name "Restore from: " dir nil t))
          (prompt-regexp (shell-maker-prompt-regexp shell-maker--config))
          (history (with-temp-buffer
