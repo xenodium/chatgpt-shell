@@ -156,7 +156,7 @@ For example:
 
 (defvaralias 'chatgpt-shell-logging 'shell-maker-logging)
 
-(defvaralias 'chatgpt-shell-history-path 'shell-maker-root-path)
+(defvaralias 'chatgpt-shell-root-path 'shell-maker-root-path)
 
 (defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 

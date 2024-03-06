@@ -196,7 +196,6 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-read-string-function                               | Function to read strings from user.                                         |
 | chatgpt-shell-model-temperature                                  | What sampling temperature to use, between 0 and 2, or nil.                  |
 | chatgpt-shell-transmitted-context-length                         | Controls the amount of context provided to chatGPT.                         |
-| chatgpt-shell-history-path                                       | Root path to the location for storing history files.                        |
 | chatgpt-shell-system-prompts                                     | List of system prompts to choose from.                                      |
 | chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
 | chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                           |
@@ -205,6 +204,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of `git-commit`.                                              |
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                            |
 | chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.               |
+| chatgpt-shell-root-path                                          | Root path location to store internal shell files.                           |
 | chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`.                                         |
 | chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                      |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                          |
@@ -300,6 +300,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-write-git-commit                     | Write commit from region using ChatGPT.                           |
 |                 | chatgpt-shell-prompt                               | Make a ChatGPT request from the minibuffer.                       |
 |                 | chatgpt-shell-remove-block-overlays                | Remove block overlays.  Handy for renaming blocks.                |
+|                 | chatgpt-shell-system-prompts-menu                  | ChatGPT                                                           |
 |                 | chatgpt-shell-proofread-region                     | Proofread English from region using ChatGPT.                      |
 | M-r             | chatgpt-shell-search-history                       | Search previous input history.                                    |
 |                 | chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.                 |
@@ -413,17 +414,18 @@ Please also share the entire org snippet.
 #+END_SRC
 
 #+RESULTS:
-| C-<up> or M-p   | dall-e-shell-previous-input          | Cycle backwards through input history, saving input.       |
-|                 | dall-e-shell                         | Start a DALL-E shell.                                      |
-|                 | dall-e-shell-interrupt               | Interrupt `dall-e-shell' from any buffer.                  |
-| S-<return>      | dall-e-shell-newline                 | Insert a newline, and move to left margin of the new line. |
-| RET             | dall-e-shell-submit                  | Submit current input.                                      |
-| C-x C-s         | dall-e-shell-save-session-transcript | Save shell transcript to file.                             |
-| C-c C-v         | dall-e-shell-swap-model-version      | Swap model version from `dall-e-shell-model-versions'.     |
-|                 | dall-e-shell-mode                    | Major mode for DALL-E shell.                               |
-| C-<down> or M-n | dall-e-shell-next-input              | Cycle forwards through input history.                      |
-| M-r             | dall-e-shell-search-history          | Search previous input history.                             |
-|                 | dall-e-shell-rename-buffer           | Rename current shell buffer.                               |
+| C-<up> or M-p   | dall-e-shell-previous-input                       | Cycle backwards through input history, saving input.              |
+|                 | dall-e-shell                                      | Start a DALL-E shell.                                             |
+|                 | dall-e-shell-insert-image-from-region-description | Generate and insert an image using current region as description. |
+|                 | dall-e-shell-interrupt                            | Interrupt `dall-e-shell' from any buffer.                         |
+| S-<return>      | dall-e-shell-newline                              | Insert a newline, and move to left margin of the new line.        |
+| RET             | dall-e-shell-submit                               | Submit current input.                                             |
+| C-x C-s         | dall-e-shell-save-session-transcript              | Save shell transcript to file.                                    |
+| C-c C-v         | dall-e-shell-swap-model-version                   | Swap model version from `dall-e-shell-model-versions'.            |
+|                 | dall-e-shell-mode                                 | Major mode for DALL-E shell.                                      |
+| C-<down> or M-n | dall-e-shell-next-input                           | Cycle forwards through input history.                             |
+| M-r             | dall-e-shell-search-history                       | Search previous input history.                                    |
+|                 | dall-e-shell-rename-buffer                        | Rename current shell buffer.                                      |
 
 * ChatGPT org babel
 
