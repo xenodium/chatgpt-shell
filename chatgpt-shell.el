@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.7
+;; Version: 1.0.8
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -551,6 +551,8 @@ or
 
 With NEW-SESSION, start a new session."
   (interactive "P")
+  (when (boundp 'chatgpt-shell-history-path)
+    (error "chatgpt-shell-history-path no longer exists. Please migrate to chatgpt-shell-root-path and then (makunbound 'chatgpt-shell-history-path)"))
   (chatgpt-shell-start nil new-session))
 
 (defun chatgpt-shell-start (&optional no-focus new-session)
