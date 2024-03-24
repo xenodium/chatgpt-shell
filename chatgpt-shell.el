@@ -1405,15 +1405,6 @@ enables additional key bindings.
           (chatgpt-shell--primary-buffer)
         (chatgpt-shell--put-source-block-overlays)))))
 
-(defun chatgpt-shell-ask-chatgpt-region ()
-  "Send text from region using ChatGPT"
-  (interactive)
-  (unless (region-active-p)
-    (user-error "No region active"))
-  (let* ((region-text (buffer-substring (region-beginning) (region-end)))
-         )
-    (chatgpt-shell-send-to-buffer trim-leading nil)))
-
 (defun chatgpt-shell-send-region-with-header (header)
   "Send text with HEADER from region using ChatGPT."
   (unless (region-active-p)
