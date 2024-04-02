@@ -1,4 +1,3 @@
-
 (require 'ert)
 
 ;;; chatgpt-shell-model-version
@@ -34,8 +33,7 @@
 
 (ert-deftest test-chatgpt-shell--append-system-info-with-mock ()
   (cl-letf (((symbol-function 'shell-command-to-string) #'mock-shell-command-to-string)
-            ((symbol-function 'emacs-version) #'mock-emacs-version)
-            )
+            ((symbol-function 'emacs-version) #'mock-emacs-version))
     (should (let ((system-type 'darwin))
               (equal (chatgpt-shell--append-system-info "foo")
                      "foo\n# System info\n\n## OS details\nmocked system info\n## Editor\nmocked emacs version")))
