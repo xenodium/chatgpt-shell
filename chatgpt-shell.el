@@ -600,10 +600,10 @@ Set NEW-SESSION to start a separate new session."
 (defun chatgpt-shell--shrink-system-prompt (prompt)
   "Shrink PROMPT."
   (if (consp prompt)
-      (car prompt)
-    (if (> (length (string-trim prompt)) 6)
+      (chatgpt-shell--shrink-system-prompt (car prompt))
+    (if (> (length (string-trim prompt)) 15)
         (format "%s..."
-                (substring (string-trim prompt) 0 15))
+                (substring (string-trim prompt) 0 12))
       (string-trim prompt))))
 
 (defun chatgpt-shell--shell-info ()
