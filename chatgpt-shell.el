@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.9
+;; Version: 1.0.10
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1114,6 +1114,10 @@ With PREFIX, clear existing history (wipe asociated shell history).
 Whenever `chatgpt-shell-prompt-compose' is invoked, appends any active
 region (or flymake issue at point) to compose buffer.
 
+Additionally, if point is at an error/warning raised by flymake,
+automatically add context (error/warning + code) to expedite ChatGPT
+for help to fix the issue.
+
 The compose buffer always shows the latest interaction, but it's
 backed by the shell history. You can always switch to the shell buffer
 to view the history.
@@ -1162,8 +1166,22 @@ enables additional key bindings.
                                                           (region-end))))
                        (deactivate-mark)
                        region)
-                     (when-let ((diagnostic (flymake-diagnostics (point))))
-                       (mapconcat #'flymake-diagnostic-text diagnostic "\n"))))
+                     (when-let* ((diagnostic (flymake-diagnostics (point)))
+                                 (line-start (line-beginning-position))
+                                 (line-end (line-end-position))
+                                 (top-context-start (max (line-beginning-position 1) (point-min)))
+                                 (top-context-end (max (line-beginning-position -5) (point-min)))
+                                 (bottom-context-start (min (line-beginning-position 2) (point-max)))
+                                 (bottom-context-end (min (line-beginning-position 7) (point-max)))
+                                 (current-line (buffer-substring line-start line-end)))
+                       (concat
+                        "Fix this code and only show me a diff without explanation\n\n"
+                        (mapconcat #'flymake-diagnostic-text diagnostic "\n")
+                        "\n\n"
+                        (buffer-substring top-context-start top-context-end)
+                        (buffer-substring line-start line-end)
+                        " <--- issue is here\n"
+                        (buffer-substring bottom-context-start bottom-context-end)))))
          (instructions (concat "Type "
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
