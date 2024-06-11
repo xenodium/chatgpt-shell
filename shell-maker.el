@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.50.1
+;; Version: 0.50.2
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -919,6 +919,17 @@ Very much EXPERIMENTAL."
         (write-file path t))
       (setq shell-maker--file path)
       (set-buffer-modified-p nil))))
+
+(defun shell-maker--prompt-end-markers ()
+  "Return the location of all \"<shell-maker-end-of-prompt>\" markers.
+
+Each marker is of the form (START . END)."
+  (save-excursion
+    (goto-char (point-min))
+    (let (matches)
+      (while (search-forward "<shell-maker-end-of-prompt>" nil t)
+        (push (cons (match-beginning 0) (match-end 0)) matches))
+      (reverse matches))))
 
 (defun shell-maker--extract-history (text prompt-regexp)
   "Extract all commands and respective output in TEXT with PROMPT-REGEXP.

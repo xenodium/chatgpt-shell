@@ -433,6 +433,11 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   :type 'boolean
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-insert-dividers nil
+  "Whether or not to display a divider between requests and responses."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-transmitted-context-length
   #'chatgpt-shell--approximate-context-length
   "Controls the amount of context provided to chatGPT.
@@ -2175,6 +2180,17 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
       (overlay-put (make-overlay body-start body-end buf)
                    'face 'font-lock-doc-markup-face))))
 
+(defun chatgpt-shell--fontify-divider (start end)
+  "Display text between START and END as a divider."
+  (overlay-put (make-overlay start end
+                             (if (and (boundp 'shell-maker--config)
+                                      shell-maker--config)
+                                 (shell-maker-buffer shell-maker--config)
+                               (current-buffer)))
+               'display
+               (concat (propertize (concat (make-string (window-body-width) ? ) "")
+                                   'face '(:underline t)) "\n")))
+
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-link (start end title-start title-end url-start url-end)
   "Fontify a markdown link.
@@ -2322,6 +2338,9 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
          (cdr (map-elt block 'body))
          (car (map-elt block 'end))
          (cdr (map-elt block 'end))))
+      (when chatgpt-shell-insert-dividers
+        (dolist (divider (shell-maker--prompt-end-markers))
+          (chatgpt-shell--fontify-divider (car divider) (cdr divider))))
       (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
         (chatgpt-shell--fontify-link
          (map-elt link 'start)
