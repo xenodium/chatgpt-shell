@@ -135,6 +135,14 @@ Note: in all cases responses are written to the shell to keep context."
                  (const :tag "Shell" shell))
   :group 'chatgpt)
 
+(defcustom chatgpt-shell-prompt-reuse-transient-buffer-window nil
+  "Reuse transient buffer window instead of creating a new one.
+
+This only has effect when `chatgpt-shell-prompt-query-response-style' is set to
+`'other-window'."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-after-command-functions nil
   "Abnormal hook (i.e. with parameters) invoked after each command.
 
@@ -1653,12 +1661,18 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
         (view-mode +1)
         (setq view-exit-action 'kill-buffer)))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
-                     display-buffer-alist)
-        (add-to-list 'display-buffer-alist
-                     (cons (rx "*ChatGPT>" (zero-or-more not-newline) "*")
-                           '((display-buffer-below-selected) (split-window-sensibly)))))
-      (display-buffer buffer))
+      (let ((buffer-name-regex (concat (regexp-quote (chatgpt-shell--minibuffer-prompt)) ".+")))
+        (unless (assoc buffer-name-regex display-buffer-alist)
+          (add-to-list 'display-buffer-alist
+                       (cons buffer-name-regex
+                             '((display-buffer-below-selected) (split-window-sensibly)))))
+        (if chatgpt-shell-prompt-reuse-transient-buffer-window
+            (if-let (window (get-window-with-predicate
+                             (lambda (w)
+                               (string-match buffer-name-regex (buffer-name (window-buffer w))))))
+                (set-window-buffer window buffer)
+              (display-buffer buffer))
+          (display-buffer buffer))))
     (cl-flet ((send ()
                     (when shell-maker--busy
                       (shell-maker-interrupt nil))
