@@ -1666,12 +1666,11 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
           (add-to-list 'display-buffer-alist
                        (cons buffer-name-regex
                              '((display-buffer-below-selected) (split-window-sensibly)))))
-        (if chatgpt-shell-prompt-reuse-transient-buffer-window
-            (if-let (window (get-window-with-predicate
-                             (lambda (w)
-                               (string-match buffer-name-regex (buffer-name (window-buffer w))))))
-                (set-window-buffer window buffer)
-              (display-buffer buffer))
+        (if-let ((_ chatgpt-shell-prompt-reuse-transient-buffer-window)
+                 (window (get-window-with-predicate
+                          (lambda (w)
+                            (string-match buffer-name-regex (buffer-name (window-buffer w)))))))
+            (set-window-buffer window buffer)
           (display-buffer buffer))))
     (cl-flet ((send ()
                     (when shell-maker--busy
