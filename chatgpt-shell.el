@@ -1661,7 +1661,7 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
         (view-mode +1)
         (setq view-exit-action 'kill-buffer)))
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (let ((buffer-name-regex (concat (regexp-quote (chatgpt-shell--minibuffer-prompt)) ".+")))
+      (let ((buffer-name-regex (rx (| (group "*chatgpt* " (+ nonl) "> " (+ nonl)) (group "ChatGPT> " (+ nonl))))))
         (unless (assoc buffer-name-regex display-buffer-alist)
           (add-to-list 'display-buffer-alist
                        (cons buffer-name-regex
