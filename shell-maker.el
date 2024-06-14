@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.50.2
+;; Version: 0.50.3
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -168,6 +168,7 @@ Set BUFFER-NAME to override the buffer name."
       (fset (intern (concat namespace "-shell-search-history")) #'shell-maker-search-history)
       (fset (intern (concat namespace "-shell-newline")) #'newline)
       (fset (intern (concat namespace "-shell-rename-buffer")) #'shell-maker-rename-buffer)
+      (fset (intern (concat namespace "-shell-delete-interaction-at-point")) #'shell-maker-delete-interaction-at-point)
       (eval
        (macroexpand
         `(define-derived-mode ,(shell-maker-major-mode config) comint-mode
@@ -412,6 +413,35 @@ Set BUFFER-NAME to override the buffer name."
        (if (= begin (shell-maker--prompt-begin-position))
            (point-max)
          (shell-maker--prompt-begin-position))))))
+
+
+(defun shell-maker-delete-interaction-at-point ()
+  "Delete interaction (request and response) at point."
+  (interactive)
+  (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
+    (user-error "Not in a shell"))
+  (save-excursion
+    (save-restriction
+      (let ((inhibit-read-only t)
+            (prompt-pos (save-excursion
+                          (goto-char (process-mark
+                                      (get-buffer-process (current-buffer))))
+                          (point))))
+        ;; Go to previous response if at last/empty prompt.
+        (when (>= (point) prompt-pos)
+          (goto-char prompt-pos)
+          (forward-line -1)
+          (end-of-line))
+        ;; Removing `insert-in-front-hooks' from text, prior
+        ;; to deleting region, ensures comint runs neither
+        ;; `comint--mark-as-output' nor `comint--mark-yanked-as-output'
+        ;; if user undoes the deletion, which breaks `comint' navigation.
+        (remove-text-properties (point-min)
+                                (point-max)
+                                '(insert-in-front-hooks nil))
+        (shell-maker-narrow-to-prompt)
+        (delete-region (point-min) (point-max)))))
+  (end-of-line))
 
 (defun shell-maker--prompt-end-position ()
   "Based on `shell--prompt-end-position'."
