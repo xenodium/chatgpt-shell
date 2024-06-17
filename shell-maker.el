@@ -447,7 +447,8 @@ Set BUFFER-NAME to override the buffer name."
   "Based on `shell--prompt-end-position'."
   (save-excursion
     (goto-char (shell-maker--prompt-begin-position))
-    (comint-next-prompt 1)
+    (unless (comint-next-prompt 1)
+      (error "No end found"))
     (point)))
 
 (defun shell-maker-mark-output ()

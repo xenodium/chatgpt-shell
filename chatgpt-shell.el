@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.11
+;; Version: 1.0.12
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -650,6 +650,8 @@ Set NEW-SESSION to start a separate new session."
 
 (defun chatgpt-shell--set-primary-buffer (primary-shell-buffer)
   "Set PRIMARY-SHELL-BUFFER as primary buffer."
+  (unless primary-shell-buffer
+    (error "No primary shell available."))
   (mapc (lambda (shell-buffer)
           (with-current-buffer shell-buffer
             (setq chatgpt-shell--is-primary-p nil)))
@@ -661,11 +663,21 @@ Set NEW-SESSION to start a separate new session."
   "Return the primary shell buffer.
 
 This is used for sending a prompt to in the background."
-  (let ((primary-shell-buffer (seq-find
-                               (lambda (shell-buffer)
-                                 (with-current-buffer shell-buffer
-                                   chatgpt-shell--is-primary-p))
-                               (chatgpt-shell--shell-buffers))))
+  (let* ((shell-buffers (chatgpt-shell--shell-buffers))
+         (primary-shell-buffer (seq-find
+                                (lambda (shell-buffer)
+                                  (with-current-buffer shell-buffer
+                                    chatgpt-shell--is-primary-p))
+                                shell-buffers)))
+    (unless primary-shell-buffer
+      (setq primary-shell-buffer
+            (or (seq-first shell-buffers)
+                (shell-maker-start chatgpt-shell--config
+                                   t
+                                   chatgpt-shell-welcome-function
+                                   t
+                                   (chatgpt-shell--make-buffer-name))))
+      (chatgpt-shell--set-primary-buffer primary-shell-buffer))
     primary-shell-buffer))
 
 (defun chatgpt-shell--make-buffer-name ()
