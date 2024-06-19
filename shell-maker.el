@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.50.3
+;; Version: 0.50.4
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -736,9 +736,7 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                        (cond ((eq 0 curl-exit-code)
                               (funcall callback (cdr preparsed) t))
                              ((numberp curl-exit-code)
-                              (funcall error-callback (string-trim (cdr preparsed))))
-                             (t
-                              (funcall callback (cdr preparsed) t))))))
+                              (funcall error-callback (string-trim (cdr preparsed))))))))
                  (setq remaining-text (cdr preparsed)))
              (error (delete-process process))))))
       (set-process-sentinel
