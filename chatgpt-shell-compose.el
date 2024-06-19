@@ -41,12 +41,17 @@ This is typically used to craft prompts and immediately jump over to
 the shell to follow the response.")
 
 (defvar-local chatgpt-shell-compose--compose-buffer-p nil
-  "Identifies whethere or not buffer is a compose buffer.
+  "Identifies whether or not buffer is a compose buffer.
 
 Checking for major mode in buffer isn't reliable to distinguish
 compose buffers as it could be either `view-mode' or
 `chatgpt-shell-compose-mode'.  Instead, store in
 `chatgpt-shell-compose--compose-buffer-p'.")
+
+(defvar-local chatgpt-shell-compose--transient-frame-p nil
+  "Identifies whether or not buffer is a compose buffer.
+
+t if invoked from a transient frame (quitting closes the frame).")
 
 (defvar chatgpt-shell-compose-mode-map
   (let ((map (make-sparse-keymap)))
@@ -99,8 +104,19 @@ to retry on disconnects.
  `\\[chatgpt-shell-compose-other-buffer]` Jump to other buffer (ie. the shell itself).
  `\\[chatgpt-shell-mark-block]` Mark block at point."
   (interactive "P")
+  (chatgpt-shell-compose-show-buffer nil prefix))
+
+(defun chatgpt-shell-compose-show-buffer (&optional content clear-history transient-frame-p)
+  "Show a prompt compose buffer.
+
+Prepopulate buffer with optional CONTENT.
+
+Set CLEAR-HISTORY to wipe any existing shell history.
+
+Set TRANSIENT-FRAME-P to also close frame on exit."
   (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
-         (region (or (when-let ((region-active (region-active-p))
+         (region (or content
+                     (when-let ((region-active (region-active-p))
                                 (region (buffer-substring (region-beginning)
                                                           (region-end))))
                        (deactivate-mark)
@@ -126,15 +142,16 @@ to retry on disconnects.
                                " to send prompt. "
                                (propertize "C-c C-k" 'face 'help-key-binding)
                                " to cancel and exit. "))
-         (erase-buffer (or prefix
+         (erase-buffer (or clear-history
                            (not region)
                            ;; view-mode = old query, erase for new one.
                            (with-current-buffer (chatgpt-shell-compose-buffer)
                              view-mode)))
          (prompt))
     (with-current-buffer (chatgpt-shell-compose-buffer)
-      (setq chatgpt-shell-compose--exit-on-submit exit-on-submit)
       (chatgpt-shell-compose-mode)
+      (setq-local chatgpt-shell-compose--exit-on-submit exit-on-submit)
+      (setq-local chatgpt-shell-compose--transient-frame-p transient-frame-p)
       (setq-local chatgpt-shell-compose--compose-buffer-p t)
       (visual-line-mode +1)
       (when view-mode
@@ -149,7 +166,7 @@ to retry on disconnects.
             (insert region)
             (when insert-trailing-newlines
               (insert "\n\n")))))
-      (when prefix
+      (when clear-history
         (let ((chatgpt-shell-prompt-query-response-style 'inline))
           (chatgpt-shell-send-to-buffer "clear")))
       ;; TODO: Find a better alternative to prevent clash.
@@ -161,7 +178,17 @@ to retry on disconnects.
       (defvar-local chatgpt-shell--ring-index nil)
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
-    (pop-to-buffer (chatgpt-shell-compose-buffer))))
+    ;; Is there a window already displaying a chatgpt compose/output buffer?
+    (if-let* ((buffer-name-regex (rx (| (group "*chatgpt* " (+ nonl) "> " (+ nonl)) (group "ChatGPT> " (+ nonl)))))
+              (window (get-window-with-predicate
+                       (lambda (w)
+                         (string-match buffer-name-regex
+                                       (buffer-name (window-buffer w)))))))
+        (progn
+          (set-window-buffer window (chatgpt-shell-compose-buffer))
+          (select-window window))
+      (pop-to-buffer (chatgpt-shell-compose-buffer)))
+    (chatgpt-shell-compose-buffer)))
 
 (defun chatgpt-shell-compose-search-history ()
   "Search prompt history, select, and insert to current compose buffer."
@@ -177,6 +204,26 @@ to retry on disconnects.
                           (not (string-empty-p item)))
                         (ring-elements comint-input-ring))) nil t))))
     (insert candidate)))
+
+(defun chatgpt-shell-compose-quit-and-close-frame ()
+  "Quit compose and close frame if it's the last window."
+  (interactive)
+  (unless chatgpt-shell-compose--compose-buffer-p
+    (user-error "Not in a compose buffer"))
+  (let ((transient-frame-p chatgpt-shell-compose--transient-frame-p))
+    (quit-restore-window (get-buffer-window (current-buffer)) 'kill)
+    (when (and transient-frame-p
+               (< (chatgpt-shell-compose-frame-window-count) 2))
+      (delete-frame))))
+
+(defun chatgpt-shell-compose-frame-window-count ()
+  "Get the number of windows per current frame."
+  (unless chatgpt-shell-compose--compose-buffer-p
+    (user-error "Not in a compose buffer"))
+  (if-let ((window (get-buffer-window (current-buffer)))
+           (frame (window-frame window)))
+      (length (window-list frame))
+    0))
 
 (defun chatgpt-shell-compose-previous-history ()
   "Insert previous prompt from history into compose buffer."
@@ -270,7 +317,6 @@ to retry on disconnects.
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
     (view-mode +1)
     ;; Make buffer-local view-mode bindings.
-    (message "buffer=> %s" (buffer-name (current-buffer)))
     (let ((map (make-sparse-keymap)))
       (set-keymap-parent map view-mode-map)
       (define-key map (kbd "g") #'chatgpt-shell-compose-retry)
@@ -278,6 +324,7 @@ to retry on disconnects.
       (define-key map (kbd "n") #'chatgpt-shell-compose-next-block)
       (define-key map (kbd "p") #'chatgpt-shell-compose-previous-block)
       (define-key map (kbd "r") #'chatgpt-shell-compose-reply)
+      (define-key map (kbd "q") #'chatgpt-shell-compose-quit-and-close-frame)
       (define-key map (kbd "e") #'chatgpt-shell-compose-request-entire-snippet)
       (define-key map (kbd "o") #'chatgpt-shell-compose-other-buffer)
       (setq-local minor-mode-overriding-map-alist
@@ -294,13 +341,13 @@ to retry on disconnects.
       (let ((chatgpt-shell-prompt-query-response-style 'inline))
         (chatgpt-shell-send-to-buffer prompt)))))
 
+;; TODO: Delete and use chatgpt-shell-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-compose-cancel ()
   "Cancel and close compose buffer."
   (interactive)
   (unless chatgpt-shell-compose--compose-buffer-p
     (user-error "Not in a compose buffer"))
-  (quit-window t (get-buffer-window (chatgpt-shell-compose-buffer)))
-  (message "exit"))
+  (chatgpt-shell-compose-quit-and-close-frame))
 
 (define-derived-mode chatgpt-shell-compose-mode fundamental-mode "ChatGPT Compose"
   "Major mode for composing ChatGPT prompts from a dedicated buffer."
