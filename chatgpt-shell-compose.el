@@ -34,22 +34,17 @@
 
 ;;; Code:
 
+(require 'view)
+(require 'chatgpt-shell)
+
 (defvar-local chatgpt-shell-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
 
 This is typically used to craft prompts and immediately jump over to
 the shell to follow the response.")
 
-(defvar-local chatgpt-shell-compose--compose-buffer-p nil
-  "Identifies whether or not buffer is a compose buffer.
-
-Checking for major mode in buffer isn't reliable to distinguish
-compose buffers as it could be either `view-mode' or
-`chatgpt-shell-compose-mode'.  Instead, store in
-`chatgpt-shell-compose--compose-buffer-p'.")
-
 (defvar-local chatgpt-shell-compose--transient-frame-p nil
-  "Identifies whether or not buffer is a compose buffer.
+  "Identifies whether or not buffer is running on a dedicated frame.
 
 t if invoked from a transient frame (quitting closes the frame).")
 
@@ -61,6 +56,29 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "M-p") #'chatgpt-shell-compose-previous-history)
     (define-key map (kbd "M-n") #'chatgpt-shell-compose-next-history)
     map))
+
+(define-derived-mode chatgpt-shell-compose-mode fundamental-mode "ChatGPT Compose"
+  "Major mode for composing ChatGPT prompts from a dedicated buffer."
+  :keymap chatgpt-shell-compose-mode-map)
+
+(defvar chatgpt-shell-compose-view-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "g") #'chatgpt-shell-compose-retry)
+    (define-key map (kbd "C-M-h") #'chatgpt-shell-mark-block)
+    (define-key map (kbd "n") #'chatgpt-shell-compose-next-block)
+    (define-key map (kbd "p") #'chatgpt-shell-compose-previous-block)
+    (define-key map (kbd "r") #'chatgpt-shell-compose-reply)
+    (define-key map (kbd "q") #'chatgpt-shell-compose-quit-and-close-frame)
+    (define-key map (kbd "e") #'chatgpt-shell-compose-request-entire-snippet)
+    (define-key map (kbd "o") #'chatgpt-shell-compose-other-buffer)
+    (set-keymap-parent map view-mode-map)
+    map)
+  "Keymap for `chatgpt-shell-compose-view-mode'.")
+
+(define-minor-mode chatgpt-shell-compose-view-mode
+  "Like `view-mode`, but extended for ChatGPT Compose."
+  :lighter "ChatGPT view"
+  :keymap chatgpt-shell-compose-view-mode-map)
 
 (defun chatgpt-shell-compose (prefix)
   "Compose and send prompt from a dedicated buffer.
@@ -146,16 +164,15 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                            (not region)
                            ;; view-mode = old query, erase for new one.
                            (with-current-buffer (chatgpt-shell-compose-buffer)
-                             view-mode)))
+                             chatgpt-shell-compose-view-mode)))
          (prompt))
     (with-current-buffer (chatgpt-shell-compose-buffer)
       (chatgpt-shell-compose-mode)
       (setq-local chatgpt-shell-compose--exit-on-submit exit-on-submit)
       (setq-local chatgpt-shell-compose--transient-frame-p transient-frame-p)
-      (setq-local chatgpt-shell-compose--compose-buffer-p t)
       (visual-line-mode +1)
-      (when view-mode
-        (view-mode -1))
+      (when chatgpt-shell-compose-view-mode
+        (chatgpt-shell-compose-view-mode -1))
       (when erase-buffer
         (erase-buffer))
       (when region
@@ -193,8 +210,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-search-history ()
   "Search prompt history, select, and insert to current compose buffer."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (let ((candidate (with-current-buffer (chatgpt-shell--primary-buffer)
                      (completing-read
                       "History: "
@@ -208,8 +225,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-quit-and-close-frame ()
   "Quit compose and close frame if it's the last window."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (let ((transient-frame-p chatgpt-shell-compose--transient-frame-p))
     (quit-restore-window (get-buffer-window (current-buffer)) 'kill)
     (when (and transient-frame-p
@@ -218,8 +235,6 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 
 (defun chatgpt-shell-compose-frame-window-count ()
   "Get the number of windows per current frame."
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
   (if-let ((window (get-buffer-window (current-buffer)))
            (frame (window-frame window)))
       (length (window-list frame))
@@ -228,7 +243,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-previous-history ()
   "Insert previous prompt from history into compose buffer."
   (interactive)
-  (unless view-mode
+  (unless chatgpt-shell-compose-view-mode
     (let* ((ring (with-current-buffer (chatgpt-shell--primary-buffer)
                    (seq-filter
                     (lambda (item)
@@ -254,7 +269,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-next-history ()
   "Insert next prompt from history into compose buffer."
   (interactive)
-  (unless view-mode
+  (unless chatgpt-shell-compose-view-mode
     (let* ((ring (with-current-buffer (chatgpt-shell--primary-buffer)
                    (seq-filter
                     (lambda (item)
@@ -283,8 +298,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-send-buffer ()
   "Send compose buffer content to shell for processing."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
       (unless (y-or-n-p "Abort?")
@@ -292,7 +307,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (shell-maker-interrupt t)
       (with-current-buffer (chatgpt-shell-compose-buffer)
         (progn
-          (view-mode -1)
+          (chatgpt-shell-compose-view-mode -1)
           (erase-buffer)))
       (user-error "Aborted")))
   (when (chatgpt-shell-block-action-at-point)
@@ -304,9 +319,9 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
            (point-min) (point-max))))
     (erase-buffer)
     (user-error "Nothing to send"))
-  (if view-mode
+  (if chatgpt-shell-compose-view-mode
       (progn
-        (view-mode -1)
+        (chatgpt-shell-compose-view-mode -1)
         (erase-buffer)
         (message instructions))
     (setq prompt
@@ -315,20 +330,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
             (point-min) (point-max))))
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
-    (view-mode +1)
-    ;; Make buffer-local view-mode bindings.
-    (let ((map (make-sparse-keymap)))
-      (set-keymap-parent map view-mode-map)
-      (define-key map (kbd "g") #'chatgpt-shell-compose-retry)
-      (define-key map (kbd "C-M-h") #'chatgpt-shell-mark-block)
-      (define-key map (kbd "n") #'chatgpt-shell-compose-next-block)
-      (define-key map (kbd "p") #'chatgpt-shell-compose-previous-block)
-      (define-key map (kbd "r") #'chatgpt-shell-compose-reply)
-      (define-key map (kbd "q") #'chatgpt-shell-compose-quit-and-close-frame)
-      (define-key map (kbd "e") #'chatgpt-shell-compose-request-entire-snippet)
-      (define-key map (kbd "o") #'chatgpt-shell-compose-other-buffer)
-      (setq-local minor-mode-overriding-map-alist
-                  (list (cons 'view-mode map))))
+    (chatgpt-shell-compose-view-mode +1)
     (setq view-exit-action 'kill-buffer)
     (when (string-equal prompt "clear")
       (view-mode -1)
@@ -345,13 +347,9 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-compose-cancel ()
   "Cancel and close compose buffer."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (chatgpt-shell-compose-quit-and-close-frame))
-
-(define-derived-mode chatgpt-shell-compose-mode fundamental-mode "ChatGPT Compose"
-  "Major mode for composing ChatGPT prompts from a dedicated buffer."
-  :keymap chatgpt-shell-compose-mode-map)
 
 (defun chatgpt-shell-compose-buffer ()
   "Get the available shell compose buffer."
@@ -369,8 +367,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 
 Useful if sending a request failed, perhaps from failed connectivity."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (when-let ((prompt (with-current-buffer (chatgpt-shell--primary-buffer)
                        (seq-first (delete-dups
                                    (seq-filter
@@ -386,8 +384,8 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-compose-next-block ()
   "Jump to and select next code block."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (call-interactively #'chatgpt-shell-next-source-block)
   (when-let ((block (chatgpt-shell-markdown-block-at-point)))
     (set-mark (map-elt block 'end))
@@ -396,8 +394,8 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-compose-previous-block ()
   "Jump to and select previous code block."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (call-interactively #'chatgpt-shell-previous-source-block)
   (when-let ((block (chatgpt-shell-markdown-block-at-point)))
     (set-mark (map-elt block 'end))
@@ -406,19 +404,19 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-compose-reply ()
   "Reply as a follow-up and compose another query."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
       (user-error "Busy, please wait")))
-  (view-mode -1)
+  (chatgpt-shell-compose-view-mode -1)
   (erase-buffer))
 
 (defun chatgpt-shell-compose-request-entire-snippet ()
   "If the response code is incomplete, request the entire snippet."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
       (user-error "Busy, please wait")))
@@ -432,8 +430,8 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-compose-other-buffer ()
   "Jump to the shell buffer (compose's other buffer)."
   (interactive)
-  (unless chatgpt-shell-compose--compose-buffer-p
-    (user-error "Not in a compose buffer"))
+  (unless (eq major-mode 'chatgpt-shell-compose-mode)
+    (user-error "Not in a shell compose buffer"))
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
 (provide 'chatgpt-shell-compose)
