@@ -197,13 +197,15 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (message instructions))
     ;; Is there a window already displaying a chatgpt compose/output buffer?
     (if-let* ((buffer-name-regex (rx (| (group "*chatgpt* " (+ nonl) "> " (+ nonl)) (group "ChatGPT> " (+ nonl)))))
-              (window (get-window-with-predicate
-                       (lambda (w)
-                         (string-match buffer-name-regex
-                                       (buffer-name (window-buffer w)))))))
+              (window (catch 'found
+                        (walk-windows (lambda (w)
+                                        (when (string-match buffer-name-regex
+                                                            (buffer-name (window-buffer w)))
+                                          (throw 'found w)))
+                                      nil t))))
         (progn
           (set-window-buffer window (chatgpt-shell-prompt-compose-buffer))
-          (select-window window))
+          (select-frame-set-input-focus (window-frame window)))
       (pop-to-buffer (chatgpt-shell-prompt-compose-buffer)))
     (chatgpt-shell-prompt-compose-buffer)))
 
