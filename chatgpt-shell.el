@@ -2582,11 +2582,10 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
     ;; Is there a window already displaying a chatgpt compose/output buffer?
-    (if-let* ((buffer-name-regex (rx (| (group "*chatgpt* " (+ nonl) "> " (+ nonl)) (group "ChatGPT> " (+ nonl)))))
-              (window (catch 'found
+    (if-let* ((window (catch 'found
                         (walk-windows (lambda (w)
-                                        (when (string-match buffer-name-regex
-                                                            (buffer-name (window-buffer w)))
+                                        (when (eq (buffer-local-value 'major-mode (window-buffer w))
+                                                  'chatgpt-shell-prompt-compose-mode)
                                           (throw 'found w)))
                                       nil t))))
         (progn
