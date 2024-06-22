@@ -551,7 +551,7 @@ or
 With NEW-SESSION, start a new session."
   (interactive "P")
   (when (boundp 'chatgpt-shell-history-path)
-    (error "chatgpt-shell-history-path no longer exists. Please migrate to chatgpt-shell-root-path and then (makunbound 'chatgpt-shell-history-path)"))
+    (error Variable "chatgpt-shell-history-path no longer exists. Please migrate to chatgpt-shell-root-path and then (makunbound 'chatgpt-shell-history-path)"))
   (chatgpt-shell-start nil new-session))
 
 (defun chatgpt-shell-start (&optional no-focus new-session)
@@ -657,7 +657,7 @@ Set NEW-SESSION to start a separate new session."
 (defun chatgpt-shell--set-primary-buffer (primary-shell-buffer)
   "Set PRIMARY-SHELL-BUFFER as primary buffer."
   (unless primary-shell-buffer
-    (error "No primary shell available."))
+    (error "No primary shell available"))
   (mapc (lambda (shell-buffer)
           (with-current-buffer shell-buffer
             (setq chatgpt-shell--is-primary-p nil)))
