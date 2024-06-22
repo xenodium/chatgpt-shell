@@ -1350,6 +1350,10 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
   (add-to-list 'eshell-complex-commands "??"))
 
+(define-derived-mode chatgpt-shell-prompt-other-buffer-response-mode
+  fundamental-mode "ChatGPT response"
+  "Major mode for buffers created by `other-buffer' `chatgpt-shell-prompt-query-response-style'.")
+
 (defun chatgpt-shell-send-to-buffer (text &optional review handler)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
@@ -1368,6 +1372,7 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                                           (nth 0 (split-string text "\n"))
                                           (window-body-width))))))
                           (with-current-buffer other-buffer
+                            (chatgpt-shell-prompt-other-buffer-response-mode)
                             (erase-buffer))
                           other-buffer))
                        (t
@@ -1388,13 +1393,7 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
     (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (with-current-buffer buffer
         (view-mode +1)
-        (setq view-exit-action 'kill-buffer)))
-    (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (unless (assoc (rx "*ChatGPT>" (zero-or-more not-newline) "*")
-                     display-buffer-alist)
-        (add-to-list 'display-buffer-alist
-                     (cons (rx "*ChatGPT>" (zero-or-more not-newline) "*")
-                           '((display-buffer-below-selected) (split-window-sensibly)))))
+        (setq view-exit-action 'kill-buffer))
       (display-buffer buffer))
     (cl-flet ((send ()
                     (when shell-maker--busy
@@ -2581,17 +2580,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (defvar-local chatgpt-shell--ring-index nil)
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
-    ;; Is there a window already displaying a chatgpt compose/output buffer?
-    (if-let* ((window (catch 'found
-                        (walk-windows (lambda (w)
-                                        (when (eq (buffer-local-value 'major-mode (window-buffer w))
-                                                  'chatgpt-shell-prompt-compose-mode)
-                                          (throw 'found w)))
-                                      nil t))))
-        (progn
-          (set-window-buffer window (chatgpt-shell-prompt-compose-buffer))
-          (select-frame-set-input-focus (window-frame window)))
-      (pop-to-buffer (chatgpt-shell-prompt-compose-buffer)))
+    (display-buffer (chatgpt-shell-prompt-compose-buffer))
     (chatgpt-shell-prompt-compose-buffer)))
 
 (defun chatgpt-shell-prompt-compose-search-history ()
