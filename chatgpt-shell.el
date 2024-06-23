@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.12
+;; Version: 1.0.13
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1354,11 +1354,13 @@ With prefix REVIEW prompt before sending to ChatGPT."
   fundamental-mode "ChatGPT response"
   "Major mode for buffers created by `other-buffer' `chatgpt-shell-prompt-query-response-style'.")
 
-(defun chatgpt-shell-send-to-buffer (text &optional review handler)
+(defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
-If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
+If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'
+
+ON-FINISHED is invoked when the entire interaction is finished."
   (if (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
       (let ((buffer (chatgpt-shell-prompt-compose-show-buffer text)))
         (unless review
@@ -1414,7 +1416,9 @@ If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
                                        (goto-char marker)
                                        (insert output)
                                        (set-marker marker (+ (length output)
-                                                             (marker-position marker))))))))))
+                                                             (marker-position marker))))))))
+                             (when (and finished on-finished)
+                               (funcall on-finished))))
                        (or handler (lambda (_command _output _error _finished))))
                      t))))
         (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
@@ -2708,7 +2712,10 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
           (quit-window t (get-buffer-window (chatgpt-shell-prompt-compose-buffer)))
           (chatgpt-shell-send-to-buffer prompt))
       (let ((chatgpt-shell-prompt-query-response-style 'inline))
-        (chatgpt-shell-send-to-buffer prompt)))))
+        (chatgpt-shell-send-to-buffer prompt nil nil
+                                      (lambda ()
+                                        (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+                                          (chatgpt-shell--put-source-block-overlays))))))))
 
 ;; TODO: Delete and use chatgpt-shell-prompt-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-prompt-compose-cancel ()
@@ -2746,7 +2753,10 @@ Useful if sending a request failed, perhaps from failed connectivity."
              (chatgpt-shell-prompt-query-response-style 'inline))
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
-    (chatgpt-shell-send-to-buffer prompt)))
+    (chatgpt-shell-send-to-buffer prompt nil nil
+                                  (lambda ()
+                                    (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+                                      (chatgpt-shell--put-source-block-overlays))))))
 
 (defun chatgpt-shell-prompt-compose-next-block ()
   "Jump to and select next code block."
