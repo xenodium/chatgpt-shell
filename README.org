@@ -145,6 +145,8 @@ Configure the following variables:
 
 Launch with =M-x chatgpt-shell= or =dall-e-shell=.
 
+Launch concurrent additional shells with =C-u M-x chatgpt-shell=.
+
 * Clear buffer
 
 Type =clear= as a prompt.
