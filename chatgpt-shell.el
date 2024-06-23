@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 1.0.12
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.1"))
+;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1851,9 +1851,18 @@ lang-start lang-end body-start body-end quotes2-start quotes2-end)
   "Fontify a source block.
 Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
  BODY-END QUOTES2-START and QUOTES2-END."
-  ;; Hide ```
+  ;; Overlay beginning "```" with a copy block button.
   (overlay-put (make-overlay quotes1-start
-                             quotes1-end) 'invisible 'chatgpt-shell)
+                             quotes1-end)
+               'display
+               (propertize "📋 "
+                           'pointer 'hand
+                           'keymap (shell-maker--make-ret-binding-map
+                                    (lambda ()
+                                      (interactive)
+                                      (kill-ring-save body-start body-end)
+                                      (message "Copied")))))
+  ;; Hide end "```" altogether.
   (overlay-put (make-overlay quotes2-start
                              quotes2-end) 'invisible 'chatgpt-shell)
   (unless (eq lang-start lang-end)

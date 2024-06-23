@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.50.4
+;; Version: 0.50.5
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1270,6 +1270,7 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
   "Make (kbd \"RET\") binding map to FUN."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") fun)
+    (define-key map [mouse-1] fun)
     (define-key map [remap self-insert-command]
       'ignore)
     map))
