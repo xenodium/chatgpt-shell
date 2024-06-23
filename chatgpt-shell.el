@@ -1359,89 +1359,71 @@ With prefix REVIEW prompt before sending to ChatGPT."
 Set REVIEW to make changes before submitting to ChatGPT.
 
 If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'."
-  (let* ((buffer (cond (handler
-                        nil)
-                       ((eq chatgpt-shell-prompt-query-response-style 'inline)
-                        (current-buffer))
-                       ((eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                        (let* ((inhibit-read-only t)
-                               (other-buffer
-                                (get-buffer-create
-                                 (concat (chatgpt-shell--minibuffer-prompt)
-                                         (truncate-string-to-width
-                                          (nth 0 (split-string text "\n"))
-                                          (window-body-width))))))
-                          (with-current-buffer other-buffer
-                            (chatgpt-shell-prompt-other-buffer-response-mode)
-                            (erase-buffer))
-                          other-buffer))
-                       (t
-                        nil)))
-         (point (point))
-         (marker (copy-marker (point)))
-         (orig-region-active (region-active-p))
-         (no-focus (or (eq chatgpt-shell-prompt-query-response-style 'inline)
-                       (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                       handler)))
-    (when (region-active-p)
-      (setq marker (copy-marker (max (region-beginning)
-                                     (region-end)))))
-    (if (chatgpt-shell--primary-buffer)
-        (with-current-buffer (chatgpt-shell--primary-buffer)
-          (chatgpt-shell-start no-focus))
-      (chatgpt-shell-start no-focus t))
-    (when (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (with-current-buffer buffer
-        (view-mode +1)
-        (setq view-exit-action 'kill-buffer))
-      (display-buffer buffer))
-    (cl-flet ((send ()
-                    (when shell-maker--busy
-                      (shell-maker-interrupt nil))
-                    (goto-char (point-max))
-                    (if review
-                        (save-excursion
-                          (insert text))
-                      (insert text)
-                      (shell-maker--send-input
-                       (if (or (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-                               (eq chatgpt-shell-prompt-query-response-style 'inline))
-                           (lambda (_command output error finished)
-                             (setq output (or output ""))
-                             (when (buffer-live-p buffer)
-                               (with-current-buffer buffer
-                                 (if error
-                                     (unless (string-empty-p (string-trim output))
-                                       (message "%s" output))
-                                   (let ((inhibit-read-only t))
-                                     (save-excursion
-                                       (if orig-region-active
-                                           (progn
-                                             (goto-char marker)
-                                             (when (eq (marker-position marker)
-                                                       point)
-                                               (insert "\n\n")
-                                               (set-marker marker (+ 2 (marker-position marker))))
-                                             (insert output)
-                                             (set-marker marker (+ (length output)
-                                                                   (marker-position marker))))
-                                         (goto-char marker)
-                                         (insert output)
-                                         (set-marker marker (+ (length output)
-                                                               (marker-position marker)))))))
-                                 (when (and finished
-                                            (eq chatgpt-shell-prompt-query-response-style 'other-buffer))
-                                   (chatgpt-shell--put-source-block-overlays)))))
-                         (or handler (lambda (_command _output _error _finished))))
-                       t))))
-      (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
-              (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-              handler)
+  (if (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
+      (let ((buffer (chatgpt-shell-prompt-compose-show-buffer text)))
+        (unless review
+          (with-current-buffer buffer
+            (chatgpt-shell-prompt-compose-send-buffer))))
+    (let* ((buffer (cond (handler
+                          nil)
+                         ((eq chatgpt-shell-prompt-query-response-style 'inline)
+                          (current-buffer))
+                         (t
+                          nil)))
+           (point (point))
+           (marker (copy-marker (point)))
+           (orig-region-active (region-active-p))
+           (no-focus (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                         handler)))
+      (when (region-active-p)
+        (setq marker (copy-marker (max (region-beginning)
+                                       (region-end)))))
+      (if (chatgpt-shell--primary-buffer)
           (with-current-buffer (chatgpt-shell--primary-buffer)
-            (goto-char (point-max))
-            (send))
-        (with-selected-window (get-buffer-window (chatgpt-shell--primary-buffer))
-          (send))))))
+            (chatgpt-shell-start no-focus))
+        (chatgpt-shell-start no-focus t))
+      (cl-flet ((send ()
+                  (when shell-maker--busy
+                    (shell-maker-interrupt nil))
+                  (goto-char (point-max))
+                  (if review
+                      (save-excursion
+                        (insert text))
+                    (insert text)
+                    (shell-maker--send-input
+                     (if (eq chatgpt-shell-prompt-query-response-style 'inline)
+                         (lambda (_command output error finished)
+                           (setq output (or output ""))
+                           (when (buffer-live-p buffer)
+                             (with-current-buffer buffer
+                               (if error
+                                   (unless (string-empty-p (string-trim output))
+                                     (message "%s" output))
+                                 (let ((inhibit-read-only t))
+                                   (save-excursion
+                                     (if orig-region-active
+                                         (progn
+                                           (goto-char marker)
+                                           (when (eq (marker-position marker)
+                                                     point)
+                                             (insert "\n\n")
+                                             (set-marker marker (+ 2 (marker-position marker))))
+                                           (insert output)
+                                           (set-marker marker (+ (length output)
+                                                                 (marker-position marker))))
+                                       (goto-char marker)
+                                       (insert output)
+                                       (set-marker marker (+ (length output)
+                                                             (marker-position marker))))))))))
+                       (or handler (lambda (_command _output _error _finished))))
+                     t))))
+        (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+                handler)
+            (with-current-buffer (chatgpt-shell--primary-buffer)
+              (goto-char (point-max))
+              (send))
+          (with-selected-window (get-buffer-window (chatgpt-shell--primary-buffer))
+            (send)))))))
 
 (defun chatgpt-shell-send-to-ielm-buffer (text &optional execute save-excursion)
   "Send TEXT to *ielm* buffer.
@@ -2580,7 +2562,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (defvar-local chatgpt-shell--ring-index nil)
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
-    (display-buffer (chatgpt-shell-prompt-compose-buffer))
+    (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer)))
     (chatgpt-shell-prompt-compose-buffer)))
 
 (defun chatgpt-shell-prompt-compose-search-history ()
