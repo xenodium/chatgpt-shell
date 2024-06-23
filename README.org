@@ -145,7 +145,7 @@ Configure the following variables:
 
 Launch with =M-x chatgpt-shell= or =dall-e-shell=.
 
-Launch concurrent additional shells with =C-u M-x chatgpt-shell=.
+Note: =M-x chatgpt-shell= or =dall-e-shell= keeps a single shell around, refocusing if needed. To launch multiple shells, use =C-u M-x chatgpt-shell=.
 
 * Clear buffer
 
