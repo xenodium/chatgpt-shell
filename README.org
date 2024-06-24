@@ -189,40 +189,42 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 #+END_SRC
 
 #+RESULTS:
-| Custom variable                                                  | Description                                                                 |
-|------------------------------------------------------------------+-----------------------------------------------------------------------------|
-| chatgpt-shell-display-function                                   | Function to display the shell.  Set to `display-buffer' or custom function. |
-| chatgpt-shell-model-versions                                     | The list of ChatGPT OpenAI models to swap from.                             |
-| chatgpt-shell-system-prompt                                      | The system prompt `chatgpt-shell-system-prompts' index.                     |
-| chatgpt-shell-default-prompts                                    | List of default prompts to choose from.                                     |
-| chatgpt-shell-read-string-function                               | Function to read strings from user.                                         |
-| chatgpt-shell-model-temperature                                  | What sampling temperature to use, between 0 and 2, or nil.                  |
-| chatgpt-shell-transmitted-context-length                         | Controls the amount of context provided to chatGPT.                         |
-| chatgpt-shell-system-prompts                                     | List of system prompts to choose from.                                      |
-| chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).    |
-| chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                           |
-| chatgpt-shell-auth-header                                        | Function to generate the request's `Authorization' header string.           |
-| chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`.                           |
-| chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of `git-commit`.                                              |
-| chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                            |
-| chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.               |
-| chatgpt-shell-root-path                                          | Root path location to store internal shell files.                           |
-| chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`.                                         |
-| chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                      |
-| chatgpt-shell-source-block-actions                               | Block actions for known languages.                                          |
-| chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of `eshell-summarize-last-command-output`.                    |
-| chatgpt-shell-welcome-function                                   | Function returning welcome message or nil for no message.                   |
-| chatgpt-shell-api-url-path                                       | OpenAI API's URL path.                                                      |
-| chatgpt-shell-additional-curl-options                            | Additional options for `curl' command.                                      |
-| chatgpt-shell-openai-key                                         | OpenAI key as a string or a function that loads and returns it.             |
-| chatgpt-shell-after-command-functions                            | Abnormal hook (i.e. with parameters) invoked after each command.            |
-| chatgpt-shell-prompt-header-describe-code                        | Prompt header of `describe-code`.                                           |
-| chatgpt-shell-api-url-base                                       | OpenAI API's base URL.                                                      |
-| chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                               |
-| chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                  |
-| chatgpt-shell-language-mapping                                   | Maps external language names to Emacs names.                                |
-| chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of `generate-unit-test`.                                      |
-| chatgpt-shell-request-timeout                                    | How long to wait for a request to time out in seconds.                      |
+| Custom variable                                                  | Description                                                                  |
+|------------------------------------------------------------------+------------------------------------------------------------------------------|
+| chatgpt-shell-prompt-compose-view-mode-hook                      | Hook run after entering or leaving `chatgpt-shell-prompt-compose-view-mode'. |
+| chatgpt-shell-display-function                                   | Function to display the shell.  Set to `display-buffer' or custom function.  |
+| chatgpt-shell-model-versions                                     | The list of ChatGPT OpenAI models to swap from.                              |
+| chatgpt-shell-system-prompt                                      | The system prompt `chatgpt-shell-system-prompts' index.                      |
+| chatgpt-shell-default-prompts                                    | List of default prompts to choose from.                                      |
+| chatgpt-shell-read-string-function                               | Function to read strings from user.                                          |
+| chatgpt-shell-model-temperature                                  | What sampling temperature to use, between 0 and 2, or nil.                   |
+| chatgpt-shell-transmitted-context-length                         | Controls the amount of context provided to chatGPT.                          |
+| chatgpt-shell-system-prompts                                     | List of system prompts to choose from.                                       |
+| chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).     |
+| chatgpt-shell-prompt-header-refactor-code                        | Prompt header of `refactor-code`.                                            |
+| chatgpt-shell-auth-header                                        | Function to generate the request's `Authorization' header string.            |
+| chatgpt-shell-prompt-header-whats-wrong-with-last-command        | Prompt header of `whats-wrong-with-last-command`.                            |
+| chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of `git-commit`.                                               |
+| chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                             |
+| chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.                |
+| chatgpt-shell-root-path                                          | Root path location to store internal shell files.                            |
+| chatgpt-shell-prompt-header-proofread-region                     | Promt header of `proofread-region`.                                          |
+| chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                       |
+| chatgpt-shell-source-block-actions                               | Block actions for known languages.                                           |
+| chatgpt-shell-insert-dividers                                    | Whether or not to display a divider between requests and responses.          |
+| chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of `eshell-summarize-last-command-output`.                     |
+| chatgpt-shell-welcome-function                                   | Function returning welcome message or nil for no message.                    |
+| chatgpt-shell-api-url-path                                       | OpenAI API's URL path.                                                       |
+| chatgpt-shell-additional-curl-options                            | Additional options for `curl' command.                                       |
+| chatgpt-shell-openai-key                                         | OpenAI key as a string or a function that loads and returns it.              |
+| chatgpt-shell-after-command-functions                            | Abnormal hook (i.e. with parameters) invoked after each command.             |
+| chatgpt-shell-prompt-header-describe-code                        | Prompt header of `describe-code`.                                            |
+| chatgpt-shell-api-url-base                                       | OpenAI API's base URL.                                                       |
+| chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                                |
+| chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                   |
+| chatgpt-shell-language-mapping                                   | Maps external language names to Emacs names.                                 |
+| chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of `generate-unit-test`.                                       |
+| chatgpt-shell-request-timeout                                    | How long to wait for a request to time out in seconds.                       |
 
 There are more. Browse via =M-x set-variable=
 
@@ -286,51 +288,68 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 #+END_SRC
 
 #+RESULTS:
-| Binding         | Command                                            | Description                                                       |
-|-----------------+----------------------------------------------------+-------------------------------------------------------------------|
-|                 | chatgpt-shell                                      | Start a ChatGPT shell interactive command.                        |
-|                 | chatgpt-shell-rename-block-at-point                | Rename block at point (perhaps a different language).             |
-| C-M-h           | chatgpt-shell-mark-at-point-dwim                   | Mark source block if at point.  Mark all output otherwise.        |
-| C-<up> or M-p   | chatgpt-shell-previous-input                       | Cycle backwards through input history, saving input.              |
-|                 | chatgpt-shell-execute-babel-block-action-at-point  | Execute block as org babel.                                       |
-|                 | chatgpt-shell-eshell-whats-wrong-with-last-command | Ask ChatGPT what's wrong with the last eshell command.            |
-| C-c C-p         | chatgpt-shell-previous-item                        | Go to previous item.                                              |
-|                 | chatgpt-shell-set-as-primary-shell                 | Set as primary shell when there are multiple sessions.            |
-|                 | chatgpt-shell-refresh-rendering                    | Refresh markdown rendering by re-applying to entire buffer.       |
-|                 | chatgpt-shell-explain-code                         | Describe code from region using ChatGPT.                          |
-|                 | chatgpt-shell-rename-buffer                        | Rename current shell buffer.                                      |
-|                 | chatgpt-shell-write-git-commit                     | Write commit from region using ChatGPT.                           |
-|                 | chatgpt-shell-prompt                               | Make a ChatGPT request from the minibuffer.                       |
-|                 | chatgpt-shell-remove-block-overlays                | Remove block overlays.  Handy for renaming blocks.                |
-|                 | chatgpt-shell-system-prompts-menu                  | ChatGPT                                                           |
-|                 | chatgpt-shell-proofread-region                     | Proofread English from region using ChatGPT.                      |
-| M-r             | chatgpt-shell-search-history                       | Search previous input history.                                    |
-|                 | chatgpt-shell-send-and-review-region               | Send region to ChatGPT, review before submitting.                 |
-| C-<down> or M-n | chatgpt-shell-next-input                           | Cycle forwards through input history.                             |
-|                 | chatgpt-shell-eshell-summarize-last-command-output | Ask ChatGPT to summarize the last command output.                 |
-|                 | chatgpt-shell-prompt-appending-kill-ring           | Make a ChatGPT request from the minibuffer appending kill ring.   |
-|                 | chatgpt-shell-describe-code                        | Describe code from region using ChatGPT.                          |
-|                 | chatgpt-shell-mode                                 | Major mode for ChatGPT shell.                                     |
-| C-c C-v         | chatgpt-shell-swap-model-version                   | Swap model version from `chatgpt-shell-model-versions'.           |
-|                 | chatgpt-shell-previous-source-block                | Move point to previous source block.                              |
-|                 | chatgpt-shell-refactor-code                        | Refactor code from region using ChatGPT.                          |
-| S-<return>      | chatgpt-shell-newline                              | Insert a newline, and move to left margin of the new line.        |
-| C-c C-s         | chatgpt-shell-swap-system-prompt                   | Swap system prompt from `chatgpt-shell-system-prompts'.           |
-| C-x C-s         | chatgpt-shell-save-session-transcript              | Save shell transcript to file.                                    |
-| C-c M-o         | chatgpt-shell-clear-buffer                         | Clear the comint buffer.                                          |
-|                 | chatgpt-shell-load-awesome-prompts                 | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts. |
-| RET             | chatgpt-shell-submit                               | Submit current input.                                             |
-| C-c C-n         | chatgpt-shell-next-item                            | Go to next item.                                                  |
-|                 | chatgpt-shell-describe-image                       | Request OpenAI to describe image.                                 |
-|                 | chatgpt-shell-execute-block-action-at-point        | Execute block at point.                                           |
-|                 | chatgpt-shell-view-at-point                        | View prompt and output at point in a separate buffer.             |
-|                 | chatgpt-shell-send-region                          | Send region to ChatGPT.                                           |
-|                 | chatgpt-shell-restore-session-from-transcript      | Restore session from transcript.                                  |
-|                 | chatgpt-shell-generate-unit-test                   | Generate unit-test for the code from region using ChatGPT.        |
-| C-c C-e         | chatgpt-shell-prompt-compose                       | Compose and send prompt (kbd "C-c C-c") from a dedicated buffer.  |
-|                 | chatgpt-shell-next-source-block                    | Move point to previous source block.                              |
-| C-c C-c         | chatgpt-shell-ctrl-c-ctrl-c                        | If point in source block, execute it.  Otherwise interrupt.       |
-|                 | chatgpt-shell-interrupt                            | Interrupt `chatgpt-shell' from any buffer.                        |
+| Binding         | Command                                             | Description                                                                                   |
+|-----------------+-----------------------------------------------------+-----------------------------------------------------------------------------------------------|
+|                 | chatgpt-shell                                       | Start a ChatGPT shell interactive command.                                                    |
+|                 | chatgpt-shell-rename-block-at-point                 | Rename block at point (perhaps a different language).                                         |
+|                 | chatgpt-shell-prompt-compose-view-mode              | Like `view-mode`, but extended for ChatGPT Compose.                                           |
+| C-M-h           | chatgpt-shell-mark-at-point-dwim                    | Mark source block if at point.  Mark all output otherwise.                                    |
+|                 | chatgpt-shell-prompt-compose-quit-and-close-frame   | Quit compose and close frame if it's the last window.                                         |
+| C-<up> or M-p   | chatgpt-shell-previous-input                        | Cycle backwards through input history, saving input.                                          |
+|                 | chatgpt-shell-execute-babel-block-action-at-point   | Execute block as org babel.                                                                   |
+|                 | chatgpt-shell-eshell-whats-wrong-with-last-command  | Ask ChatGPT what's wrong with the last eshell command.                                        |
+| C-c C-p         | chatgpt-shell-previous-item                         | Go to previous item.                                                                          |
+|                 | chatgpt-shell-set-as-primary-shell                  | Set as primary shell when there are multiple sessions.                                        |
+|                 | chatgpt-shell-prompt-compose-send-buffer            | Send compose buffer content to shell for processing.                                          |
+|                 | chatgpt-shell-refresh-rendering                     | Refresh markdown rendering by re-applying to entire buffer.                                   |
+|                 | chatgpt-shell-prompt-compose-next-history           | Insert next prompt from history into compose buffer.                                          |
+|                 | chatgpt-shell-explain-code                          | Describe code from region using ChatGPT.                                                      |
+|                 | chatgpt-shell-prompt-compose-other-buffer           | Jump to the shell buffer (compose's other buffer).                                            |
+|                 | chatgpt-shell-rename-buffer                         | Rename current shell buffer.                                                                  |
+|                 | chatgpt-shell-prompt-compose-previous-block         | Jump to and select previous code block.                                                       |
+|                 | chatgpt-shell-write-git-commit                      | Write commit from region using ChatGPT.                                                       |
+|                 | chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                                                   |
+|                 | chatgpt-shell-remove-block-overlays                 | Remove block overlays.  Handy for renaming blocks.                                            |
+|                 | chatgpt-shell-system-prompts-menu                   | ChatGPT                                                                                       |
+|                 | chatgpt-shell-prompt-compose-mode                   | Major mode for composing ChatGPT prompts from a dedicated buffer.                             |
+|                 | chatgpt-shell-proofread-region                      | Proofread English from region using ChatGPT.                                                  |
+|                 | chatgpt-shell-prompt-compose-retry                  | Retry sending request to shell.                                                               |
+| M-r             | chatgpt-shell-search-history                        | Search previous input history.                                                                |
+|                 | chatgpt-shell-send-and-review-region                | Send region to ChatGPT, review before submitting.                                             |
+| C-<down> or M-n | chatgpt-shell-next-input                            | Cycle forwards through input history.                                                         |
+|                 | chatgpt-shell-delete-interaction-at-point           | Delete interaction (request and response) at point.                                           |
+|                 | chatgpt-shell-eshell-summarize-last-command-output  | Ask ChatGPT to summarize the last command output.                                             |
+|                 | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.                               |
+|                 | chatgpt-shell-prompt-other-buffer-response-mode     | Major mode for buffers created by `other-buffer' `chatgpt-shell-prompt-query-response-style'. |
+|                 | chatgpt-shell-describe-code                         | Describe code from region using ChatGPT.                                                      |
+|                 | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                                                 |
+| C-c C-v         | chatgpt-shell-swap-model-version                    | Swap model version from `chatgpt-shell-model-versions'.                                       |
+|                 | chatgpt-shell-previous-source-block                 | Move point to previous source block.                                                          |
+|                 | chatgpt-shell-prompt-compose-search-history         | Search prompt history, select, and insert to current compose buffer.                          |
+|                 | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                                                      |
+| S-<return>      | chatgpt-shell-newline                               | Insert a newline, and move to left margin of the new line.                                    |
+| C-c C-s         | chatgpt-shell-swap-system-prompt                    | Swap system prompt from `chatgpt-shell-system-prompts'.                                       |
+| C-x C-s         | chatgpt-shell-save-session-transcript               | Save shell transcript to file.                                                                |
+| C-c M-o         | chatgpt-shell-clear-buffer                          | Clear the comint buffer.                                                                      |
+|                 | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.                             |
+|                 | chatgpt-shell-prompt-compose-request-entire-snippet | If the response code is incomplete, request the entire snippet.                               |
+| RET             | chatgpt-shell-submit                                | Submit current input.                                                                         |
+| C-c C-n         | chatgpt-shell-next-item                             | Go to next item.                                                                              |
+|                 | chatgpt-shell-describe-image                        | Request OpenAI to describe image.                                                             |
+|                 | chatgpt-shell-execute-block-action-at-point         | Execute block at point.                                                                       |
+|                 | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.                                         |
+|                 | chatgpt-shell-send-region                           | Send region to ChatGPT.                                                                       |
+|                 | chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                                                              |
+|                 | chatgpt-shell-prompt-compose-next-block             | Jump to and select next code block.                                                           |
+|                 | chatgpt-shell-mark-block                            | Mark current block in compose buffer.                                                         |
+|                 | chatgpt-shell-prompt-compose-reply                  | Reply as a follow-up and compose another query.                                               |
+|                 | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT.                                    |
+|                 | chatgpt-shell-prompt-compose-previous-history       | Insert previous prompt from history into compose buffer.                                      |
+| C-c C-e         | chatgpt-shell-prompt-compose                        | Compose and send prompt from a dedicated buffer.                                              |
+|                 | chatgpt-shell-next-source-block                     | Move point to previous source block.                                                          |
+| C-c C-c         | chatgpt-shell-ctrl-c-ctrl-c                         | If point in source block, execute it.  Otherwise interrupt.                                   |
+|                 | chatgpt-shell-prompt-compose-cancel                 | Cancel and close compose buffer.                                                              |
+|                 | chatgpt-shell-interrupt                             | Interrupt `chatgpt-shell' from any buffer.                                                    |
 
 Browse all available via =M-x=.
 
