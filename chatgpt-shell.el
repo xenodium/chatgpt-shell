@@ -2575,7 +2575,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (defvar-local chatgpt-shell--ring-index nil)
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
-    (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer)))
+    (unless transient-frame-p
+      (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer))))
     (chatgpt-shell-prompt-compose-buffer)))
 
 (defun chatgpt-shell-prompt-compose-search-history ()
