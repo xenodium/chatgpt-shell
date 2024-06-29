@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.13
+;; Version: 1.0.14
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -2459,6 +2459,12 @@ t if invoked from a transient frame (quitting closes the frame).")
   "Like `view-mode`, but extended for ChatGPT Compose."
   :lighter "ChatGPT view"
   :keymap chatgpt-shell-prompt-compose-view-mode-map)
+
+(define-minor-mode chatgpt-shell-prompt-compose-view-mode
+  "Like `view-mode`, but extended for ChatGPT Compose."
+  :lighter "ChatGPT view"
+  :keymap chatgpt-shell-prompt-compose-view-mode-map
+  (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
 (defun chatgpt-shell-prompt-compose (prefix)
   "Compose and send prompt from a dedicated buffer.
