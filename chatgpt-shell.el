@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.14
+;; Version: 1.0.15
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -2553,34 +2553,35 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                              chatgpt-shell-prompt-compose-view-mode)))
          (prompt))
     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-      (chatgpt-shell-prompt-compose-mode)
-      (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
-      (setq-local chatgpt-shell-prompt-compose--transient-frame-p transient-frame-p)
-      (visual-line-mode +1)
-      (when chatgpt-shell-prompt-compose-view-mode
-        (chatgpt-shell-prompt-compose-view-mode -1))
-      (when erase-buffer
-        (erase-buffer))
-      (when region
-        (save-excursion
-          (goto-char (point-min))
-          (let ((insert-trailing-newlines (not (looking-at-p "\n\n"))))
-            (insert "\n\n")
-            (insert region)
-            (when insert-trailing-newlines
-              (insert "\n\n")))))
-      (when clear-history
-        (let ((chatgpt-shell-prompt-query-response-style 'inline))
-          (chatgpt-shell-send-to-buffer "clear")))
-      ;; TODO: Find a better alternative to prevent clash.
-      ;; Disable "n"/"p" for region-bindings-mode-map, so it doesn't
-      ;; clash with "n"/"p" selection binding.
-      (when (boundp 'region-bindings-mode-disable-predicates)
-        (add-to-list 'region-bindings-mode-disable-predicates
-                     (lambda () buffer-read-only)))
-      (defvar-local chatgpt-shell--ring-index nil)
-      (setq chatgpt-shell--ring-index nil)
-      (message instructions))
+      (let ((buffer-read-only nil))
+        (chatgpt-shell-prompt-compose-mode)
+        (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
+        (setq-local chatgpt-shell-prompt-compose--transient-frame-p transient-frame-p)
+        (visual-line-mode +1)
+        (when chatgpt-shell-prompt-compose-view-mode
+          (chatgpt-shell-prompt-compose-view-mode -1))
+        (when erase-buffer
+          (erase-buffer))
+        (when region
+          (save-excursion
+            (goto-char (point-min))
+            (let ((insert-trailing-newlines (not (looking-at-p "\n\n"))))
+              (insert "\n\n")
+              (insert region)
+              (when insert-trailing-newlines
+                (insert "\n\n")))))
+        (when clear-history
+          (let ((chatgpt-shell-prompt-query-response-style 'inline))
+            (chatgpt-shell-send-to-buffer "clear")))
+        ;; TODO: Find a better alternative to prevent clash.
+        ;; Disable "n"/"p" for region-bindings-mode-map, so it doesn't
+        ;; clash with "n"/"p" selection binding.
+        (when (boundp 'region-bindings-mode-disable-predicates)
+          (add-to-list 'region-bindings-mode-disable-predicates
+                       (lambda () buffer-read-only)))
+        (defvar-local chatgpt-shell--ring-index nil)
+        (setq chatgpt-shell--ring-index nil)
+        (message instructions)))
     (unless transient-frame-p
       (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer))))
     (chatgpt-shell-prompt-compose-buffer)))
