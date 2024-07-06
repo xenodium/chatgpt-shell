@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.16
+;; Version: 1.0.17
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -2432,6 +2432,8 @@ t if invoked from a transient frame (quitting closes the frame).")
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'chatgpt-shell-prompt-compose-send-buffer)
     (define-key map (kbd "C-c C-k") #'chatgpt-shell-prompt-compose-cancel)
+    (define-key map (kbd "C-c C-s") #'chatgpt-shell-prompt-compose-swap-system-prompt)
+    (define-key map (kbd "C-c C-v") #'chatgpt-shell-prompt-compose-swap-model-version)
     (define-key map (kbd "M-r") #'chatgpt-shell-prompt-compose-search-history)
     (define-key map (kbd "M-p") #'chatgpt-shell-prompt-compose-previous-history)
     (define-key map (kbd "M-n") #'chatgpt-shell-prompt-compose-next-history)
@@ -2731,13 +2733,33 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
     (user-error "Not in a shell compose buffer"))
   (chatgpt-shell-prompt-compose-quit-and-close-frame))
 
+(defun chatgpt-shell-prompt-compose-buffer-name ()
+  "Generate compose buffer name."
+  (concat (chatgpt-shell--minibuffer-prompt) "compose"))
+
+(defun chatgpt-shell-prompt-compose-swap-system-prompt ()
+  "Swap the compose buffer's system prompt."
+  (interactive)
+  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+    (user-error "Not in a shell compose buffer"))
+  (with-current-buffer (chatgpt-shell--primary-buffer)
+    (chatgpt-shell-swap-system-prompt))
+  (rename-buffer (chatgpt-shell-prompt-compose-buffer-name)))
+
+(defun chatgpt-shell-prompt-compose-swap-model-version ()
+  "Swap the compose buffer's model version."
+  (interactive)
+  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+    (user-error "Not in a shell compose buffer"))
+  (with-current-buffer (chatgpt-shell--primary-buffer)
+    (chatgpt-shell-swap-model-version))
+  (rename-buffer (chatgpt-shell-prompt-compose-buffer-name)))
+
 (defun chatgpt-shell-prompt-compose-buffer ()
   "Get the available shell compose buffer."
   (unless (chatgpt-shell--primary-buffer)
     (error "No shell to compose to"))
-  (let* ((buffer-name (concat (chatgpt-shell--minibuffer-prompt)
-                              "compose"))
-         (buffer (get-buffer-create buffer-name)))
+  (let* ((buffer (get-buffer-create (chatgpt-shell-prompt-compose-buffer-name))))
     (unless buffer
       (error "No compose buffer available"))
     buffer))
