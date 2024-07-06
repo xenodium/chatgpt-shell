@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.17
+;; Version: 1.0.18
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -2434,6 +2434,7 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "C-c C-k") #'chatgpt-shell-prompt-compose-cancel)
     (define-key map (kbd "C-c C-s") #'chatgpt-shell-prompt-compose-swap-system-prompt)
     (define-key map (kbd "C-c C-v") #'chatgpt-shell-prompt-compose-swap-model-version)
+    (define-key map (kbd "C-c C-o") #'chatgpt-shell-prompt-compose-other-buffer)
     (define-key map (kbd "M-r") #'chatgpt-shell-prompt-compose-search-history)
     (define-key map (kbd "M-p") #'chatgpt-shell-prompt-compose-previous-history)
     (define-key map (kbd "M-n") #'chatgpt-shell-prompt-compose-next-history)
