@@ -1173,26 +1173,31 @@ If region is active, append to prompt."
   (let ((question (concat header "\n\n" (buffer-substring (region-beginning) (region-end)))))
     (chatgpt-shell-send-to-buffer question nil)))
 
+;;;###autoload
 (defun chatgpt-shell-refactor-code ()
   "Refactor code from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-refactor-code))
 
+;;;###autoload
 (defun chatgpt-shell-write-git-commit ()
   "Write commit from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-write-git-commit))
 
+;;;###autoload
 (defun chatgpt-shell-generate-unit-test ()
   "Generate unit-test for the code from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-generate-unit-test))
 
+;;;###autoload
 (defun chatgpt-shell-proofread-region ()
   "Proofread English from region using ChatGPT."
   (interactive)
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-proofread-region))
 
+;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
   "Ask ChatGPT what's wrong with the last eshell command."
   (interactive)
@@ -1204,6 +1209,7 @@ If region is active, append to prompt."
              "\n\n"
              (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))))
 
+;;;###autoload
 (defun chatgpt-shell-eshell-summarize-last-command-output ()
   "Ask ChatGPT to summarize the last command output."
   (interactive)
@@ -1215,6 +1221,7 @@ If region is active, append to prompt."
              "\n\n"
              (buffer-substring-no-properties (eshell-beginning-of-output) (eshell-end-of-output))))))
 
+;;;###autoload
 (defun chatgpt-shell-send-region (review)
   "Send region to ChatGPT.
 With prefix REVIEW prompt before sending to ChatGPT."
@@ -1228,6 +1235,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
          (concat "\n\n" region-text)
        region-text) review)))
 
+;;;###autoload
 (defun chatgpt-shell-send-and-review-region ()
   "Send region to ChatGPT, review before submitting."
   (interactive)
