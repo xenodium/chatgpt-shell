@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.18
+;; Version: 1.0.19
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -380,7 +380,8 @@ Or nil if none."
                   ;; -1 to disregard None
                   (1- (seq-position choices choice)))))
   (chatgpt-shell--update-prompt t)
-  (chatgpt-shell-interrupt nil))
+  (chatgpt-shell-interrupt nil)
+  (chatgpt-shell--save-variables))
 
 (defun chatgpt-shell-load-awesome-prompts ()
   "Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.
@@ -718,6 +719,7 @@ This is used for sending a prompt to in the background."
                        (interactive)
                        (setq-local chatgpt-shell-system-prompt
                                    (seq-position (map-keys chatgpt-shell-system-prompts) ,(car prompt)))
+                       (chatgpt-shell--save-variables)
                        (chatgpt-shell--update-prompt t)
                        (chatgpt-shell-interrupt nil))])
                  chatgpt-shell-system-prompts))))
@@ -2420,6 +2422,34 @@ compiling source blocks."
   (replace-regexp-in-string
    (rx-to-string `(: bol ,filename (one-or-more (not (any " "))) " ") " ")
    "" text))
+
+(defun chatgpt-shell--save-variables ()
+  "Save variables across Emacs sessions."
+  (setq-default chatgpt-shell-system-prompt
+                chatgpt-shell-system-prompt)
+  (with-temp-file (concat user-emacs-directory ".chatgpt-shell.el")
+    (prin1 (list
+            (cons 'chatgpt-shell-system-prompt chatgpt-shell-system-prompt)
+            (cons 'chatgpt-shell-system-prompt-resolved
+                  (when (integerp chatgpt-shell-system-prompt)
+                    (nth chatgpt-shell-system-prompt
+                         chatgpt-shell-system-prompts)))) (current-buffer))))
+
+(with-eval-after-load 'chatgpt-shell
+  (chatgpt-shell--load-variables))
+
+(defun chatgpt-shell--load-variables ()
+  "Load variables across Emacs sessions."
+  (with-temp-buffer
+    (insert-file-contents (concat user-emacs-directory ".chatgpt-shell.el"))
+    (goto-char (point-min))
+    (let ((vars (read (current-buffer))))
+      (when (and (map-elt vars 'chatgpt-shell-system-prompt)
+                 (map-elt vars 'chatgpt-shell-system-prompt-resolved)
+                 (equal (map-elt vars 'chatgpt-shell-system-prompt-resolved)
+                        (nth (map-elt vars 'chatgpt-shell-system-prompt)
+                             chatgpt-shell-system-prompts)))
+        (setq chatgpt-shell-system-prompt (map-elt vars 'chatgpt-shell-system-prompt))))))
 
 ;;; TODO: Move to chatgpt-shell-prompt-compose.el, but first update
 ;;; the MELPA recipe, so it can load additional files other than chatgpt-shell.el.
