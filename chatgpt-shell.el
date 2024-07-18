@@ -2439,7 +2439,12 @@ compiling source blocks."
 (defun chatgpt-shell--load-variables ()
   "Load variables across Emacs sessions."
   (with-temp-buffer
-    (insert-file-contents (concat user-emacs-directory ".chatgpt-shell.el"))
+    (condition-case nil
+      ;; Try to insert the contents of .chatgpt-shell.el
+      (insert-file-contents (concat user-emacs-directory ".chatgpt-shell.el"))
+      (error
+        ;; If an error happens, execute chatgpt-shell--save-variables
+        (chatgpt-shell--save-variables)))
     (goto-char (point-min))
     (let ((vars (read (current-buffer))))
       (when (and (map-elt vars 'chatgpt-shell-system-prompt)
