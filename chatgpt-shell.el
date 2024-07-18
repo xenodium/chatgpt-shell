@@ -551,8 +551,6 @@ or
 
 With NEW-SESSION, start a new session."
   (interactive "P")
-  (when (boundp 'chatgpt-shell-history-path)
-    (error Variable "chatgpt-shell-history-path no longer exists. Please migrate to chatgpt-shell-root-path and then (makunbound 'chatgpt-shell-history-path)"))
   (chatgpt-shell-start nil new-session))
 
 (defun chatgpt-shell-start (&optional no-focus new-session)
