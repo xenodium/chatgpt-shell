@@ -1613,12 +1613,12 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                             `(((type . "text")
                                (text . ,prompt))
                               ((type . "image_url")
-                               (image_url . ,url)))))))))))
+                               (image_url . ((url . ,url)))))))))))))
     (message "Requesting...")
     (chatgpt-shell-post-messages
      messages
      #'chatgpt-shell--extract-chatgpt-response
-     "gpt-4-vision-preview"
+     "gpt-4o"
      (if on-success
          (lambda (response _partial)
            (funcall on-success response))
