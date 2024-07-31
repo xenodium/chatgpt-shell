@@ -1567,7 +1567,19 @@ If in a `dired' buffer, use selection (single image only for now)."
       (user-error "Must be user either .jpg, .jpeg, .png, .webp or .gif file"))
     (chatgpt-shell-vision-make-request
      (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
-     file)))
+     file
+     :on-success
+     (lambda (response)
+       (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
+         (with-current-buffer description-buffer
+           (let ((inhibit-read-only t))
+             (erase-buffer)
+             (insert response)
+             (use-local-map (let ((map (make-sparse-keymap)))
+                              (define-key map (kbd "q") 'kill-buffer-and-window)
+                              map)))
+           (read-only-mode +1))
+         (display-buffer description-buffer))))))
 
 (defun chatgpt-shell--current-file ()
   "Return buffer file (if available) or Dired selected file."
