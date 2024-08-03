@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.0.21
+;; Version: 1.1.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1484,6 +1484,53 @@ Set SAVE-EXCURSION to prevent point from moving."
       (push other-params
             request-data))
     request-data))
+
+(defun chatgpt-shell-japanese-ocr-lookup ()
+  "Select a region of the screen to OCR and look up in Japanese."
+  (interactive)
+  (let* ((term)
+         (translation-buffer (get-buffer-create "*chatgpt japanese translation*"))
+         (process (start-process "macosrec-ocr" nil "macosrec" "--ocr")))
+    (if (memq window-system '(mac ns))
+        (unless (executable-find "macosrec")
+          (user-error "You need \"macosrec\" installed: brew install xenodium/macosrec/macosrec"))
+      (user-error "Not yet supported on %s (please send a pull request).?" window-system))
+    (set-process-filter process (lambda (_proc text)
+                                  (setq term (concat term text))))
+    (set-process-sentinel process (lambda (_proc event)
+                                    (when (string= event "finished\n")
+                                      (chatgpt-shell-japanese-lookup term))))))
+
+(defun chatgpt-shell-japanese-lookup (&optional term)
+  "Look up Japanese TERM."
+  (interactive)
+  (unless term
+    (setq term (read-string "Japanese look up: ")))
+  (when (string-empty-p (string-trim term))
+    (user-error "Nothing to look up"))
+  (let* ((translation-buffer (get-buffer-create "*chatgpt japanese translation*")))
+    (chatgpt-shell-post-messages
+     (vconcat ;; Convert to vector for json
+      `(((role . "system")
+         (content . "you are a japanese translator. only provide katakana if applicable. provide respective:\n kanji: <fill-in-blank>\nhiragana: <fill-in-blank>\nkatakana: <fill-in-blank>\romaji: <fill-in-blank>\nmeaning: <fill-in-blank>"))
+        ((role . "user")
+         (content . ,(vconcat
+                      `(((type . "text")
+                         (text . ,term))))))))
+     nil nil
+     (lambda (response _partial)
+       (with-current-buffer translation-buffer
+         (let ((inhibit-read-only t))
+           (erase-buffer)
+           (insert response)
+           (use-local-map (let ((map (make-sparse-keymap)))
+                            (define-key map (kbd "q") 'kill-buffer-and-window)
+                            map)))
+         (read-only-mode +1))
+       (display-buffer translation-buffer))
+     (lambda (error)
+       (message error))
+     nil '(max_tokens . 300))))
 
 (defun chatgpt-shell-post-messages (messages response-extractor &optional version callback error-callback temperature other-params)
   "Make a single ChatGPT request with MESSAGES and RESPONSE-EXTRACTOR.
