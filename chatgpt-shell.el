@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.1.2
+;; Version: 1.1.3
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1489,7 +1489,6 @@ Set SAVE-EXCURSION to prevent point from moving."
   "Select a region of the screen to OCR and look up in Japanese."
   (interactive)
   (let* ((term)
-         (translation-buffer (get-buffer-create "*chatgpt japanese translation*"))
          (process (start-process "macosrec-ocr" nil "macosrec" "--ocr")))
     (if (memq window-system '(mac ns))
         (unless (executable-find "macosrec")
@@ -1508,11 +1507,19 @@ Set SAVE-EXCURSION to prevent point from moving."
     (setq term (read-string "Japanese look up: ")))
   (when (string-empty-p (string-trim term))
     (user-error "Nothing to look up"))
-  (let* ((translation-buffer (get-buffer-create "*chatgpt japanese translation*")))
+  (let* ((translation-buffer (get-buffer-create "*chatgpt japanese translation*"))
+         (system-prompt (concat "You are a japanese translator. "
+                                "Only provide katakana if applicable. "
+                                "provide respective:\n\n"
+                                "kanji: <fill-in-blank>\n"
+                                "hiragana: <fill-in-blank>\n"
+                                "katakana: <fill-in-blank>\n"
+                                "romaji: <fill-in-blank>\n"
+                                "meaning: <fill-in-blank>")))
     (chatgpt-shell-post-messages
      (vconcat ;; Convert to vector for json
       `(((role . "system")
-         (content . "you are a japanese translator. only provide katakana if applicable. provide respective:\n kanji: <fill-in-blank>\nhiragana: <fill-in-blank>\nkatakana: <fill-in-blank>\romaji: <fill-in-blank>\nmeaning: <fill-in-blank>"))
+         (content . ,system-prompt))
         ((role . "user")
          (content . ,(vconcat
                       `(((type . "text")
