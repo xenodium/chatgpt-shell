@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.1.1
+;; Version: 1.1.2
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1494,7 +1494,7 @@ Set SAVE-EXCURSION to prevent point from moving."
     (if (memq window-system '(mac ns))
         (unless (executable-find "macosrec")
           (user-error "You need \"macosrec\" installed: brew install xenodium/macosrec/macosrec"))
-      (user-error "Not yet supported on %s (please send a pull request).?" window-system))
+      (user-error "Not yet supported on %s (please send a pull request)" window-system))
     (set-process-filter process (lambda (_proc text)
                                   (setq term (concat term text))))
     (set-process-sentinel process (lambda (_proc event)
