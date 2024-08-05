@@ -1357,10 +1357,6 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
   (add-to-list 'eshell-complex-commands "??"))
 
-(define-derived-mode chatgpt-shell-prompt-other-buffer-response-mode
-  fundamental-mode "ChatGPT response"
-  "Major mode for buffers created by `other-buffer' `chatgpt-shell-prompt-query-response-style'.")
-
 (defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
   "Send TEXT to *chatgpt* buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
@@ -2593,11 +2589,6 @@ t if invoked from a transient frame (quitting closes the frame).")
 (define-minor-mode chatgpt-shell-prompt-compose-view-mode
   "Like `view-mode`, but extended for ChatGPT Compose."
   :lighter "ChatGPT view"
-  :keymap chatgpt-shell-prompt-compose-view-mode-map)
-
-(define-minor-mode chatgpt-shell-prompt-compose-view-mode
-  "Like `view-mode`, but extended for ChatGPT Compose."
-  :lighter "ChatGPT view"
   :keymap chatgpt-shell-prompt-compose-view-mode-map
   (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
@@ -2687,8 +2678,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                            (not region)
                            ;; view-mode = old query, erase for new one.
                            (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                             chatgpt-shell-prompt-compose-view-mode)))
-         (prompt))
+                             chatgpt-shell-prompt-compose-view-mode))))
     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
       (chatgpt-shell-prompt-compose-mode)
       (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
