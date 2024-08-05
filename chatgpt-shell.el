@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.2.1
+;; Version: 1.2.2
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1647,7 +1647,7 @@ If in a `dired' buffer, use selection (single image only for now)."
            (when (> (length dired-files) 1)
              (user-error "Only one file selection supported"))
            file))
-        ((eq major-mode 'eww-mode)
+        (t
          (if-let* ((image (get-text-property (point) 'display))
                    (data (plist-get (cdr image) :data))
                    (image-file (chatgpt-shell--image-request-file)))
@@ -1658,9 +1658,7 @@ If in a `dired' buffer, use selection (single image only for now)."
                  (set-buffer-multibyte nil)
                  (insert data))
                image-file)
-           (user-error "No image at point")))
-        (t
-         (user-error "No image found"))))
+           (user-error "No image found")))))
 
 (cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
   "Make a vision request using PROMPT and URL-PATH.
