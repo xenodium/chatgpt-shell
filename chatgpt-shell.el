@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.1.3
+;; Version: 1.1.4
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1632,6 +1632,7 @@ If in a `dired' buffer, use selection (single image only for now)."
              (use-local-map (let ((map (make-sparse-keymap)))
                               (define-key map (kbd "q") 'kill-buffer-and-window)
                               map)))
+           (message "Image description ready")
            (read-only-mode +1))
          (display-buffer description-buffer))))))
 
