@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.1.4
+;; Version: 1.1.5
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-whats-wrong-with-last-command
-  "What's wrong with this command?"
+  "What's wrong with this command execution?"
   "Prompt header of `whats-wrong-with-last-command`."
   :type 'string
   :group 'chatgpt-shell)
@@ -1289,8 +1289,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
           (forward-line 1)
           (re-search-forward eshell-prompt-regexp nil t)
           (forward-line -1)
-          (concat "What's wrong with this command?\n\n"
-                  (buffer-substring-no-properties cmd-start cmd-end)))
+          (buffer-substring-no-properties cmd-start cmd-end))
       (message "Current buffer is not an eshell buffer."))))
 
 ;; Based on https://emacs.stackexchange.com/a/48215
@@ -2636,6 +2635,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                                           (region-end))))
                        (deactivate-mark)
                        region)
+                     (when (eq major-mode 'eshell-mode)
+                       (chatgpt-shell--eshell-last-last-command))
                      (when-let* ((diagnostic (flymake-diagnostics (point)))
                                  (line-start (line-beginning-position))
                                  (line-end (line-end-position))
