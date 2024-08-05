@@ -1615,8 +1615,10 @@ When visiting a buffer with an image, send that.
 If in a `dired' buffer, use selection (single image only for now)."
   (interactive)
   (let* ((file (chatgpt-shell--current-file))
-         (extension (downcase (file-name-extension file))))
-    (unless (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
+         (extension (downcase (file-name-extension file)))
+         (name (file-name-nondirectory file)))
+    (unless (or (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
+                (equal name "image.request"))
       (user-error "Must be user either .jpg, .jpeg, .png, .webp or .gif file"))
     (chatgpt-shell-vision-make-request
      (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
@@ -1639,15 +1641,30 @@ If in a `dired' buffer, use selection (single image only for now)."
   "Return buffer file (if available) or Dired selected file."
   (when (use-region-p)
     (user-error "No region selection supported"))
-  (if (buffer-file-name)
-      (buffer-file-name)
-    (let* ((dired-files (dired-get-marked-files))
-           (file (seq-first dired-files)))
-      (unless dired-files
-        (user-error "No file selected"))
-      (when (> (length dired-files) 1)
-        (user-error "Only one file selection supported"))
-      file)))
+  (cond ((eq major-mode 'image-mode)
+         (buffer-file-name))
+        ((eq major-mode 'dired-mode)
+         (let* ((dired-files (dired-get-marked-files))
+                (file (seq-first dired-files)))
+           (unless dired-files
+             (user-error "No file selected"))
+           (when (> (length dired-files) 1)
+             (user-error "Only one file selection supported"))
+           file))
+        ((eq major-mode 'eww-mode)
+         (if-let* ((image (get-text-property (point) 'display))
+                   (data (plist-get (cdr image) :data))
+                   (image-file (chatgpt-shell--image-request-file)))
+             (progn
+               (ignore-errors
+                 (delete-file image-file))
+               (with-temp-file image-file
+                 (set-buffer-multibyte nil)
+                 (insert data))
+               image-file)
+           (user-error "No image at point")))
+        (t
+         (user-error "No image found"))))
 
 (cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
   "Make a vision request using PROMPT and URL-PATH.
@@ -1749,6 +1766,14 @@ For example:
    (file-name-as-directory
     (shell-maker-files-path shell-maker--config))
    "request.json"))
+
+(defun chatgpt-shell--image-request-file ()
+  "Image written to this file prior to sending."
+  (concat
+   (file-name-as-directory
+    (shell-maker-files-path (or shell-maker--config
+                                chatgpt-shell--config)))
+   "image.request"))
 
 (defun chatgpt-shell--make-curl-request-command-list (request-data)
   "Build ChatGPT curl command list using REQUEST-DATA."
