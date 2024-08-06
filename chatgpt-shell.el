@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.2.2
+;; Version: 1.2.3
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -1634,7 +1634,7 @@ If in a `dired' buffer, use selection (single image only for now)."
          (display-buffer description-buffer))))))
 
 (defun chatgpt-shell--current-file ()
-  "Return buffer file (if available) or Dired selected file."
+  "Return buffer file (if available), Dired selected file, or image at point."
   (when (use-region-p)
     (user-error "No region selection supported"))
   (cond ((eq major-mode 'image-mode)
@@ -1648,16 +1648,17 @@ If in a `dired' buffer, use selection (single image only for now)."
              (user-error "Only one file selection supported"))
            file))
         (t
-         (if-let* ((image (get-text-property (point) 'display))
-                   (data (plist-get (cdr image) :data))
-                   (image-file (chatgpt-shell--image-request-file)))
-             (progn
-               (ignore-errors
-                 (delete-file image-file))
-               (with-temp-file image-file
-                 (set-buffer-multibyte nil)
-                 (insert data))
-               image-file)
+         (if-let* ((image (cdr (get-text-property (point) 'display)))
+                   (image-file (cond ((plist-get image :file)
+                                      (plist-get image :file))
+                                     ((plist-get image :data)
+                                      (ignore-errors
+                                        (delete-file (chatgpt-shell--image-request-file)))
+                                      (with-temp-file (chatgpt-shell--image-request-file)
+                                        (set-buffer-multibyte nil)
+                                        (insert (plist-get image :data)))
+                                      (chatgpt-shell--image-request-file)))))
+             image-file
            (user-error "No image found")))))
 
 (cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
