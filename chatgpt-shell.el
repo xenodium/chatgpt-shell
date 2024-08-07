@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.2.3
+;; Version: 1.2.4
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -2649,7 +2649,11 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                 (region (buffer-substring (region-beginning)
                                                           (region-end))))
                        (deactivate-mark)
-                       region)
+                       (concat (or (when (buffer-file-name)
+                                     (file-name-nondirectory (buffer-file-name)))
+                                   (buffer-name)) ":"
+                                   "\n\n"
+                                   region))
                      (when (eq major-mode 'eshell-mode)
                        (chatgpt-shell--eshell-last-last-command))
                      (when-let* ((diagnostic (flymake-diagnostics (point)))
@@ -2688,12 +2692,9 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
         (erase-buffer))
       (when region
         (save-excursion
-          (goto-char (point-min))
-          (let ((insert-trailing-newlines (not (looking-at-p "\n\n"))))
-            (insert "\n\n")
-            (insert region)
-            (when insert-trailing-newlines
-              (insert "\n\n")))))
+          (goto-char (point-max))
+          (insert "\n\n")
+          (insert region)))
       (when clear-history
         (let ((chatgpt-shell-prompt-query-response-style 'inline))
           (chatgpt-shell-send-to-buffer "clear")))
