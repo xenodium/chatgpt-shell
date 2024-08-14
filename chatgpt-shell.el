@@ -4,8 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.2.4
+;; Version: 1.3.1
 ;; Package-Requires: ((emacs "27.1") (shell-maker "0.50.5"))
+(defconst chatgpt-shell--version "1.3.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -413,6 +414,11 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
     (chatgpt-shell--update-prompt t)
     (chatgpt-shell-interrupt nil)
     (chatgpt-shell-swap-system-prompt)))
+
+(defun chatgpt-shell-version ()
+  "Show chatgot-shell mode version."
+  (interactive)
+  (message "chatgpt-shell v%s" chatgpt-shell--version))
 
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
