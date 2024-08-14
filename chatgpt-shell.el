@@ -2651,11 +2651,32 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                 (region (buffer-substring (region-beginning)
                                                           (region-end))))
                        (deactivate-mark)
-                       (concat (or (when (buffer-file-name)
-                                     (file-name-nondirectory (buffer-file-name)))
-                                   (buffer-name)) ":"
-                                   "\n\n"
-                                   region))
+                       (concat (if-let ((buffer-file-name (buffer-file-name))
+                                        (name (file-name-nondirectory buffer-file-name))
+                                        (is-key-file (seq-contains-p '(".babelrc"
+                                                                       ".editorconfig"
+                                                                       ".eslintignore"
+                                                                       ".eslintrc"
+                                                                       ".eslintrc.json"
+                                                                       ".mocharc.json"
+                                                                       ".prettierrc"
+                                                                       "package.json"
+                                                                       "tsconfig.json"
+                                                                       "wrangler.toml")
+                                                                     name)))
+                                   (format "%s: \n\n" name)
+                                 "")
+                               "```"
+                               (cond ((listp mode-name)
+                                      (downcase (car mode-name)))
+                                     ((stringp mode-name)
+                                      (downcase mode-name))
+                                     (t
+                                      ""))
+                               "\n"
+                               region
+                               "\n"
+                               "```"))
                      (when (eq major-mode 'eshell-mode)
                        (chatgpt-shell--eshell-last-last-command))
                      (when-let* ((diagnostic (flymake-diagnostics (point)))
