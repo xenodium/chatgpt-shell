@@ -2580,6 +2580,7 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "r") #'chatgpt-shell-prompt-compose-reply)
     (define-key map (kbd "q") #'chatgpt-shell-prompt-compose-quit-and-close-frame)
     (define-key map (kbd "e") #'chatgpt-shell-prompt-compose-request-entire-snippet)
+    (define-key map (kbd "m") #'chatgpt-shell-prompt-compose-request-more)
     (define-key map (kbd "o") #'chatgpt-shell-prompt-compose-other-buffer)
     (set-keymap-parent map view-mode-map)
     map)
@@ -2629,7 +2630,8 @@ to retry on disconnects.
  `\\[chatgpt-shell-prompt-compose-next-block]` Jump to next source block.
  `\\[chatgpt-shell-prompt-compose-previous-block]` Jump to next previous block.
  `\\[chatgpt-shell-prompt-compose-reply]` Reply to follow-up with additional questions.
- `\\[chatgpt-shell-prompt-compose-request-entire-snippet]` Send \"Show entire snippet\" query (useful to request alternative
+ `\\[chatgpt-shell-prompt-compose-request-entire-snippet]` Send \"Show entire snippet\" query.
+ `\\[chatgpt-shell-prompt-compose-request-more]` Send \"Show me more\" query.
  `\\[chatgpt-shell-prompt-compose-other-buffer]` Jump to other buffer (ie. the shell itself).
  `\\[chatgpt-shell-mark-block]` Mark block at point."
   (interactive "P")
@@ -2951,6 +2953,21 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (when shell-maker--busy
       (user-error "Busy, please wait")))
   (let ((prompt "show entire snippet")
+        (inhibit-read-only t)
+        (chatgpt-shell-prompt-query-response-style 'inline))
+    (erase-buffer)
+    (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+    (chatgpt-shell-send-to-buffer prompt)))
+
+(defun chatgpt-shell-prompt-compose-request-more ()
+  "Request more data.  This is useful if you already requested examples."
+  (interactive)
+  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+    (user-error "Not in a shell compose buffer"))
+  (with-current-buffer (chatgpt-shell--primary-buffer)
+    (when shell-maker--busy
+      (user-error "Busy, please wait")))
+  (let ((prompt "give me more")
         (inhibit-read-only t)
         (chatgpt-shell-prompt-query-response-style 'inline))
     (erase-buffer)
