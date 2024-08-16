@@ -416,7 +416,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
     (chatgpt-shell-swap-system-prompt)))
 
 (defun chatgpt-shell-version ()
-  "Show chatgot-shell mode version."
+  "Show chatgpt-shell mode version."
   (interactive)
   (message "chatgpt-shell v%s" chatgpt-shell--version))
 
