@@ -542,8 +542,6 @@ or
                                    output)
        output))))
 
-(defalias 'chatgpt-shell-clear-buffer #'comint-clear-buffer)
-
 (defalias 'chatgpt-shell-explain-code #'chatgpt-shell-describe-code)
 
 ;; Aliasing enables editing as text in babel.
@@ -606,6 +604,13 @@ Set NEW-SESSION to start a separate new session."
     (define-key chatgpt-shell-mode-map (kbd "C-c C-e")
       #'chatgpt-shell-prompt-compose)
     shell-buffer))
+
+(defun chatgpt-shell-clear-buffer ()
+  "Vlean the current shell buffer."
+  (interactive)
+  (comint-clear-buffer)
+  (shell-maker--reset-file-path)
+  )
 
 (defun chatgpt-shell--shrink-model-version (model-version)
   "Shrink MODEL-VERSION.  gpt-3.5-turbo -> 3.5t."
