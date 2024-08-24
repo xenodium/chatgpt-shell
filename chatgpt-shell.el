@@ -416,7 +416,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
     (chatgpt-shell-swap-system-prompt)))
 
 (defun chatgpt-shell-version ()
-  "Show chatgpt-shell mode version."
+  "Show `chatgpt-shell' mode version."
   (interactive)
   (message "chatgpt-shell v%s" chatgpt-shell--version))
 
@@ -2240,7 +2240,7 @@ If no LENGTH set, use 2048."
         (forward-line -1)
         (end-of-line))
       (let* ((items (chatgpt-shell--user-assistant-messages
-                     (shell-maker--command-and-response-at-point)))
+                     (list (shell-maker--command-and-response-at-point))))
              (command (string-trim (or (map-elt (seq-first items) 'content) "")))
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
         (setq buf (generate-new-buffer (if command
@@ -2879,6 +2879,39 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                         (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                           (chatgpt-shell--put-source-block-overlays))))))))
 
+(defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
+  "Show next interaction (request / response).
+
+If BACKWARDS is non-nil, go to previous interaction."
+  (interactive)
+  (unless (eq (current-buffer) (chatgpt-shell-prompt-compose-buffer))
+    (error "Not in a compose buffer"))
+  (when-let ((shell-buffer (chatgpt-shell--primary-buffer))
+             (compose-buffer (chatgpt-shell-prompt-compose-buffer))
+             (next (with-current-buffer (chatgpt-shell--primary-buffer)
+                     (shell-maker-next-command-and-response backwards))))
+    (chatgpt-shell-prompt-compose-replace-interaction
+     (car next) (cdr next))))
+
+(defun chatgpt-shell-prompt-compose-previous-interaction ()
+  "Show previous interaction (request / response)."
+  (interactive)
+  (chatgpt-shell-prompt-compose-next-interaction t))
+
+(defun chatgpt-shell-prompt-compose-replace-interaction (prompt &optional response)
+  "Replace the current compose's buffer interaction with PROMPT and RESPONSE."
+  (unless (eq (current-buffer) (chatgpt-shell-prompt-compose-buffer))
+    (error "Not in a compose buffer"))
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (save-excursion
+      (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+      (when response
+        (insert response))
+      (chatgpt-shell--put-source-block-overlays))
+    (chatgpt-shell-prompt-compose-view-mode +1)
+    (view-mode +1)))
+
 ;; TODO: Delete and use chatgpt-shell-prompt-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-prompt-compose-cancel ()
   "Cancel and close compose buffer."
@@ -2945,16 +2978,22 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
-  (call-interactively #'chatgpt-shell-next-source-block)
-  (call-interactively #'chatgpt-shell-mark-block))
+  (let ((before (point)))
+    (call-interactively #'chatgpt-shell-next-source-block)
+    (call-interactively #'chatgpt-shell-mark-block)
+    (when (eq before (point))
+      (chatgpt-shell-prompt-compose-next-interaction))))
 
 (defun chatgpt-shell-prompt-compose-previous-block ()
   "Jump to and select previous code block."
   (interactive)
   (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
-  (call-interactively #'chatgpt-shell-previous-source-block)
-  (call-interactively #'chatgpt-shell-mark-block))
+  (let ((before (point)))
+    (call-interactively #'chatgpt-shell-previous-source-block)
+    (call-interactively #'chatgpt-shell-mark-block)
+    (when (eq before (point))
+      (chatgpt-shell-prompt-compose-previous-interaction))))
 
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."

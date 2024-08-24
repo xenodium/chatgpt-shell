@@ -902,7 +902,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                     (shell-maker-prompt shell-maker--config))))
         (cl-assert (or (seq-empty-p items)
                        (eq (length items) 1)))
-        items))))
+        (seq-first items)))))
 
 (defun shell-maker--write-output-to-log-buffer (output config)
   "Write OUTPUT to log buffer using CONFIG."
@@ -959,6 +959,30 @@ Each marker is of the form (START . END)."
       (while (search-forward "<shell-maker-end-of-prompt>" nil t)
         (push (cons (match-beginning 0) (match-end 0)) matches))
       (reverse matches))))
+
+(defun shell-maker-next-command-and-response (&optional backwards)
+  "Move to next prompt and return interaction.  Return a command/response cons.
+
+If BACKWARDS is non-nil, move backwards."
+  (when-let* ((point-before (point))
+              (point-after (save-excursion
+                             (comint-previous-prompt (if backwards 1 -1))
+                             ;; Point could be away from current prompt.
+                             (when (eq (line-number-at-pos point-before)
+                                       (line-number-at-pos (point)))
+                               (comint-previous-prompt (if backwards 1 -1)))
+                             ;; Try going back again if on the last response.
+                             (when-let* ((going-back backwards)
+                                         (response (cdr (shell-maker--command-and-response-at-point)))
+                                         (same (equal (string-trim response)
+                                                      (string-trim (shell-maker-last-output)))))
+                               (comint-previous-prompt (if backwards 1 -1)))
+                             (point)))
+              (moved (and (not (eq point-before point-after))
+                          (not (eq (line-number-at-pos point-before)
+                                   (line-number-at-pos point-after))))))
+    (goto-char point-after)
+    (shell-maker--command-and-response-at-point)))
 
 (defun shell-maker--extract-history (text prompt-regexp)
   "Extract all commands and respective output in TEXT with PROMPT-REGEXP.
