@@ -816,7 +816,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                       (forward-line 0)
                       (point)))))
         (when (and start end
-                   (> (point) start)
+                   (>= (point) start)
                    (< (point) end))
           (list (cons 'language language)
                 (cons 'language-start language-start)
