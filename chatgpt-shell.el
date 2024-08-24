@@ -2946,9 +2946,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (call-interactively #'chatgpt-shell-next-source-block)
-  (when-let ((block (chatgpt-shell-markdown-block-at-point)))
-    (set-mark (map-elt block 'end))
-    (goto-char (map-elt block 'start))))
+  (call-interactively #'chatgpt-shell-mark-block))
 
 (defun chatgpt-shell-prompt-compose-previous-block ()
   "Jump to and select previous code block."
@@ -2956,9 +2954,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (call-interactively #'chatgpt-shell-previous-source-block)
-  (when-let ((block (chatgpt-shell-markdown-block-at-point)))
-    (set-mark (map-elt block 'end))
-    (goto-char (map-elt block 'start))))
+  (call-interactively #'chatgpt-shell-mark-block))
 
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."
