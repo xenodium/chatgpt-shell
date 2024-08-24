@@ -606,7 +606,7 @@ Set NEW-SESSION to start a separate new session."
     shell-buffer))
 
 (defun chatgpt-shell-clear-buffer ()
-  "Vlean the current shell buffer."
+  "Clean the current shell buffer."
   (interactive)
   (comint-clear-buffer)
   (shell-maker--reset-file-path)
