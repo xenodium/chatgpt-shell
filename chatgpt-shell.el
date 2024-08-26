@@ -2909,8 +2909,7 @@ If BACKWARDS is non-nil, go to previous interaction."
       (when response
         (insert response))
       (chatgpt-shell--put-source-block-overlays))
-    (chatgpt-shell-prompt-compose-view-mode +1)
-    (view-mode +1)))
+    (chatgpt-shell-prompt-compose-view-mode +1)))
 
 ;; TODO: Delete and use chatgpt-shell-prompt-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-prompt-compose-cancel ()
