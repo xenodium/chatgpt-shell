@@ -1501,6 +1501,26 @@ Set SAVE-EXCURSION to prevent point from moving."
                                     (when (string= event "finished\n")
                                       (chatgpt-shell-japanese-lookup term))))))
 
+(defun chatgpt-shell-japanese-audio-lookup ()
+  "Transcribe audio at current file (buffer or `dired') and look up in Japanese."
+  (interactive)
+  (let* ((term)
+         (file (chatgpt-shell--current-file))
+         (extension (downcase (file-name-extension file)))
+         (process (start-process "macosrec-speechrec" nil "macosrec"
+                                 "--speech-to-text" "--locale" "ja-JP" "--input" file)))
+    (if (memq window-system '(mac ns))
+        (unless (executable-find "macosrec")
+          (user-error "You need \"macosrec\" installed: brew install xenodium/macosrec/macosrec"))
+      (user-error "Not yet supported on %s (please send a pull request)" window-system))
+    (unless (seq-contains-p '("mp3" "wav" "m4a" "caf") extension)
+      (user-error "Must be using either .mp3, .m4a, .caf or .wav"))
+    (set-process-filter process (lambda (_proc text)
+                                  (setq term (concat term text))))
+    (set-process-sentinel process (lambda (_proc event)
+                                    (when (string= event "finished\n")
+                                      (chatgpt-shell-japanese-lookup term))))))
+
 (defun chatgpt-shell-japanese-lookup (&optional term)
   "Look up Japanese TERM."
   (interactive)
@@ -1616,12 +1636,12 @@ When visiting a buffer with an image, send that.
 
 If in a `dired' buffer, use selection (single image only for now)."
   (interactive)
-  (let* ((file (chatgpt-shell--current-file))
+  (let* ((file (chatgpt-shell--current-image-file))
          (extension (downcase (file-name-extension file)))
          (name (file-name-nondirectory file)))
     (unless (or (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
                 (equal name "image.request"))
-      (user-error "Must be user either .jpg, .jpeg, .png, .webp or .gif file"))
+      (user-error "Must be using either .jpg, .jpeg, .png, .webp or .gif file"))
     (chatgpt-shell-vision-make-request
      (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
      file
@@ -1639,8 +1659,8 @@ If in a `dired' buffer, use selection (single image only for now)."
            (read-only-mode +1))
          (display-buffer description-buffer))))))
 
-(defun chatgpt-shell--current-file ()
-  "Return buffer file (if available), Dired selected file, or image at point."
+(defun chatgpt-shell--current-image-file ()
+  "Return buffer image file, Dired selected file, or image at point."
   (when (use-region-p)
     (user-error "No region selection supported"))
   (cond ((eq major-mode 'image-mode)
@@ -1665,7 +1685,24 @@ If in a `dired' buffer, use selection (single image only for now)."
                                         (insert (plist-get image :data)))
                                       (chatgpt-shell--image-request-file)))))
              image-file
-           (user-error "No image found")))))
+           (user-error "Nothing found to work on")))))
+
+(defun chatgpt-shell--current-file ()
+  "Return buffer file, Dired selected file, or image at point."
+  (when (use-region-p)
+    (user-error "No region selection supported"))
+  (cond ((buffer-file-name)
+         (buffer-file-name))
+        ((eq major-mode 'dired-mode)
+         (let* ((dired-files (dired-get-marked-files))
+                (file (seq-first dired-files)))
+           (unless dired-files
+             (user-error "No file selected"))
+           (when (> (length dired-files) 1)
+             (user-error "Only one file selection supported"))
+           file))
+        (t
+         (user-error "Nothing found to work on"))))
 
 (cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
   "Make a vision request using PROMPT and URL-PATH.
