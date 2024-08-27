@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.32.1
+;; Version: 0.32.2
 ;; Package-Requires: ((emacs "27.1") (chatgpt-shell "1.0.3"))
 
 ;;; License:
@@ -82,7 +82,7 @@ This function is called by `org-babel-execute-src-block'"
              (map-elt params :temperature)))
       (chatgpt-shell-post-messages
        messages
-       (map-elt params :version)
+       nil (map-elt params :version)
        nil nil
        (map-elt params :temperature)))))
 
