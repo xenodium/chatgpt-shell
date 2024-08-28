@@ -69,7 +69,7 @@ Enable it for troubleshooting issues."
   :group 'shell-maker)
 
 (defcustom shell-maker-prompt-before-killing-buffer t
-  "If t, confirm killing buffer without saving."
+  "If non-nil, confirm killing buffer without saving."
   :type 'boolean
   :group 'shell-maker)
 
