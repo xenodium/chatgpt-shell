@@ -319,6 +319,14 @@ Set BUFFER-NAME to override the buffer name."
     (user-error "Not in a shell"))
   (shell-maker--send-input))
 
+(defun shell-maker-clear-buffer ()
+  "Clear the current shell buffer."
+  (interactive)
+  (when shell-maker-forget-file-after-clear
+
+    (setq shell-maker--file nil))
+  (comint-clear-buffer))
+
 (defun shell-maker-search-history ()
   "Search previous input history."
   (interactive)
@@ -598,7 +606,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
         (shell-maker--print-help)
         (setq shell-maker--busy nil))
        ((string-equal "clear" (string-trim input-string))
-        (call-interactively #'comint-clear-buffer)
+        (call-interactively #'shell-maker-clear-buffer)
         (shell-maker--output-filter (shell-maker--process) (shell-maker-prompt shell-maker--config))
         (setq shell-maker--busy nil)
         (set-buffer-modified-p nil))
