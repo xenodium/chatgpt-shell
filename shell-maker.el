@@ -98,7 +98,7 @@ For example:
   :group 'shell-maker)
 
 (defcustom shell-maker-forget-file-after-clean nil
-  "Tell the `shell-maker-save-session-transcript' reset file path or not."
+  "If non-nil, reset file path after clear command."
   :type 'boolean
   :group 'shell-maker)
 
