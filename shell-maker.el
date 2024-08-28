@@ -97,6 +97,11 @@ For example:
   :type 'directory
   :group 'shell-maker)
 
+(defcustom shell-maker-forget-file-after-clean nil
+  "If non-nil, reset file path after clear command."
+  :type 'boolean
+  :group 'shell-maker)
+
 (defvar-local shell-maker--input nil)
 
 (defvar-local shell-maker--current-request-id 0)
