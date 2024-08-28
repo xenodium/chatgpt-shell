@@ -1530,7 +1530,13 @@ Set SAVE-EXCURSION to prevent point from moving."
   "Look up Japanese TERM."
   (interactive)
   (unless term
-    (setq term (read-string "Japanese look up: ")))
+    (setq term (cond ((region-active-p)
+                      (let ((region (buffer-substring (region-beginning)
+                                                      (region-end))))
+                        (deactivate-mark)
+                        region))
+                     (t
+                      (read-string "Japanese look up: ")))))
   (when (string-empty-p (string-trim term))
     (user-error "Nothing to look up"))
   (let* ((translation-buffer (get-buffer-create "*chatgpt japanese translation*"))
