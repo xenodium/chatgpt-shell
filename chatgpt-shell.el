@@ -608,9 +608,9 @@ Set NEW-SESSION to start a separate new session."
 (defun chatgpt-shell-clear-buffer ()
   "Clean the current shell buffer."
   (interactive)
-  (comint-clear-buffer)
-  (shell-maker--reset-file-path)
-  )
+  (when shell-maker-forget-file-after-clean
+    (setq shell-maker--file nil))
+  (comint-clear-buffer))
 
 (defun chatgpt-shell--shrink-model-version (model-version)
   "Shrink MODEL-VERSION.  gpt-3.5-turbo -> 3.5t."

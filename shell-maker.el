@@ -97,13 +97,10 @@ For example:
   :type 'directory
   :group 'shell-maker)
 
-(defcustom shell-maker-if-file-path-reset-after-clean nil
-  "Tell the shell-maker-save-session-transcript reset file path or not.
-
-Values: \\'reset, nil (default)"
-  :type 'symbol
-  :group 'shell-maker
-  )
+(defcustom shell-maker-forget-file-after-clean nil
+  "Tell the `shell-maker-save-session-transcript' reset file path or not."
+  :type 'boolean
+  :group 'shell-maker)
 
 (defvar-local shell-maker--input nil)
 
@@ -931,14 +928,6 @@ NO-ANNOUNCEMENT skips announcing response when in background."
 (defun shell-maker--process nil
   "Get shell buffer process."
   (get-buffer-process (shell-maker-buffer shell-maker--config)))
-
-(defun shell-maker--reset-file-path ()
-  "Reset the `shell-maker--file`.
-
-Depend on shell-maker-if-file-path-reset-after-clean."
-  (pcase shell-maker-if-file-path-reset-after-clean
-    ('reset (setq shell-maker--file nil))
-    (_)))
 
 (defun shell-maker-save-session-transcript ()
   "Save shell transcript to file.
