@@ -608,7 +608,8 @@ Set NEW-SESSION to start a separate new session."
 (defun chatgpt-shell-clear-buffer ()
   "Clear the current shell buffer."
   (interactive)
-  (when shell-maker-forget-file-after-clean
+  (when shell-maker-forget-file-after-clear
+
     (setq shell-maker--file nil))
   (comint-clear-buffer))
 

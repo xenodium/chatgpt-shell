@@ -97,7 +97,7 @@ For example:
   :type 'directory
   :group 'shell-maker)
 
-(defcustom shell-maker-forget-file-after-clean nil
+(defcustom shell-maker-forget-file-after-clear nil
   "If non-nil, reset file path after clear command."
   :type 'boolean
   :group 'shell-maker)
