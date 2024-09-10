@@ -2876,53 +2876,54 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-prompt-compose-send-buffer ()
   "Send compose buffer content to shell for processing."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
-    (user-error "Not in a shell compose buffer"))
-  (with-current-buffer (chatgpt-shell--primary-buffer)
-    (when shell-maker--busy
-      (unless (y-or-n-p "Abort?")
-        (cl-return))
-      (shell-maker-interrupt t)
-      (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+  (catch 'exit
+    (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+      (user-error "Not in a shell compose buffer"))
+    (with-current-buffer (chatgpt-shell--primary-buffer)
+      (when shell-maker--busy
+        (unless (y-or-n-p "Abort?")
+          (throw 'exit nil))
+        (shell-maker-interrupt t)
+        (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+          (progn
+            (chatgpt-shell-prompt-compose-view-mode -1)
+            (erase-buffer)))
+        (user-error "Aborted")))
+    (when (chatgpt-shell-block-action-at-point)
+      (chatgpt-shell-execute-block-action-at-point)
+      (throw 'exit nil))
+    (when (string-empty-p
+           (string-trim
+            (buffer-substring-no-properties
+             (point-min) (point-max))))
+      (erase-buffer)
+      (user-error "Nothing to send"))
+    (if chatgpt-shell-prompt-compose-view-mode
         (progn
           (chatgpt-shell-prompt-compose-view-mode -1)
-          (erase-buffer)))
-      (user-error "Aborted")))
-  (when (chatgpt-shell-block-action-at-point)
-    (chatgpt-shell-execute-block-action-at-point)
-    (cl-return))
-  (when (string-empty-p
-         (string-trim
-          (buffer-substring-no-properties
-           (point-min) (point-max))))
-    (erase-buffer)
-    (user-error "Nothing to send"))
-  (if chatgpt-shell-prompt-compose-view-mode
-      (progn
-        (chatgpt-shell-prompt-compose-view-mode -1)
-        (erase-buffer)
-        (message instructions))
-    (setq prompt
-          (string-trim
-           (buffer-substring-no-properties
-            (point-min) (point-max))))
-    (erase-buffer)
-    (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
-    (chatgpt-shell-prompt-compose-view-mode +1)
-    (setq view-exit-action 'kill-buffer)
-    (when (string-equal prompt "clear")
-      (view-mode -1)
-      (erase-buffer))
-    (if chatgpt-shell-prompt-compose--exit-on-submit
-        (let ((view-exit-action nil)
-              (chatgpt-shell-prompt-query-response-style 'shell))
-          (quit-window t (get-buffer-window (chatgpt-shell-prompt-compose-buffer)))
-          (chatgpt-shell-send-to-buffer prompt))
-      (let ((chatgpt-shell-prompt-query-response-style 'inline))
-        (chatgpt-shell-send-to-buffer prompt nil nil
-                                      (lambda ()
-                                        (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                          (chatgpt-shell--put-source-block-overlays))))))))
+          (erase-buffer)
+          (message instructions))
+      (setq prompt
+            (string-trim
+             (buffer-substring-no-properties
+              (point-min) (point-max))))
+      (erase-buffer)
+      (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+      (chatgpt-shell-prompt-compose-view-mode +1)
+      (setq view-exit-action 'kill-buffer)
+      (when (string-equal prompt "clear")
+        (view-mode -1)
+        (erase-buffer))
+      (if chatgpt-shell-prompt-compose--exit-on-submit
+          (let ((view-exit-action nil)
+                (chatgpt-shell-prompt-query-response-style 'shell))
+            (quit-window t (get-buffer-window (chatgpt-shell-prompt-compose-buffer)))
+            (chatgpt-shell-send-to-buffer prompt))
+        (let ((chatgpt-shell-prompt-query-response-style 'inline))
+          (chatgpt-shell-send-to-buffer prompt nil nil
+                                        (lambda ()
+                                          (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+                                            (chatgpt-shell--put-source-block-overlays)))))))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
