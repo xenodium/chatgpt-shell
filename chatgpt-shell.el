@@ -1823,8 +1823,7 @@ For example:
   "Build ChatGPT curl command list using REQUEST-DATA."
   (let ((json-path (chatgpt-shell--json-request-file)))
     (with-temp-file json-path
-      (when (eq system-type 'windows-nt)
-        (setq-local buffer-file-coding-system 'utf-8))
+      (setq-local coding-system-for-write 'utf-8)
       (insert (shell-maker--json-encode request-data)))
     (append (list "curl" (chatgpt-shell--api-url))
             chatgpt-shell-additional-curl-options
