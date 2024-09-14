@@ -212,9 +212,9 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '("o1-preview"
+  '("chatgpt-4o-latest"
+    "o1-preview"
     "o1-mini"
-    "chatgpt-4o-latest"
     "gpt-4o"
     "gpt-4-0125-preview"
     "gpt-4-turbo-preview"
