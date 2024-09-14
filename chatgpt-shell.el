@@ -212,7 +212,10 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '("gpt-4o"
+  '("o1-preview"
+    "o1-mini"
+    "chatgpt-4o-latest"
+    "gpt-4o"
     "gpt-4-0125-preview"
     "gpt-4-turbo-preview"
     "gpt-4-1106-preview"
@@ -1870,6 +1873,15 @@ For example:
     ;; Remove "ft:" from fine-tuned models and recognize as usual
     (setq model (string-remove-prefix "ft:" model))
     (cond
+     ((string-prefix-p "o1" model)
+      (setq tokens-per-message 3
+            ;; https://platform.openai.com/docs/models/o1
+            max-tokens 128000))
+     ((or (string-prefix-p "chatgpt-4o" model)
+          (string-prefix-p "gpt-4o" model))
+      (setq tokens-per-message 3
+            ;; https://platform.openai.com/docs/models/gpt-4o
+            max-tokens 128000))
      ((string-prefix-p "gpt-3.5" model)
       (setq tokens-per-message 4
             ;; https://platform.openai.com/docs/models/gpt-3-5
