@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.52.1
+;; Version: 0.53.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -358,18 +358,31 @@ Set BUFFER-NAME to override the buffer name."
 ;; Thanks to https://www.n16f.net/blog/making-ielm-more-comfortable
 (defun shell-maker--read-input-ring-history (config)
   "Read input ring history from file using CONFIG."
-  (let ((path (shell-maker-history-file-path config)))
+  (let ((path (shell-maker-history-file-path config))
+        (ring))
     (make-directory
      (file-name-directory path) t)
-    (setq-local comint-input-ring-file-name path))
-  (setq-local comint-input-ring-size 10000)
-  (setq-local comint-input-ignoredups t)
-  (comint-read-input-ring t))
+    (setq-local comint-input-ring-file-name nil)
+    (setq-local comint-input-ignoredups t)
+    (setq ring (ignore-errors
+                 (with-temp-buffer
+                   (insert-file-contents path)
+                   (read (current-buffer)))))
+    (unless (ring-p ring)
+      (setq ring (make-ring (min 1500 comint-input-ring-size))))
+    (setq comint-input-ring ring)))
 
-(defun shell-maker--write-input-ring-history ()
-  "Write input ring history to file."
-  (with-file-modes #o600
-    (comint-write-input-ring)))
+(defun shell-maker--write-input-ring-history (config)
+  "Write input ring history to file using CONFIG."
+  (let ((path (shell-maker-history-file-path config))
+        (ring comint-input-ring)
+        (print-length nil)
+        (print-level nil))
+    (make-directory
+     (file-name-directory path) t)
+    (with-temp-file path
+      (insert (prin1-to-string (or ring
+                                  (make-ring (min 1500 comint-input-ring-size))))))))
 
 (defun shell-maker--output-at-point ()
   "Output at point range with cons of start and end."
@@ -659,7 +672,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                          (unless no-announcement
                            (shell-maker--announce-response buffer))
                          (setq shell-maker--busy nil)
-                         (shell-maker--write-input-ring-history)
+                         (shell-maker--write-input-ring-history shell-maker--config)
                          (when (shell-maker-config-on-command-finished shell-maker--config)
                            ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
                            (when on-output
