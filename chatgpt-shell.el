@@ -367,6 +367,7 @@ Or nil if none."
         (push key seen)))
     duplicates))
 
+;;;###autoload
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
   (interactive)
@@ -389,6 +390,7 @@ Or nil if none."
   (chatgpt-shell-interrupt nil)
   (chatgpt-shell--save-variables))
 
+;;;###autoload
 (defun chatgpt-shell-load-awesome-prompts ()
   "Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.
 
@@ -420,6 +422,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
     (chatgpt-shell-interrupt nil)
     (chatgpt-shell-swap-system-prompt)))
 
+;;;###autoload
 (defun chatgpt-shell-version ()
   "Show `chatgpt-shell' mode version."
   (interactive)
@@ -1108,6 +1111,7 @@ Could be a prompt or a source block."
     (shell-maker-prompt
      chatgpt-shell--config)))
 
+;;;###autoload
 (defun chatgpt-shell-prompt ()
   "Make a ChatGPT request from the minibuffer.
 
@@ -1138,6 +1142,7 @@ If region is active, append to prompt."
                              ""))))
     (chatgpt-shell-send-to-buffer prompt nil)))
 
+;;;###autoload
 (defun chatgpt-shell-prompt-appending-kill-ring ()
   "Make a ChatGPT request from the minibuffer appending kill ring."
   (interactive)
@@ -1153,6 +1158,7 @@ If region is active, append to prompt."
      (concat prompt "\n\n"
              (current-kill 0)) nil)))
 
+;;;###autoload
 (defun chatgpt-shell-describe-code ()
   "Describe code from region using ChatGPT."
   (interactive)
@@ -1321,6 +1327,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
                (delete-region here (point))
                (goto-char orig))))))
 
+;;;###autoload
 (defun chatgpt-shell-add-??-command-to-eshell ()
   "Add `??' command to `eshell'."
 
@@ -1489,6 +1496,7 @@ Set SAVE-EXCURSION to prevent point from moving."
             request-data))
     request-data))
 
+;;;###autoload
 (defun chatgpt-shell-japanese-ocr-lookup ()
   "Select a region of the screen to OCR and look up in Japanese."
   (interactive)
@@ -1504,6 +1512,7 @@ Set SAVE-EXCURSION to prevent point from moving."
                                     (when (string= event "finished\n")
                                       (chatgpt-shell-japanese-lookup term))))))
 
+;;;###autoload
 (defun chatgpt-shell-japanese-audio-lookup ()
   "Transcribe audio at current file (buffer or `dired') and look up in Japanese."
   (interactive)
@@ -1524,6 +1533,7 @@ Set SAVE-EXCURSION to prevent point from moving."
                                     (when (string= event "finished\n")
                                       (chatgpt-shell-japanese-lookup term))))))
 
+;;;###autoload
 (defun chatgpt-shell-japanese-lookup (&optional term)
   "Look up Japanese TERM."
   (interactive)
@@ -1638,6 +1648,7 @@ For example:
         (shell-maker--write-output-to-log-buffer "\n\n" config)
         response))))
 
+;;;###autoload
 (defun chatgpt-shell-describe-image ()
   "Request OpenAI to describe image.
 
@@ -2654,6 +2665,7 @@ t if invoked from a transient frame (quitting closes the frame).")
   :keymap chatgpt-shell-prompt-compose-view-mode-map
   (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
+;;;###autoload
 (defun chatgpt-shell-prompt-compose (prefix)
   "Compose and send prompt from a dedicated buffer.
 
