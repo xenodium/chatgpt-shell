@@ -106,8 +106,8 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-proofread-region
-  "Please help me proofread the following text with English:"
-  "Promt header of `proofread-region`."
+  "Please help me proofread the following Ensligh text and only reply with fixed text:"
+  "Prompt header used by `chatgpt-shell-proofread-region`."
   :type 'string
   :group 'chatgpt-shell)
 
@@ -1208,9 +1208,13 @@ If region is active, append to prompt."
 
 ;;;###autoload
 (defun chatgpt-shell-proofread-region ()
-  "Proofread English from region using ChatGPT."
+  "Proofread text from region using ChatGPT.
+
+See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
   (interactive)
-  (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-proofread-region))
+  (let ((chatgpt-shell-prompt-query-response-style 'inline))
+    (chatgpt-shell-send-region-with-header
+     chatgpt-shell-prompt-header-proofread-region)))
 
 ;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
@@ -1385,16 +1389,21 @@ ON-FINISHED is invoked when the entire interaction is finished."
         (unless review
           (with-current-buffer buffer
             (chatgpt-shell-prompt-compose-send-buffer))))
-    (let* ((buffer (cond (handler
+    (let* ((response-style chatgpt-shell-prompt-query-response-style)
+           (buffer (cond (handler
                           nil)
-                         ((eq chatgpt-shell-prompt-query-response-style 'inline)
+                         ((eq response-style 'inline)
                           (current-buffer))
                          (t
                           nil)))
            (point (point))
            (marker (copy-marker (point)))
            (orig-region-active (region-active-p))
-           (no-focus (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+           (region-beginning (when orig-region-active
+                               (region-beginning)))
+           (region-end (when orig-region-active
+                         (region-end)))
+           (no-focus (or (eq response-style 'inline)
                          handler)))
       (when (region-active-p)
         (setq marker (copy-marker (max (region-beginning)
@@ -1412,7 +1421,7 @@ ON-FINISHED is invoked when the entire interaction is finished."
                         (insert text))
                     (insert text)
                     (shell-maker--send-input
-                     (if (eq chatgpt-shell-prompt-query-response-style 'inline)
+                     (if (eq response-style 'inline)
                          (lambda (_command output error finished)
                            (setq output (or output ""))
                            (when (buffer-live-p buffer)
@@ -1422,25 +1431,18 @@ ON-FINISHED is invoked when the entire interaction is finished."
                                      (message "%s" output))
                                  (let ((inhibit-read-only t))
                                    (save-excursion
-                                     (if orig-region-active
-                                         (progn
-                                           (goto-char marker)
-                                           (when (eq (marker-position marker)
-                                                     point)
-                                             (insert "\n\n")
-                                             (set-marker marker (+ 2 (marker-position marker))))
-                                           (insert output)
-                                           (set-marker marker (+ (length output)
-                                                                 (marker-position marker))))
-                                       (goto-char marker)
-                                       (insert output)
-                                       (set-marker marker (+ (length output)
-                                                             (marker-position marker))))))))
+                                     (when orig-region-active
+                                       (delete-region region-beginning region-end)
+                                       (setq orig-region-active nil))
+                                     (goto-char marker)
+                                     (insert output)
+                                     (set-marker marker (+ (length output)
+                                                           (marker-position marker)))))))
                              (when (and finished on-finished)
                                (funcall on-finished))))
                        (or handler (lambda (_command _output _error _finished))))
                      t))))
-        (if (or (eq chatgpt-shell-prompt-query-response-style 'inline)
+        (if (or (eq response-style 'inline)
                 handler)
             (with-current-buffer (chatgpt-shell--primary-buffer)
               (goto-char (point-max))
