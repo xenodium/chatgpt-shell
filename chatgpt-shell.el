@@ -106,7 +106,7 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-proofread-region
-  "Please help me proofread the following Ensligh text and only reply with fixed text:"
+  "Please help me proofread the following English text and only reply with fixed text:"
   "Prompt header used by `chatgpt-shell-proofread-region`."
   :type 'string
   :group 'chatgpt-shell)
