@@ -1473,7 +1473,6 @@ ON-FINISHED is invoked when the entire interaction is finished."
                           (current-buffer))
                          (t
                           nil)))
-           (point (point))
            (marker (copy-marker (point)))
            (orig-region-active (region-active-p))
            (region-beginning (when orig-region-active
