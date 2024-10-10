@@ -2771,6 +2771,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                         (buffer-substring line-start line-end)
                         " <--- issue is here\n"
                         (buffer-substring bottom-context-start bottom-context-end)))))
+         ;; TODO: Consolidate, but until then keep in sync with
+         ;; inlined instructions from `chatgpt-shell-prompt-compose-send-buffer'.
          (instructions (concat "Type "
                                (propertize "C-c C-c" 'face 'help-key-binding)
                                " to send prompt. "
@@ -2927,7 +2929,13 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
         (progn
           (chatgpt-shell-prompt-compose-view-mode -1)
           (erase-buffer)
-          (message instructions))
+          ;; TODO: Consolidate, but until then keep in sync with
+          ;; instructions from `chatgpt-shell-prompt-compose-show-buffer'.
+          (message (concat "Type "
+                           (propertize "C-c C-c" 'face 'help-key-binding)
+                           " to send prompt. "
+                           (propertize "C-c C-k" 'face 'help-key-binding)
+                           " to cancel and exit. ")))
       (setq prompt
             (string-trim
              (buffer-substring-no-properties
