@@ -565,14 +565,22 @@ With NEW-SESSION, start a new session."
   (interactive "P")
   (chatgpt-shell-start nil new-session))
 
-(defun chatgpt-shell-start (&optional no-focus new-session)
+(defun chatgpt-shell-start (&optional no-focus new-session ignore-as-primary model-version system-prompt)
   "Start a ChatGPT shell programmatically.
 
 Set NO-FOCUS to start in background.
 
-Set NEW-SESSION to start a separate new session."
+Set NEW-SESSION to start a separate new session.
+
+Set IGNORE-AS-PRIMARY to avoid making new buffer the primary one.
+
+Set MODEL-VERSION to override variable `chatgpt-shell-system-prompt'.
+
+Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   (let* ((chatgpt-shell--config
-          (let ((config (copy-sequence chatgpt-shell--config)))
+          (let ((config (copy-sequence chatgpt-shell--config))
+                (chatgpt-shell-model-version (or model-version chatgpt-shell-system-prompt))
+                (chatgpt-shell-system-prompt (or system-prompt chatgpt-shell-system-prompt)))
             (setf (shell-maker-config-prompt config)
                   (car (chatgpt-shell--prompt-pair)))
             (setf (shell-maker-config-prompt-regexp config)
@@ -583,18 +591,22 @@ Set NEW-SESSION to start a separate new session."
                              no-focus
                              chatgpt-shell-welcome-function
                              new-session
-                             (if (chatgpt-shell--primary-buffer)
+                             (if (and (chatgpt-shell--primary-buffer)
+                                      (not ignore-as-primary))
                                  (buffer-name (chatgpt-shell--primary-buffer))
                                (chatgpt-shell--make-buffer-name)))))
-    (unless (chatgpt-shell--primary-buffer)
+    (when (and (not ignore-as-primary)
+               (not (chatgpt-shell--primary-buffer)))
       (chatgpt-shell--set-primary-buffer shell-buffer))
-    (let ((version chatgpt-shell-model-version)
-          (system-prompt chatgpt-shell-system-prompt))
-      (with-current-buffer shell-buffer
-        (setq-local chatgpt-shell-model-version version)
-        (setq-local chatgpt-shell-system-prompt system-prompt)
-        (chatgpt-shell--update-prompt t)
-        (chatgpt-shell--add-menus)))
+    (unless model-version
+      (setq model-version chatgpt-shell-model-version))
+    (unless system-prompt
+      (setq system-prompt chatgpt-shell-system-prompt))
+    (with-current-buffer shell-buffer
+      (setq-local chatgpt-shell-model-version model-version)
+      (setq-local chatgpt-shell-system-prompt system-prompt)
+      (chatgpt-shell--update-prompt t)
+      (chatgpt-shell--add-menus))
     ;; Disabling advice for now. It gets in the way.
     ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
     (define-key chatgpt-shell-mode-map (kbd "C-M-h")
@@ -1212,9 +1224,12 @@ If region is active, append to prompt."
 
 See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
   (interactive)
-  (let ((chatgpt-shell-prompt-query-response-style 'inline))
-    (chatgpt-shell-send-region-with-header
-     chatgpt-shell-prompt-header-proofread-region)))
+  (chatgpt-shell-request-and-insert-response
+   :system-prompt chatgpt-shell-prompt-header-proofread-region
+   :streaming t
+   :query (if (region-active-p)
+              (buffer-substring (region-beginning) (region-end))
+            (error "No active region"))))
 
 ;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
@@ -1376,6 +1391,68 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (require 'esh-cmd)
 
   (add-to-list 'eshell-complex-commands "??"))
+
+(cl-defun chatgpt-shell-request-and-insert-response (&key query
+                                                          (buffer (current-buffer))
+                                                          model-version
+                                                          system-prompt
+                                                          streaming)
+  "Send a contextless request (no history) with:
+
+QUERY: Request query text.
+BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
+MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+SYSTEM-PROMPT (optional): As string.
+STREAMING (optional): Non-nil to stream insertion."
+  (let* ((delete-text (region-active-p))
+         (delete-from (when delete-text
+                        (region-beginning)))
+         (delete-to (when delete-text
+                      (region-end))))
+    (chatgpt-shell-send-contextless-request
+     :model-version model-version
+     :system-prompt system-prompt
+     :query query
+     :streaming streaming
+     :on-output (lambda (command output error finished)
+                  (if error
+                      (unless (string-empty-p (string-trim output))
+                        (message "%s" output))
+                    (with-current-buffer buffer
+                      (when delete-text
+                        (deactivate-mark)
+                        (delete-region delete-from delete-to)
+                        (setq delete-text nil))
+                      (insert output)))))))
+
+(cl-defun chatgpt-shell-send-contextless-request
+    (&key (model-version chatgpt-shell-model-version)
+          (system-prompt "")
+          query
+          streaming
+          on-output)
+  "Send a request with:
+
+QUERY: Request query text.
+ON-OUTPUT: Of the form (lambda (command output error finished))
+MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+SYSTEM-PROMPT (optional): As string.
+STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
+  (unless query
+    (error "Missing mandatory \"query\" param"))
+  (unless on-output
+    (error "Missing mandatory \"on-output\" param of the form (lambda (command output error finished))"))
+  (let ((shell-buffer (chatgpt-shell-start t t t model-version system-prompt)))
+    (with-current-buffer shell-buffer
+      (setq-local shell-maker-prompt-before-killing-buffer nil)
+      (setq-local chatgpt-shell-streaming streaming)
+      (insert query)
+      (shell-maker--send-input
+       (lambda (command output error finished)
+         (funcall on-output command output error finished)
+         (when finished
+           (kill-buffer shell-buffer)))
+       t))))
 
 (defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
   "Send TEXT to *chatgpt* buffer.
