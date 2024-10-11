@@ -1417,7 +1417,7 @@ STREAMING (optional): Non-nil to stream insertion."
      :system-prompt system-prompt
      :query query
      :streaming streaming
-     :on-output (lambda (command output error finished)
+     :on-output (lambda (_command output error finished)
                   (if error
                       (unless (string-empty-p (string-trim output))
                         (message "%s" output))
@@ -1430,7 +1430,9 @@ STREAMING (optional): Non-nil to stream insertion."
                         (goto-char marker)
                         (insert output)
                         (set-marker marker (+ (length output)
-                                              (marker-position marker))))))))))
+                                              (marker-position marker)))))
+                    (when finished
+                      (message "ChatGPT: finished")))))))
 
 (cl-defun chatgpt-shell-send-contextless-request
     (&key (model-version chatgpt-shell-model-version)
