@@ -1396,43 +1396,72 @@ With prefix REVIEW prompt before sending to ChatGPT."
                                                           (buffer (current-buffer))
                                                           model-version
                                                           system-prompt
-                                                          streaming)
+                                                          streaming
+                                                          start
+                                                          end)
   "Send a contextless request (no history) with:
 
 QUERY: Request query text.
 BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
 MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
 SYSTEM-PROMPT (optional): As string.
-STREAMING (optional): Non-nil to stream insertion."
-  (let* ((delete-text (region-active-p))
+STREAMING (optional): Non-nil to stream insertion.
+START (optional): Beginning of region to replace (overrides active region).
+END (optional): End of region to replace (overrides active region)."
+  (let* ((point (point))
+         (delete-text (or
+                       (and start end)
+                       (region-active-p)))
          (delete-from (when delete-text
-                        (region-beginning)))
+                        (or start (region-beginning))))
          (delete-to (when delete-text
-                      (region-end)))
+                      (or end (region-end))))
          (marker (if delete-text
                      (copy-marker (max delete-from delete-to))
-                   (copy-marker (point)))))
+                   (copy-marker (point))))
+         (response "")
+         (progress-reporter (make-progress-reporter "ChatGPT ")))
     (chatgpt-shell-send-contextless-request
      :model-version model-version
      :system-prompt system-prompt
      :query query
-     :streaming streaming
+     :streaming t
      :on-output (lambda (_command output error finished)
-                  (if error
-                      (unless (string-empty-p (string-trim output))
-                        (message "%s" output))
-                    (with-current-buffer buffer
-                      (when delete-text
-                        (deactivate-mark)
-                        (delete-region delete-from delete-to)
-                        (setq delete-text nil))
-                      (save-excursion
-                        (goto-char marker)
-                        (insert output)
-                        (set-marker marker (+ (length output)
-                                              (marker-position marker)))))
-                    (when finished
-                      (message "ChatGPT: finished")))))))
+                  (if streaming
+                      (if error
+                          (unless (string-empty-p (string-trim output))
+                            (message "%s" output))
+                        (with-current-buffer buffer
+                          (when delete-text
+                            (deactivate-mark)
+                            (delete-region delete-from delete-to)
+                            (setq delete-text nil))
+                          (save-excursion
+                            (goto-char marker)
+                            (insert output)
+                            (set-marker marker (+ (length output)
+                                                  (marker-position marker)))))
+                        (when finished
+                          (with-current-buffer buffer
+                            (goto-char point))))
+                    (progn
+                      (progress-reporter-update progress-reporter)
+                      (setq response (concat response output))
+                      (when finished
+                        (progress-reporter-done progress-reporter)
+                        (with-current-buffer buffer
+                          (when delete-text
+                            (deactivate-mark)
+                            (delete-region delete-from delete-to)
+                            (setq delete-text nil))
+                          (save-excursion
+                            (goto-char marker)
+                            ;; (insert (concat "\n" response "\n")))
+                            (insert response))
+                          (goto-char point)))
+                      (when error
+                        (unless (string-empty-p (string-trim output))
+                          (message "%s" output)))))))))
 
 (cl-defun chatgpt-shell-send-contextless-request
     (&key (model-version chatgpt-shell-model-version)
@@ -2697,6 +2726,44 @@ compiling source blocks."
                         (nth (map-elt vars 'chatgpt-shell-system-prompt)
                              chatgpt-shell-system-prompts)))
         (setq chatgpt-shell-system-prompt (map-elt vars 'chatgpt-shell-system-prompt))))))
+
+(defun chatgpt-shell--flymake-context ()
+  "Return flymake diagnostic context if available.  Nil otherwise."
+  (when-let* ((diagnostic (flymake-diagnostics (point)))
+              (line-start (line-beginning-position))
+              (line-end (line-end-position))
+              (top-context-start (max (line-beginning-position -5) (point-min)))
+              (top-context-end (max (line-beginning-position 1) (point-min)))
+              (bottom-context-start (min (line-beginning-position 2) (point-max)))
+              (bottom-context-end (min (line-beginning-position 7) (point-max)))
+              (current-line (buffer-substring line-start line-end)))
+    (list
+     (cons :start top-context-start)
+     (cons :end bottom-context-end)
+     (cons :diagnostic (mapconcat #'flymake-diagnostic-text diagnostic "\n"))
+     (cons :content (concat
+                     (buffer-substring-no-properties top-context-start top-context-end)
+                     (buffer-substring-no-properties line-start line-end)
+                     " <--- issue is here\n"
+                     (buffer-substring-no-properties bottom-context-start bottom-context-end))))))
+
+(when-let ((flymake-context (chatgpt-shell--flymake-context)))
+  (set-mark (map-elt flymake-context :start))
+  (goto-char (map-elt flymake-context :end)))
+
+;;;###autoload
+(defun chatgpt-shell-fix-error-at-point ()
+  "Fixes flymake error at point."
+  (interactive)
+  (if-let ((flymake-context (chatgpt-shell--flymake-context)))
+      (chatgpt-shell-request-and-insert-response
+       :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix. Do not give explanations. Do not wrap snippets in markdown blocks.\n\n"
+       :start (map-elt flymake-context :start)
+       :end (map-elt flymake-context :end)
+       :query (concat (map-elt flymake-context :diagnostic) "\n\n"
+                      "Code: \n\n"
+                      (map-elt flymake-context :content)))
+    (error "Nothing to fix")))
 
 ;;; TODO: Move to chatgpt-shell-prompt-compose.el, but first update
 ;;; the MELPA recipe, so it can load additional files other than chatgpt-shell.el.
