@@ -1408,7 +1408,10 @@ STREAMING (optional): Non-nil to stream insertion."
          (delete-from (when delete-text
                         (region-beginning)))
          (delete-to (when delete-text
-                      (region-end))))
+                      (region-end)))
+         (marker (if delete-text
+                     (copy-marker (max delete-from delete-to))
+                   (copy-marker (point)))))
     (chatgpt-shell-send-contextless-request
      :model-version model-version
      :system-prompt system-prompt
@@ -1423,7 +1426,11 @@ STREAMING (optional): Non-nil to stream insertion."
                         (deactivate-mark)
                         (delete-region delete-from delete-to)
                         (setq delete-text nil))
-                      (insert output)))))))
+                      (save-excursion
+                        (goto-char marker)
+                        (insert output)
+                        (set-marker marker (+ (length output)
+                                              (marker-position marker))))))))))
 
 (cl-defun chatgpt-shell-send-contextless-request
     (&key (model-version chatgpt-shell-model-version)
