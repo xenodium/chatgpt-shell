@@ -2753,6 +2753,22 @@ t if invoked from a transient frame (quitting closes the frame).")
   (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
 ;;;###autoload
+(defun chatgpt-shell-quick-request ()
+  "Request from minibuffer and insert response into current buffer."
+  (interactive)
+  (let ((query (read-string "ChatGPT request insert: ")))
+    (chatgpt-shell-request-and-insert-response
+     :streaming t
+     :system-prompt "Follow my instruction and only my instruction.
+Do not explain nor wrap in a markdown block unless I ask for them.
+Write solutions in their entirety."
+     :query (if (region-active-p)
+                (concat query ":\n\n"
+                        (buffer-substring (region-beginning)
+                                          (region-end)))
+              query))))
+
+;;;###autoload
 (defun chatgpt-shell-prompt-compose (prefix)
   "Compose and send prompt from a dedicated buffer.
 
