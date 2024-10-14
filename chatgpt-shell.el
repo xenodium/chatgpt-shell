@@ -2756,15 +2756,71 @@ compiling source blocks."
 (defun chatgpt-shell-fix-error-at-point ()
   "Fixes flymake error at point."
   (interactive)
-  (if-let ((flymake-context (chatgpt-shell--flymake-context)))
-      (chatgpt-shell-request-and-insert-response
-       :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix. Do not give explanations. Do not wrap snippets in markdown blocks.\n\n"
-       :start (map-elt flymake-context :start)
-       :end (map-elt flymake-context :end)
+  (if-let ((flymake-context (chatgpt-shell--flymake-context))
+           (buffer (current-buffer)))
+      (chatgpt-shell-send-contextless-request
+       :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
+Do not give explanations. Do not add comments.
+Do not balance unbalanced brackets or parenthesis at beginning or end of text.
+Do not wrap snippets in markdown blocks.\n\n"
        :query (concat (map-elt flymake-context :diagnostic) "\n\n"
                       "Code: \n\n"
-                      (map-elt flymake-context :content)))
+                      (map-elt flymake-context :content))
+       :streaming nil
+       :on-output (lambda (_command output error finished)
+                    (when (and finished
+                               (not error))
+                      (reversible-insert
+                       :text output
+                       :start (map-elt flymake-context :start)
+                       :end (map-elt flymake-context :end)
+                       :buffer buffer))))
     (error "Nothing to fix")))
+
+(defun chatgpt-shell-quick-modify-region ()
+  "Request from minibuffer to modify selection."
+  (interactive)
+  (unless (region-active-p)
+    (error "Select region to modify"))
+  (if-let ((buffer (current-buffer))
+           (start (region-beginning))
+           (end (region-end))
+           (system-prompt "Follow my instruction and only my instruction.
+Do not explain nor wrap in a markdown block.
+Do not balance unbalanced brackets or parenthesis at beginning or end of text.
+Write solutions in their entirety.")
+           (progress-reporter (make-progress-reporter "ChatGPT "))
+           (response ""))
+      (progn
+        (progress-reporter-update progress-reporter)
+        (when (derived-mode-p 'prog-mode)
+          (setq system-prompt
+                (format "%s\nUse `%s` programming language."
+                        system-prompt
+                        (string-trim-right (symbol-name major-mode) "-mode"))))
+        (chatgpt-shell-send-contextless-request
+         :system-prompt system-prompt
+         :query (concat (read-string "ChatGPT request to modify: ") "\n\n"
+                        "Apply my instruction to: \n\n"
+                        (buffer-substring start end))
+         :streaming t
+         :on-output (lambda (_command output error finished)
+                      (progn
+                        (progress-reporter-update progress-reporter)
+                        (setq response (concat response output))
+                        (when finished
+                          (progress-reporter-done progress-reporter)
+                          (with-current-buffer buffer
+                            (deactivate-mark))
+                          (reversible-insert
+                           :text response
+                           :start start
+                           :end end
+                           :buffer buffer))
+                        (when error
+                          (unless (string-empty-p (string-trim output))
+                            (message "%s" output)))))))
+    (error "Incomplete context")))
 
 ;;; TODO: Move to chatgpt-shell-prompt-compose.el, but first update
 ;;; the MELPA recipe, so it can load additional files other than chatgpt-shell.el.
@@ -3295,6 +3351,156 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
+
+;; reversible start
+
+(defvar-local reversible--overlays nil
+  "List of overlays highlighting applied changes.")
+
+(defvar-local reversible--details nil
+  "All necessary details to revert buffer change.
+
+Of the form:
+
+\(list (cons :point 25)
+      (cons :start 20)
+      (cons :end 25)
+      (cons :text \"Hello\"))")
+
+(cl-defun reversible-insert(&key text start end buffer)
+  "Insert TEXT, replacing content of START and END at BUFFER."
+  (unless (and text (stringp text))
+    (error ":text is missing or not a string"))
+  (unless (and buffer (bufferp buffer))
+    (error ":buffer is missing or not a buffer"))
+  (unless (and start (integerp start))
+    (error ":start is missing or not an integer"))
+  (unless (and end (integerp end))
+    (error ":end is missing or not an integer"))
+  (with-current-buffer buffer
+    (let* ((orig-point (copy-marker (point)))
+           (orig-start (copy-marker start))
+           (orig-end (copy-marker end))
+           (orig-text (buffer-substring-no-properties orig-start
+                                                      orig-end))
+           (diff (reversible--make-diff orig-text text)))
+      (delete-region orig-start orig-end)
+      (goto-char orig-start)
+      (insert diff)
+      (reversible--resolve-diff-and-highlight-buffer)
+      (setq orig-end (copy-marker
+                      (+ (marker-position orig-start)
+                         (with-temp-buffer
+                           (insert diff)
+                           (goto-char (point-min))
+                           (reversible--resolve-diff-and-highlight-buffer)
+                           (- (point-max)
+                              (point-min))))))
+      (setq reversible--details
+            (list (cons :point orig-point)
+                  (cons :start orig-start)
+                  (cons :end orig-end)
+                  (cons :text orig-text)))
+      (goto-char orig-point)
+      (unless (y-or-n-p "Keep change?")
+        (reversible--revert))
+      (reversible--remove-overlays))))
+
+(defun reversible--revert ()
+  "Revert modification."
+  (let ((inhibit-read-only t))
+    (if reversible--details
+        (progn
+          (delete-region
+           (map-elt reversible--details :start)
+           (map-elt reversible--details :end))
+          (insert (map-elt reversible--details :text))
+          (setq reversible--details nil)
+          (goto-char (map-elt reversible--details :point)))
+      (error "Nothing to revert to"))))
+
+(defun reversible--remove-overlays ()
+  "Remove all overlays highlighting any change."
+  (mapc #'delete-overlay reversible--overlays)
+  (setq reversible--overlays nil))
+
+(defun reversible-validate-setup ()
+  "Ensure package dependencies are installed."
+  (unless (executable-find "dwdiff")
+    (error "Needs \"dwdiff\" command line utility installed")))
+
+(defun reversible--make-diff (old new)
+  "Write OLD and NEW to temporary files, run wdiff, and return diff."
+  (reversible-validate-setup)
+  (let ((old-file (make-temp-file "old"))
+        (new-file (make-temp-file "new")))
+    (with-temp-file old-file (insert old))
+    (with-temp-file new-file (insert new))
+    (with-temp-buffer
+      (let ((diff-ret (call-process "dwdiff" nil t nil "-P" old-file new-file)))
+        (delete-file old-file)
+        (delete-file new-file)
+        (buffer-substring-no-properties (point-min)
+                                        (point-max))))))
+
+(defun reversible--resolve-diff-and-highlight-buffer ()
+  "Resolve diff in current buffer and highlight any change using overlays."
+  (let ((highlighted))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward
+              (concat
+               ;; Replace block: new
+               ;; (1 (2) (3))
+               "\\(\\(\\*?-\\]\\)[ \t]*\\({\\+[^+]*?\\+}\\)\\)\\|"
+               ;; Add block: new
+               ;; (4)
+               "\\({\\+[^+]*?\\+}\\)\\|"
+               ;; (5)
+               ;; Delete block:
+               "\\(\\*?-\\]\\)") nil t)
+        (cond ((match-beginning 1) ;; replace
+               (let ((start (match-beginning 1))
+                     (end (match-end 1))
+                     (add (match-string 3))
+                     (delete (match-string 2)))
+                 (setq add (string-trim add "{\\+" "\\+}"))
+                 (setq delete (string-trim delete "\\[-" "-\\]"))
+                 (delete-region start end)
+                 (insert add)
+                 (reversible--add-highlight-overlay
+                  start
+                  (+ start (length add)))
+                 (setq highlighted t)))
+              ((match-beginning 4) ;; add
+               (let ((start (match-beginning 4))
+                     (end (match-end 4))
+                     (add (string-trim (match-string 4) "{\\+" "\\+}")))
+                 (delete-region start end)
+                 (insert add)
+                 (reversible--add-highlight-overlay
+                  start
+                  (+ start (length add)))
+                 (setq highlighted t)))
+              ((match-beginning 5) ;; delete
+               (let ((start (match-beginning 5))
+                     (end (match-end 5))
+                     (delete (string-trim (match-string 5) "\\[-" "-\\]"))
+                     (extend-to-newline)
+                     (remaining))
+                 (delete-region start end)
+                 (setq highlighted t)))))
+      highlighted)))
+
+(defun reversible--add-highlight-overlay (start end)
+  "Highlight text with an overlay at START and END, returning the overlay."
+  (let ((overlay (make-overlay start end)))
+    (overlay-put overlay 'face 'highlight)
+    (setq reversible--overlays
+          (append reversible--overlays (list overlay)))
+    overlay))
+
+;; reversible end
 
 (provide 'chatgpt-shell)
 
