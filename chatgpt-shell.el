@@ -1420,7 +1420,8 @@ END (optional): End of region to replace (overrides active region)."
                      (copy-marker (max delete-from delete-to))
                    (copy-marker (point))))
          (response "")
-         (progress-reporter (make-progress-reporter "ChatGPT ")))
+         (progress-reporter (unless streaming
+                              (make-progress-reporter "ChatGPT "))))
     (chatgpt-shell-send-contextless-request
      :model-version model-version
      :system-prompt system-prompt
