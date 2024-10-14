@@ -2758,24 +2758,39 @@ compiling source blocks."
   (interactive)
   (reversible-validate-setup)
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
+           (progress-reporter (make-progress-reporter "ChatGPT "))
+           (response "")
            (buffer (current-buffer)))
-      (chatgpt-shell-send-contextless-request
-       :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
+      ;; TODO: Add a helper that facilitates applying changes interactively
+      ;; and reuse between chatgpt-shell-fix-error-at-point and
+      ;; chatgpt-shell-quick-modify-region.
+      (progn
+        (progress-reporter-update progress-reporter)
+        (chatgpt-shell-send-contextless-request
+         :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
 Do not give explanations. Do not add comments.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Do not wrap snippets in markdown blocks.\n\n"
-       :query (concat (map-elt flymake-context :diagnostic) "\n\n"
-                      "Code: \n\n"
-                      (map-elt flymake-context :content))
-       :streaming nil
-       :on-output (lambda (_command output error finished)
-                    (when (and finished
-                               (not error))
-                      (reversible-insert
-                       :text output
-                       :start (map-elt flymake-context :start)
-                       :end (map-elt flymake-context :end)
-                       :buffer buffer))))
+         :query (concat (map-elt flymake-context :diagnostic) "\n\n"
+                        "Code: \n\n"
+                        (map-elt flymake-context :content))
+         :streaming t
+         :on-output (lambda (_command output error finished)
+                      (progn
+                        (progress-reporter-update progress-reporter)
+                        (setq response (concat response output))
+                        (when finished
+                          (progress-reporter-done progress-reporter)
+                          (with-current-buffer buffer
+                            (deactivate-mark))
+                          (reversible-insert
+                           :text response
+                           :start (map-elt flymake-context :start)
+                           :end (map-elt flymake-context :end)
+                           :buffer buffer))
+                        (when error
+                          (unless (string-empty-p (string-trim output))
+                            (message "%s" output)))))))
     (error "Nothing to fix")))
 
 (defun chatgpt-shell-quick-modify-region ()
@@ -2792,17 +2807,18 @@ Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Write solutions in their entirety.")
            (progress-reporter (make-progress-reporter "ChatGPT "))
+           (query (read-string "ChatGPT request to modify: "))
            (response ""))
       (progn
-        (progress-reporter-update progress-reporter)
         (when (derived-mode-p 'prog-mode)
           (setq system-prompt
                 (format "%s\nUse `%s` programming language."
                         system-prompt
                         (string-trim-right (symbol-name major-mode) "-mode"))))
+        (progress-reporter-update progress-reporter)
         (chatgpt-shell-send-contextless-request
          :system-prompt system-prompt
-         :query (concat (read-string "ChatGPT request to modify: ") "\n\n"
+         :query (concat query "\n\n"
                         "Apply my instruction to: \n\n"
                         (buffer-substring start end))
          :streaming t
