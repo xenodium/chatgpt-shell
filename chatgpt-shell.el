@@ -2756,6 +2756,7 @@ compiling source blocks."
 (defun chatgpt-shell-fix-error-at-point ()
   "Fixes flymake error at point."
   (interactive)
+  (reversible-validate-setup)
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
            (buffer (current-buffer)))
       (chatgpt-shell-send-contextless-request
@@ -2780,8 +2781,9 @@ Do not wrap snippets in markdown blocks.\n\n"
 (defun chatgpt-shell-quick-modify-region ()
   "Request from minibuffer to modify selection."
   (interactive)
+  (reversible-validate-setup)
   (unless (region-active-p)
-    (error "Select region to modify"))
+    (error "No region selected"))
   (if-let ((buffer (current-buffer))
            (start (region-beginning))
            (end (region-end))
