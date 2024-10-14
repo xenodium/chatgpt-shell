@@ -3450,42 +3450,26 @@ Of the form:
       (goto-char (point-min))
       (while (re-search-forward
               (concat
-               ;; Replace block: new
-               ;; (1 (2) (3))
-               "\\(\\(\\*?-\\]\\)[ \t]*\\({\\+[^+]*?\\+}\\)\\)\\|"
-               ;; Add block: new
-               ;; (4)
-               "\\({\\+[^+]*?\\+}\\)\\|"
-               ;; (5)
-               ;; Delete block:
-               "\\(\\*?-\\]\\)") nil t)
-        (cond ((match-beginning 1) ;; replace
+               ;; Delete block: [-old-]
+               ;; (1 (2))
+               "\\(\\[-\\(.\\|\n\\)*?-\\]\\)\\|"
+               ;; Add block: {+new+}
+               ;; (3 (4))
+               "\\({\\+\\(.\\|\n\\)*?\\+}\\)") nil t)
+        (cond ((match-beginning 3) ;; add
+               (let ((start (match-beginning 3))
+                     (end (match-end 3))
+                     (add (string-trim (match-string 3) "{\\+" "\\+}")))
+                 (delete-region start end)
+                 (insert add)
+                 (reversible--add-highlight-overlay
+                  start
+                  (+ start (length add)))
+                 (setq highlighted t)))
+              ((match-beginning 1) ;; delete
                (let ((start (match-beginning 1))
                      (end (match-end 1))
-                     (add (match-string 3))
-                     (delete (match-string 2)))
-                 (setq add (string-trim add "{\\+" "\\+}"))
-                 (setq delete (string-trim delete "\\[-" "-\\]"))
-                 (delete-region start end)
-                 (insert add)
-                 (reversible--add-highlight-overlay
-                  start
-                  (+ start (length add)))
-                 (setq highlighted t)))
-              ((match-beginning 4) ;; add
-               (let ((start (match-beginning 4))
-                     (end (match-end 4))
-                     (add (string-trim (match-string 4) "{\\+" "\\+}")))
-                 (delete-region start end)
-                 (insert add)
-                 (reversible--add-highlight-overlay
-                  start
-                  (+ start (length add)))
-                 (setq highlighted t)))
-              ((match-beginning 5) ;; delete
-               (let ((start (match-beginning 5))
-                     (end (match-end 5))
-                     (delete (string-trim (match-string 5) "\\[-" "-\\]"))
+                     (delete (string-trim (match-string 1) "\\[-" "-\\]"))
                      (extend-to-newline)
                      (remaining))
                  (delete-region start end)
