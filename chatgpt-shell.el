@@ -2765,6 +2765,8 @@ compiling source blocks."
       ;; and reuse between chatgpt-shell-fix-error-at-point and
       ;; chatgpt-shell-quick-modify-region.
       (progn
+        (fader-start-fading-region (map-elt flymake-context :start)
+                                   (map-elt flymake-context :end))
         (progress-reporter-update progress-reporter)
         (chatgpt-shell-send-contextless-request
          :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
@@ -2780,6 +2782,7 @@ Do not wrap snippets in markdown blocks.\n\n"
                         (progress-reporter-update progress-reporter)
                         (setq response (concat response output))
                         (when finished
+                          (fader-stop-fading)
                           (progress-reporter-done progress-reporter)
                           (with-current-buffer buffer
                             (deactivate-mark))
