@@ -2799,7 +2799,9 @@ Do not wrap snippets in markdown blocks.\n\n"
   (unless (region-active-p)
     (error "No region selected"))
   (if-let ((buffer (current-buffer))
-           (start (region-beginning))
+           (start (save-excursion
+                    (goto-char (region-beginning))
+                    (line-beginning-position)))
            (end (region-end))
            (system-prompt "Follow my instruction and only my instruction.
 Do not explain nor wrap in a markdown block.
