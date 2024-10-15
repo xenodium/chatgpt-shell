@@ -44,6 +44,7 @@
 (require 'flymake)
 (require 'ielm)
 (require 'shell-maker)
+(require 'smerge-mode)
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
@@ -3392,14 +3393,24 @@ Useful if sending a request failed, perhaps from failed connectivity."
       (delete-region orig-start orig-end)
       (goto-char orig-start)
       (insert diff)
-      (goto-char orig-point)
+      (goto-char (max (1- (marker-position orig-point))
+                      (point-min)))
       (smerge-mode +1)
       (pretty-smerge-mode +1)
-      (smerge-next)
-      (if (y-or-n-p "Keep change?")
-          (smerge-keep-lower)
-        (smerge-keep-upper))
-      (smerge-mode -1))))
+      (if (= 1 (line-number-at-pos))
+          (progn
+            (forward-line 1)
+            (smerge-prev))
+        (smerge-next))
+      (condition-case nil
+          (unwind-protect
+              (if (y-or-n-p "Keep change?")
+                  (smerge-keep-lower)
+                (smerge-keep-upper))
+            (smerge-mode -1)
+            (pretty-smerge-mode -1))
+        (quit nil)
+        (error nil)))))
 
 (cl-defun pretty-smerge--make-merge-patch (&key old new old-label new-label)
   "Write OLD and NEW to temporary files, run diff3, and return merge patch.
@@ -3459,8 +3470,10 @@ NEW-LABEL (optional): To display for new text."
              (let ((overlay (make-overlay (match-beginning 1)
                                           (match-end 1))))
                (overlay-put overlay 'category 'conflict-marker)
-               (overlay-put overlay 'display (format "%s\n\n" (match-string 3)))
-               (overlay-put overlay 'face 'lisp-extra-font-lock-quoted)
+               (overlay-put overlay 'display
+                            (concat (propertize (match-string 3) 'face '(:inherit default :box t))
+                                    "\n\n"))
+               ;; (overlay-put overlay 'face 'warning)
                (overlay-put overlay 'evaporate t)))
             ((match-beginning 4)
              (let ((overlay (make-overlay (match-beginning 5)
@@ -3472,8 +3485,12 @@ NEW-LABEL (optional): To display for new text."
              (let ((overlay (make-overlay (match-beginning 6)
                                           (match-end 6))))
                (overlay-put overlay 'category 'conflict-marker)
-               (overlay-put overlay 'display (format "\n%s\n" (match-string 8)))
-               (overlay-put overlay 'face 'lisp-extra-font-lock-quoted)
+               (overlay-put overlay 'display
+                            (concat "\n"
+                                    (propertize (match-string 8) 'face '(:inherit default :box t))
+                                    "\n"))
+               ;; (overlay-put overlay 'display (format "\n%s\n" (match-string 8)))
+               (overlay-put overlay 'face 'warning)
                (overlay-put overlay 'evaporate t)))))))
 
 (defun pretty-smerge-mode-remove--overlays ()
