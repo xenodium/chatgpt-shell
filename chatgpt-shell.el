@@ -2811,6 +2811,8 @@ Write solutions in their entirety.")
            (query (read-string "ChatGPT request to modify: "))
            (response ""))
       (progn
+        (deactivate-mark)
+        (fader-start-fading-region start end)
         (when (derived-mode-p 'prog-mode)
           (setq system-prompt
                 (format "%s\nUse `%s` programming language."
@@ -2828,9 +2830,8 @@ Write solutions in their entirety.")
                         (progress-reporter-update progress-reporter)
                         (setq response (concat response output))
                         (when finished
+                          (fader-stop-fading)
                           (progress-reporter-done progress-reporter)
-                          (with-current-buffer buffer
-                            (deactivate-mark))
                           (pretty-smerge-insert
                            :text response
                            :start start
@@ -3463,45 +3464,108 @@ NEW-LABEL (optional): To display for new text."
   (pretty-smerge-mode-remove--overlays)
   (save-excursion
     (goto-char (point-min))
-    (while (re-search-forward (concat
-                               ;; (1 (2)(3))
-                               "\\(\\(^<<<<<<< \\)\\(.*\\)\n\\)\\|"
-                               ;; (4 (5))
-                               "\\(\\(^=======\\)\n\\)\\|"
-                               ;; (6 (7)(8))
-                               "\\(\\(^>>>>>>> \\)\\(.*\\)\n\\)") nil t)
-      (cond ((match-beginning 1)
-             (let ((overlay (make-overlay (match-beginning 1)
-                                          (match-end 1))))
-               (overlay-put overlay 'category 'conflict-marker)
-               (overlay-put overlay 'display
-                            (concat (propertize (match-string 3) 'face '(:inherit default :box t))
-                                    "\n\n"))
-               ;; (overlay-put overlay 'face 'warning)
-               (overlay-put overlay 'evaporate t)))
-            ((match-beginning 4)
-             (let ((overlay (make-overlay (match-beginning 5)
-                                          (match-end 5))))
-               (overlay-put overlay 'category 'conflict-marker)
-               (overlay-put overlay 'display "\n")
-               (overlay-put overlay 'evaporate t)))
-            ((match-beginning 6)
-             (let ((overlay (make-overlay (match-beginning 6)
-                                          (match-end 6))))
-               (overlay-put overlay 'category 'conflict-marker)
-               (overlay-put overlay 'display
-                            (concat "\n"
-                                    (propertize (match-string 8) 'face '(:inherit default :box t))
-                                    "\n"))
-               ;; (overlay-put overlay 'display (format "\n%s\n" (match-string 8)))
-               (overlay-put overlay 'face 'warning)
-               (overlay-put overlay 'evaporate t)))))))
+    (while (re-search-forward
+            (concat
+             "^\\(<<<<<<<[ \t]*\\)" ;; begin marker
+             "\\(.*\\)\n"           ;; begin label
+             "\\(\\(?:.*\n\\)*?\\)"     ;; upper content
+             "\\(=======\n\\)"      ;; maker
+             "\\(\\(?:.*\n\\)*?\\)"     ;; lwoer content
+             "\\(>>>>>>>[ \t]*\\)"  ;; end marker
+             "\\(.*\\)\n")          ;; end label
+            nil t)
+      (let ((begin (match-string 1))
+            (begin-label (match-string 2))
+            (lower (match-string 4))
+            (end (match-string 6))
+            (end-label (match-string 7)))
+        (let ((overlay (make-overlay (match-beginning 1)
+                                     (match-end 2))))
+          (overlay-put overlay 'category 'conflict-marker)
+          (overlay-put overlay 'display
+                       (concat (propertize begin-label 'face '(:inherit default :box t))
+                               "\n"))
+          (overlay-put overlay 'evaporate t))
+        (let ((overlay (make-overlay (match-beginning 4)
+                                     (match-end 4))))
+          (overlay-put overlay 'category 'conflict-marker)
+          (overlay-put overlay 'display
+                       (concat "\n" (propertize end-label 'face '(:inherit default :box t)) "\n\n"))
+          (overlay-put overlay 'evaporate t)
+          )
+        (let ((overlay (make-overlay (match-beginning 6)
+                                     (match-end 7))))
+          (overlay-put overlay 'category 'conflict-marker)
+          (overlay-put overlay 'display "")
+          (overlay-put overlay 'face 'warning)
+          (overlay-put overlay 'evaporate t))))))
 
 (defun pretty-smerge-mode-remove--overlays ()
   "Remove all conflict marker overlays."
   (remove-overlays (point-min) (point-max) 'category 'conflict-marker))
 
 ;; pretty smerge end
+
+;; fader start
+
+(defvar-local fader-timer nil
+  "Timer object for animating the region.")
+
+(defvar-local fader-overlays nil
+  "List of overlays for the animated regions.")
+
+(defun fader-start-fading-region (start end)
+  "Animate the background color of the region between START and END."
+  (fader-stop-fading)
+  (let ((colors (append (fader-palette)
+                        (reverse (fader-palette)))))
+    (dolist (ov fader-overlays) (delete-overlay ov))
+    (setq fader-overlays (list (make-overlay start end)))
+    (setq fader-timer
+          (run-with-timer 0 0.01
+                          (lambda ()
+                            (let* ((color (pop colors)))
+                              (if (and color
+                                       fader-overlays)
+                                  (progn
+                                    (overlay-put (car fader-overlays) 'face `(:background ,color :extend t))
+                                    (setq colors (append colors (list color))))
+                                (fader-stop-fading))))))))
+
+(defun fader-palette ()
+  "Generate a gradient palette from the 'highlight' face to the 'default' face."
+  (let* ((start-color (face-background 'highlight))
+         (end-color (face-background 'default))
+         (start-rgb (color-name-to-rgb start-color))
+         (end-rgb (color-name-to-rgb end-color))
+         (steps 50))
+    (mapcar (lambda (step)
+              (apply 'color-rgb-to-hex
+                     (cl-mapcar (lambda (start end)
+                                  (+ start (* step (/ (- end start) (1- steps)))))
+                                start-rgb end-rgb)))
+            (number-sequence 0 (1- steps)))))
+
+(defun fader-start ()
+  "Start animating the currently active region."
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (deactivate-mark)
+        (fader-start-fading-region (region-beginning) (region-end)))
+    (message "No active region")))
+
+(defun fader-stop-fading ()
+  "Stop animating and remove all overlays."
+  (interactive)
+  (when fader-timer
+    (cancel-timer fader-timer)
+    (setq fader-timer nil))
+  (dolist (ov fader-overlays)
+    (delete-overlay ov))
+  (setq fader-overlays nil))
+
+;; fader end
 
 (provide 'chatgpt-shell)
 
