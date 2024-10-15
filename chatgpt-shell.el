@@ -2756,7 +2756,6 @@ compiling source blocks."
 (defun chatgpt-shell-fix-error-at-point ()
   "Fixes flymake error at point."
   (interactive)
-  (reversible-validate-setup)
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
            (progress-reporter (make-progress-reporter "ChatGPT "))
            (response "")
@@ -2783,7 +2782,7 @@ Do not wrap snippets in markdown blocks.\n\n"
                           (progress-reporter-done progress-reporter)
                           (with-current-buffer buffer
                             (deactivate-mark))
-                          (reversible-insert
+                          (pretty-smerge-insert
                            :text response
                            :start (map-elt flymake-context :start)
                            :end (map-elt flymake-context :end)
@@ -2796,7 +2795,6 @@ Do not wrap snippets in markdown blocks.\n\n"
 (defun chatgpt-shell-quick-modify-region ()
   "Request from minibuffer to modify selection."
   (interactive)
-  (reversible-validate-setup)
   (unless (region-active-p)
     (error "No region selected"))
   (if-let ((buffer (current-buffer))
@@ -2830,7 +2828,7 @@ Write solutions in their entirety.")
                           (progress-reporter-done progress-reporter)
                           (with-current-buffer buffer
                             (deactivate-mark))
-                          (reversible-insert
+                          (pretty-smerge-insert
                            :text response
                            :start start
                            :end end
@@ -3370,22 +3368,9 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (user-error "Not in a shell compose buffer"))
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
-;; reversible start
+;; pretty smerge start
 
-(defvar-local reversible--overlays nil
-  "List of overlays highlighting applied changes.")
-
-(defvar-local reversible--details nil
-  "All necessary details to revert buffer change.
-
-Of the form:
-
-\(list (cons :point 25)
-      (cons :start 20)
-      (cons :end 25)
-      (cons :text \"Hello\"))")
-
-(cl-defun reversible-insert(&key text start end buffer)
+(cl-defun pretty-smerge-insert(&key text start end buffer)
   "Insert TEXT, replacing content of START and END at BUFFER."
   (unless (and text (stringp text))
     (error ":text is missing or not a string"))
@@ -3401,108 +3386,101 @@ Of the form:
            (orig-end (copy-marker end))
            (orig-text (buffer-substring-no-properties orig-start
                                                       orig-end))
-           (diff (reversible--make-diff orig-text text)))
+           (diff (pretty-smerge--make-merge-patch
+                  :old-label "Before" :old orig-text
+                  :new-label "After" :new text)))
       (delete-region orig-start orig-end)
       (goto-char orig-start)
       (insert diff)
-      (reversible--resolve-diff-and-highlight-buffer)
-      (setq orig-end (copy-marker
-                      (+ (marker-position orig-start)
-                         (with-temp-buffer
-                           (insert diff)
-                           (goto-char (point-min))
-                           (reversible--resolve-diff-and-highlight-buffer)
-                           (- (point-max)
-                              (point-min))))))
-      (setq reversible--details
-            (list (cons :point orig-point)
-                  (cons :start orig-start)
-                  (cons :end orig-end)
-                  (cons :text orig-text)))
       (goto-char orig-point)
-      (unless (y-or-n-p "Keep change?")
-        (reversible--revert))
-      (reversible--remove-overlays))))
+      (smerge-mode +1)
+      (pretty-smerge-mode +1)
+      (smerge-next)
+      (if (y-or-n-p "Keep change?")
+          (smerge-keep-lower)
+        (smerge-keep-upper))
+      (smerge-mode -1))))
 
-(defun reversible--revert ()
-  "Revert modification."
-  (let ((inhibit-read-only t))
-    (if reversible--details
-        (progn
-          (delete-region
-           (map-elt reversible--details :start)
-           (map-elt reversible--details :end))
-          (insert (map-elt reversible--details :text))
-          (setq reversible--details nil)
-          (goto-char (map-elt reversible--details :point)))
-      (error "Nothing to revert to"))))
-
-(defun reversible--remove-overlays ()
-  "Remove all overlays highlighting any change."
-  (mapc #'delete-overlay reversible--overlays)
-  (setq reversible--overlays nil))
-
-(defun reversible-validate-setup ()
-  "Ensure package dependencies are installed."
-  (unless (executable-find "dwdiff")
-    (error "Needs \"dwdiff\" command line utility installed")))
-
-(defun reversible--make-diff (old new)
-  "Write OLD and NEW to temporary files, run wdiff, and return diff."
-  (reversible-validate-setup)
-  (let ((old-file (make-temp-file "old"))
+(cl-defun pretty-smerge--make-merge-patch (&key old new old-label new-label)
+  "Write OLD and NEW to temporary files, run diff3, and return merge patch.
+OLD-LABEL (optional): To display for old text.
+NEW-LABEL (optional): To display for new text."
+  (let ((base-file (make-temp-file "base"))
+        (old-file (make-temp-file "old"))
         (new-file (make-temp-file "new")))
-    (with-temp-file old-file (insert old))
-    (with-temp-file new-file (insert new))
+    (with-temp-file old-file
+      (insert old)
+      (unless (string-suffix-p "\n" old)
+        (insert "\n")))
+    (with-temp-file new-file
+      (insert new)
+      (unless (string-suffix-p "\n" new)
+        (insert "\n")))
     (with-temp-buffer
-      (let ((diff-ret (call-process "dwdiff" nil t nil "-P" old-file new-file)))
+      (let ((retval (call-process "diff3" nil t nil "-m" old-file base-file new-file)))
+        (delete-file base-file)
         (delete-file old-file)
         (delete-file new-file)
+        ;; 0: No differences or no conflicts.
+        ;; 1: Merge conflicts.
+        ;; 2: Error occurred.
+        (when (= retval 2)
+          (error (buffer-substring-no-properties (point-min)
+                                                 (point-max))))
+        (goto-char (point-min))
+        (replace-string old-file (or old-label "old"))
+        (goto-char (point-min))
+        (replace-string new-file (or new-label "new"))
+        (goto-char (point-min))
+        (flush-lines "^|||||||")
         (buffer-substring-no-properties (point-min)
                                         (point-max))))))
 
-(defun reversible--resolve-diff-and-highlight-buffer ()
-  "Resolve diff in current buffer and highlight any change using overlays."
-  (let ((highlighted))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (concat
-               ;; Delete block: [-old-]
-               ;; (1 (2))
-               "\\(\\[-\\(.\\|\n\\)*?-\\]\\)\\|"
-               ;; Add block: {+new+}
-               ;; (3 (4))
-               "\\({\\+\\(.\\|\n\\)*?\\+}\\)") nil t)
-        (cond ((match-beginning 3) ;; add
-               (let ((start (match-beginning 3))
-                     (end (match-end 3))
-                     (add (string-trim (match-string 3) "{\\+" "\\+}")))
-                 (delete-region start end)
-                 (insert add)
-                 (reversible--add-highlight-overlay
-                  start
-                  (+ start (length add)))
-                 (setq highlighted t)))
-              ((match-beginning 1) ;; delete
-               (let ((start (match-beginning 1))
-                     (end (match-end 1))
-                     (delete (string-trim (match-string 1) "\\[-" "-\\]"))
-                     (extend-to-newline)
-                     (remaining))
-                 (delete-region start end)
-                 (setq highlighted t)))))
-      highlighted)))
+(define-minor-mode pretty-smerge-mode
+  "Minor mode to display overlays for conflict markers."
+  :lighter " PrettySmerge"
+  (if pretty-smerge-mode
+      (pretty-smerge--refresh)
+    (pretty-smerge-mode-remove--overlays)))
 
-(defun reversible--add-highlight-overlay (start end)
-  "Highlight text with an overlay at START and END, returning the overlay."
-  (let ((overlay (make-overlay start end)))
-    (overlay-put overlay 'face 'highlight)
-    (setq reversible--overlays
-          (append reversible--overlays (list overlay)))
-    overlay))
+(defun pretty-smerge--refresh ()
+  "Apply overlays to conflict markers."
+  (pretty-smerge-mode-remove--overlays)
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward (concat
+                               ;; (1 (2)(3))
+                               "\\(\\(^<<<<<<< \\)\\(.*\\)\n\\)\\|"
+                               ;; (4 (5))
+                               "\\(\\(^=======\\)\n\\)\\|"
+                               ;; (6 (7)(8))
+                               "\\(\\(^>>>>>>> \\)\\(.*\\)\n\\)") nil t)
+      (cond ((match-beginning 1)
+             (let ((overlay (make-overlay (match-beginning 1)
+                                          (match-end 1))))
+               (overlay-put overlay 'category 'conflict-marker)
+               (overlay-put overlay 'display (format "%s\n\n" (match-string 3)))
+               (overlay-put overlay 'face 'lisp-extra-font-lock-quoted)
+               (overlay-put overlay 'evaporate t)))
+            ((match-beginning 4)
+             (let ((overlay (make-overlay (match-beginning 5)
+                                          (match-end 5))))
+               (overlay-put overlay 'category 'conflict-marker)
+               (overlay-put overlay 'display "\n")
+               (overlay-put overlay 'evaporate t)))
+            ((match-beginning 6)
+             (let ((overlay (make-overlay (match-beginning 6)
+                                          (match-end 6))))
+               (overlay-put overlay 'category 'conflict-marker)
+               (overlay-put overlay 'display (format "\n%s\n" (match-string 8)))
+               (overlay-put overlay 'face 'lisp-extra-font-lock-quoted)
+               (overlay-put overlay 'evaporate t)))))))
 
-;; reversible end
+(defun pretty-smerge-mode-remove--overlays ()
+  "Remove all conflict marker overlays."
+  (remove-overlays (point-min) (point-max) 'category 'conflict-marker))
+
+;; pretty smerge end
 
 (provide 'chatgpt-shell)
 
