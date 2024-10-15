@@ -3406,12 +3406,14 @@ Useful if sending a request failed, perhaps from failed connectivity."
         (smerge-next))
       (condition-case nil
           (unwind-protect
-              (if (y-or-n-p "Keep change?")
-                  (smerge-keep-lower)
-                (smerge-keep-upper))
-            (smerge-mode -1)
+              (progn
+                (if (y-or-n-p "Keep change?")
+                    (smerge-keep-lower)
+                  (smerge-keep-upper))
+                (smerge-mode -1))
             (pretty-smerge-mode -1))
-        (quit nil)
+        (quit
+         (pretty-smerge-mode -1))
         (error nil)))))
 
 (cl-defun pretty-smerge--make-merge-patch (&key old new old-label new-label)
