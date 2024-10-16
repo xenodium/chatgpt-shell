@@ -3579,14 +3579,16 @@ NEW-LABEL (optional): To display for new text."
                                    (match-end 2))))
         (overlay-put overlay 'category 'conflict-marker)
         (overlay-put overlay 'display
-                     (concat (propertize (match-string 2) 'face '(:inherit default :box t))
+                     (concat (propertize (concat " " (match-string 2) " ")
+                                         'face '(:inherit default :box t))
                              "\n"))
         (overlay-put overlay 'evaporate t))
       (let ((overlay (make-overlay (match-beginning 4)
                                    (match-end 4))))
         (overlay-put overlay 'category 'conflict-marker)
         (overlay-put overlay 'display
-                     (concat "\n" (propertize (match-string 7) 'face '(:inherit default :box t)) "\n\n"))
+                     (concat "\n" (propertize (concat " " (match-string 7) " ")
+                                              'face '(:inherit default :box t)) "\n\n"))
         (overlay-put overlay 'evaporate t))
       (let ((overlay (make-overlay (match-beginning 6)
                                    (match-end 7))))
