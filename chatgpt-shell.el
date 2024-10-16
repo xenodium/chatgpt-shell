@@ -3649,8 +3649,8 @@ NEW-LABEL (optional): To display for new text."
                                 (fader-stop-fading))))))))
 
 (defun fader-palette ()
-  "Generate a gradient palette from the `highlight' face to the `default' face."
-  (let* ((start-color (face-background 'highlight))
+  "Generate a gradient palette from the `region' face to the `default' face."
+  (let* ((start-color (face-background 'region))
          (end-color (face-background 'default))
          (start-rgb (color-name-to-rgb start-color))
          (end-rgb (color-name-to-rgb end-color))
