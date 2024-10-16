@@ -3458,7 +3458,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 
 ;; pretty smerge start
 
-(cl-defun pretty-smerge-insert(&key text start end buffer)
+(cl-defun pretty-smerge-insert (&key text start end buffer)
   "Insert TEXT, replacing content of START and END at BUFFER."
   (unless (and text (stringp text))
     (error ":text is missing or not a string"))
@@ -3528,9 +3528,11 @@ NEW-LABEL (optional): To display for new text."
           (error (buffer-substring-no-properties (point-min)
                                                  (point-max))))
         (goto-char (point-min))
-        (replace-string old-file (or old-label "old"))
+        (while (search-forward old-file nil t)
+          (replace-match (or old-label "old")))
         (goto-char (point-min))
-        (replace-string new-file (or new-label "new"))
+        (while (search-forward new-file nil t)
+          (replace-match (or new-label "new")))
         (goto-char (point-min))
         (flush-lines "^|||||||")
         (buffer-substring-no-properties (point-min)
@@ -3554,34 +3556,29 @@ NEW-LABEL (optional): To display for new text."
              "\\(.*\\)\n"           ;; begin label
              "\\(\\(?:.*\n\\)*?\\)"     ;; upper content
              "\\(=======\n\\)"      ;; maker
-             "\\(\\(?:.*\n\\)*?\\)"     ;; lwoer content
+             "\\(\\(?:.*\n\\)*?\\)"     ;; lower content
              "\\(>>>>>>>[ \t]*\\)"  ;; end marker
              "\\(.*\\)\n")          ;; end label
             nil t)
-      (let ((begin (match-string 1))
-            (begin-label (match-string 2))
-            (lower (match-string 4))
-            (end (match-string 6))
-            (end-label (match-string 7)))
-        (let ((overlay (make-overlay (match-beginning 1)
-                                     (match-end 2))))
-          (overlay-put overlay 'category 'conflict-marker)
-          (overlay-put overlay 'display
-                       (concat (propertize begin-label 'face '(:inherit default :box t))
-                               "\n"))
-          (overlay-put overlay 'evaporate t))
-        (let ((overlay (make-overlay (match-beginning 4)
-                                     (match-end 4))))
-          (overlay-put overlay 'category 'conflict-marker)
-          (overlay-put overlay 'display
-                       (concat "\n" (propertize end-label 'face '(:inherit default :box t)) "\n\n"))
-          (overlay-put overlay 'evaporate t))
-        (let ((overlay (make-overlay (match-beginning 6)
-                                     (match-end 7))))
-          (overlay-put overlay 'category 'conflict-marker)
-          (overlay-put overlay 'display "")
-          (overlay-put overlay 'face 'warning)
-          (overlay-put overlay 'evaporate t))))))
+      (let ((overlay (make-overlay (match-beginning 1)
+                                   (match-end 2))))
+        (overlay-put overlay 'category 'conflict-marker)
+        (overlay-put overlay 'display
+                     (concat (propertize (match-string 2) 'face '(:inherit default :box t))
+                             "\n"))
+        (overlay-put overlay 'evaporate t))
+      (let ((overlay (make-overlay (match-beginning 4)
+                                   (match-end 4))))
+        (overlay-put overlay 'category 'conflict-marker)
+        (overlay-put overlay 'display
+                     (concat "\n" (propertize (match-string 7) 'face '(:inherit default :box t)) "\n\n"))
+        (overlay-put overlay 'evaporate t))
+      (let ((overlay (make-overlay (match-beginning 6)
+                                   (match-end 7))))
+        (overlay-put overlay 'category 'conflict-marker)
+        (overlay-put overlay 'display "")
+        (overlay-put overlay 'face 'warning)
+        (overlay-put overlay 'evaporate t)))))
 
 (defun pretty-smerge-mode-remove--overlays ()
   "Remove all conflict marker overlays."
@@ -3616,7 +3613,7 @@ NEW-LABEL (optional): To display for new text."
                                 (fader-stop-fading))))))))
 
 (defun fader-palette ()
-  "Generate a gradient palette from the 'highlight' face to the 'default' face."
+  "Generate a gradient palette from the `highlight' face to the `default' face."
   (let* ((start-color (face-background 'highlight))
          (end-color (face-background 'default))
          (start-rgb (color-name-to-rgb start-color))
