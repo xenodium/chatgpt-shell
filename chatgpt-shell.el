@@ -3484,11 +3484,12 @@ Useful if sending a request failed, perhaps from failed connectivity."
                       (point-min)))
       (smerge-mode +1)
       (pretty-smerge-mode +1)
-      (if (= 1 (line-number-at-pos))
-          (progn
-            (forward-line 1)
-            (smerge-prev))
-        (smerge-next))
+      (ignore-errors
+        (if (= 1 (line-number-at-pos))
+            (progn
+              (forward-line 1)
+              (smerge-prev))
+          (smerge-next)))
       (condition-case nil
           (unwind-protect
               (progn
