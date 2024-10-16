@@ -2731,7 +2731,8 @@ compiling source blocks."
 
 (defun chatgpt-shell--flymake-context ()
   "Return flymake diagnostic context if available.  Nil otherwise."
-  (when-let* ((diagnostic (flymake-diagnostics (point)))
+  (when-let* ((point (point))
+              (diagnostic (flymake-diagnostics (point)))
               (line-start (line-beginning-position))
               (line-end (line-end-position))
               (top-context-start (max (line-beginning-position -5) (point-min)))
@@ -2740,6 +2741,7 @@ compiling source blocks."
               (bottom-context-end (min (line-beginning-position 7) (point-max)))
               (current-line (buffer-substring line-start line-end)))
     (list
+     (cons :point (point))
      (cons :start top-context-start)
      (cons :end bottom-context-end)
      (cons :diagnostic (mapconcat #'flymake-diagnostic-text diagnostic "\n"))
@@ -2765,8 +2767,12 @@ compiling source blocks."
       ;; and reuse between chatgpt-shell-fix-error-at-point and
       ;; chatgpt-shell-quick-modify-region.
       (progn
-        (fader-start-fading-region (map-elt flymake-context :start)
-                                   (map-elt flymake-context :end))
+        (fader-start-fading-region (save-excursion
+                                     (goto-char (map-elt flymake-context :point))
+                                     (line-beginning-position))
+                                   (save-excursion
+                                     (goto-char (map-elt flymake-context :point))
+                                     (line-end-position)))
         (progress-reporter-update progress-reporter)
         (chatgpt-shell-send-contextless-request
          :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
