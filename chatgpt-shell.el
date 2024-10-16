@@ -2903,6 +2903,12 @@ Write solutions in their entirety.")
            (response ""))
       (progn
         (deactivate-mark)
+        ;; Barf trailing space from selection.
+        (when (string-match "[ \n\t]+$"
+                            (buffer-substring-no-properties
+                             (region-beginning)
+                             (region-end)))
+          (setq end (- end (length (match-string 0)))))
         (fader-start-fading-region start end)
         (when (derived-mode-p 'prog-mode)
           (setq system-prompt
@@ -3498,18 +3504,14 @@ Useful if sending a request failed, perhaps from failed connectivity."
                   :old-label "Before" :old orig-text
                   :new-label "After" :new text)))
       (delete-region orig-start orig-end)
+      (when (looking-at-p "\n")
+        (delete-char 1))
       (goto-char orig-start)
       (insert diff)
-      (goto-char (max (1- (marker-position orig-point))
-                      (point-min)))
       (smerge-mode +1)
-      (pretty-smerge-mode +1)
       (ignore-errors
-        (if (= 1 (line-number-at-pos))
-            (progn
-              (forward-line 1)
-              (smerge-prev))
-          (smerge-next)))
+        (smerge-prev))
+      (pretty-smerge-mode +1)
       (condition-case nil
           (unwind-protect
               (progn
