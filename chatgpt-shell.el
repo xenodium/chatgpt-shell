@@ -2139,24 +2139,31 @@ lang-start lang-end body-start body-end quotes2-start quotes2-end)
 Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
  BODY-END QUOTES2-START and QUOTES2-END."
   ;; Overlay beginning "```" with a copy block button.
-  (overlay-put (make-overlay quotes1-start
-                             quotes1-end)
-               'display
-               (propertize "📋 "
-                           'pointer 'hand
-                           'keymap (shell-maker--make-ret-binding-map
-                                    (lambda ()
-                                      (interactive)
-                                      (kill-ring-save body-start body-end)
-                                      (message "Copied")))))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay quotes1-start quotes1-end)
+   'evaporate t
+   'display
+   (propertize "📋 "
+               'pointer 'hand
+               'keymap (shell-maker--make-ret-binding-map
+                        (lambda ()
+                          (interactive)
+                          (kill-ring-save body-start body-end)
+                          (message "Copied")))))
   ;; Hide end "```" altogether.
-  (overlay-put (make-overlay quotes2-start
-                             quotes2-end) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay quotes2-start quotes2-end)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   (unless (eq lang-start lang-end)
-    (overlay-put (make-overlay lang-start
-                               lang-end) 'face '(:box t))
-    (overlay-put (make-overlay lang-end
-                               (1+ lang-end)) 'display "\n\n"))
+    (chatgpt-shell--overlay-put-all
+     (make-overlay lang-start lang-end)
+     'evaporate t
+     'face '(:box t))
+    (chatgpt-shell--overlay-put-all
+     (make-overlay lang-end (1+ lang-end))
+     'evaporate t
+     'display "\n\n"))
   (let ((lang-mode (intern (concat (or
                                     (chatgpt-shell--resolve-internal-language lang)
                                     (downcase (string-trim lang)))
@@ -2189,103 +2196,162 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
             (setq overlay (make-overlay (+ body-start pos)
                                         (+ body-start (1+ pos))
                                         buf))
-            (overlay-put overlay 'face (plist-get props 'face))
+            (chatgpt-shell--overlay-put-all
+             overlay
+             'evaporate t
+             'face (plist-get props 'face))
             (setq pos (1+ pos))))
-      (overlay-put (make-overlay body-start body-end buf)
-                   'face 'font-lock-doc-markup-face))))
+      (chatgpt-shell--overlay-put-all
+       (make-overlay body-start body-end buf)
+       'evaporate t
+       'face 'font-lock-doc-markup-face))))
+
+(defun chatgpt-shell--overlay-put-all (overlay &rest props)
+  "Set multiple properties on OVERLAY via PROPS."
+  (unless (= (mod (length props) 2) 0)
+    (error "Props missing a property or value"))
+  (while props
+    (overlay-put overlay (pop props) (pop props))))
 
 (defun chatgpt-shell--fontify-divider (start end)
   "Display text between START and END as a divider."
-  (overlay-put (make-overlay start end
-                             (if (and (boundp 'shell-maker--config)
-                                      shell-maker--config)
-                                 (shell-maker-buffer shell-maker--config)
-                               (current-buffer)))
-               'display
-               (concat (propertize (concat (make-string (window-body-width) ? ) "")
-                                   'face '(:underline t)) "\n")))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start end
+                 (if (and (boundp 'shell-maker--config)
+                          shell-maker--config)
+                     (shell-maker-buffer shell-maker--config)
+                   (current-buffer)))
+   'evaporate t
+   'display
+   (concat (propertize (concat (make-string (window-body-width) ? ) "")
+                       'face '(:underline t)) "\n")))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-link (start end title-start title-end url-start url-end)
   "Fontify a markdown link.
 Use START END TITLE-START TITLE-END URL-START URL-END."
   ;; Hide markup before
-  (overlay-put (make-overlay start title-start) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start title-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   ;; Show title as link
-  (overlay-put (make-overlay title-start title-end) 'face 'link)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay title-start title-end)
+   'evaporate t
+   'face 'link)
   ;; Make RET open the URL
   (define-key (let ((map (make-sparse-keymap)))
                 (define-key map [mouse-1]
-                  (lambda () (interactive)
-                    (browse-url (buffer-substring-no-properties url-start url-end))))
+                            (lambda () (interactive)
+                              (browse-url (buffer-substring-no-properties url-start url-end))))
                 (define-key map (kbd "RET")
-                  (lambda () (interactive)
-                    (browse-url (buffer-substring-no-properties url-start url-end))))
-                (overlay-put (make-overlay title-start title-end) 'keymap map)
+                            (lambda () (interactive)
+                              (browse-url (buffer-substring-no-properties url-start url-end))))
+                (chatgpt-shell--overlay-put-all
+                 (make-overlay title-start title-end)
+                 'evaporate t
+                 'keymap map)
                 map)
-    [remap self-insert-command] 'ignore)
+              [remap self-insert-command] 'ignore)
   ;; Hide markup after
-  (overlay-put (make-overlay title-end end) 'invisible 'chatgpt-shell))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay title-end end)
+   'evaporate t
+   'invisible 'chatgpt-shell))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-bold (start end text-start text-end)
   "Fontify a markdown bold.
 Use START END TEXT-START TEXT-END."
   ;; Hide markup before
-  (overlay-put (make-overlay start text-start) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start text-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   ;; Show title as bold
-  (overlay-put (make-overlay text-start text-end) 'face 'bold)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-start text-end)
+   'evaporate t
+   'face 'bold)
   ;; Hide markup after
-  (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-end end)
+   'evaporate t
+   'invisible 'chatgpt-shell))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-header (start _end level-start level-end title-start title-end)
   "Fontify a markdown header.
 Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
   ;; Hide markup before
-  (overlay-put (make-overlay start title-start) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start title-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   ;; Show title as header
-  (overlay-put (make-overlay title-start title-end) 'face
-               (cond ((eq (- level-end level-start) 1)
-                      'org-level-1)
-                     ((eq (- level-end level-start) 2)
-                      'org-level-2)
-                     ((eq (- level-end level-start) 3)
-                      'org-level-3)
-                     ((eq (- level-end level-start) 4)
-                      'org-level-4)
-                     ((eq (- level-end level-start) 5)
-                      'org-level-5)
-                     ((eq (- level-end level-start) 6)
-                      'org-level-6)
-                     ((eq (- level-end level-start) 7)
-                      'org-level-7)
-                     ((eq (- level-end level-start) 8)
-                      'org-level-8)
-                     (t
-                      'org-level-1))))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay title-start title-end)
+   'evaporate t
+   'face
+   (cond ((eq (- level-end level-start) 1)
+          'org-level-1)
+         ((eq (- level-end level-start) 2)
+          'org-level-2)
+         ((eq (- level-end level-start) 3)
+          'org-level-3)
+         ((eq (- level-end level-start) 4)
+          'org-level-4)
+         ((eq (- level-end level-start) 5)
+          'org-level-5)
+         ((eq (- level-end level-start) 6)
+          'org-level-6)
+         ((eq (- level-end level-start) 7)
+          'org-level-7)
+         ((eq (- level-end level-start) 8)
+          'org-level-8)
+         (t
+          'org-level-1))))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-italic (start end text-start text-end)
   "Fontify a markdown italic.
 Use START END TEXT-START TEXT-END."
   ;; Hide markup before
-  (overlay-put (make-overlay start text-start) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start text-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   ;; Show title as italic
-  (overlay-put (make-overlay text-start text-end) 'face 'italic)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-start text-end)
+   'evaporate t
+   'face 'italic)
   ;; Hide markup after
-  (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-end end)
+   'evaporate t
+   'invisible 'chatgpt-shell))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-strikethrough (start end text-start text-end)
   "Fontify a markdown strikethrough.
 Use START END TEXT-START TEXT-END."
   ;; Hide markup before
-  (overlay-put (make-overlay start text-start) 'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay start text-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
   ;; Show title as strikethrough
-  (overlay-put (make-overlay text-start text-end) 'face '(:strike-through t))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-start text-end)
+   'evaporate t
+   'face '(:strike-through t))
   ;; Hide markup after
-  (overlay-put (make-overlay text-end end) 'invisible 'chatgpt-shell))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay text-end end)
+   'evaporate t
+   'invisible 'chatgpt-shell))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-inline-code (body-start body-end)
@@ -2293,16 +2359,25 @@ Use START END TEXT-START TEXT-END."
 Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
  BODY-END QUOTES2-START and QUOTES2-END."
   ;; Hide ```
-  (overlay-put (make-overlay (1- body-start)
-                             body-start) 'invisible 'chatgpt-shell)
-  (overlay-put (make-overlay body-end
-                             (1+ body-end)) 'invisible 'chatgpt-shell)
-  (overlay-put (make-overlay body-start body-end
-                             (if (and (boundp 'shell-maker--config)
-                                      shell-maker--config)
-                                 (shell-maker-buffer shell-maker--config)
-                               (current-buffer)))
-               'face 'font-lock-doc-markup-face))
+  (chatgpt-shell--overlay-put-all
+   (make-overlay (1- body-start)
+                 body-start)
+   'evaporate t
+   'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay body-end
+                 (1+ body-end))
+   'evaporate t
+   'invisible 'chatgpt-shell)
+  (chatgpt-shell--overlay-put-all
+   (make-overlay body-start body-end
+                 (if (and (boundp 'shell-maker--config)
+                          shell-maker--config)
+                     (shell-maker-buffer shell-maker--config)
+                   (current-buffer)))
+   'evaporate t
+
+   'face 'font-lock-doc-markup-face))
 
 (defun chatgpt-shell-rename-block-at-point ()
   "Rename block at point (perhaps a different language)."
@@ -3500,8 +3575,7 @@ NEW-LABEL (optional): To display for new text."
           (overlay-put overlay 'category 'conflict-marker)
           (overlay-put overlay 'display
                        (concat "\n" (propertize end-label 'face '(:inherit default :box t)) "\n\n"))
-          (overlay-put overlay 'evaporate t)
-          )
+          (overlay-put overlay 'evaporate t))
         (let ((overlay (make-overlay (match-beginning 6)
                                      (match-end 7))))
           (overlay-put overlay 'category 'conflict-marker)
