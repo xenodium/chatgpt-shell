@@ -2898,13 +2898,12 @@ Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Write solutions in their entirety.")
            (progress-reporter (make-progress-reporter "ChatGPT "))
-           (prog-mode-p (derived-mode-p 'prog-mode))
            (query (read-string "ChatGPT request to modify: "))
            (response ""))
       (progn
         (deactivate-mark)
         (fader-start-fading-region start end)
-        (when prog-mode-p
+        (when (derived-mode-p 'prog-mode)
           (setq system-prompt
                 (format "%s\nUse `%s` programming language."
                         system-prompt
@@ -2923,7 +2922,8 @@ Write solutions in their entirety.")
                         (when finished
                           ;; In prog mode, remove unnecessary
                           ;; markdown blocks prior to insertion.
-                          (when prog-mode-p
+                          (when (with-current-buffer buffer
+                                  (derived-mode-p 'prog-mode))
                             (setq response
                                   (chatgpt-shell--remove-source-block-markers response)))
                           (fader-stop-fading)
