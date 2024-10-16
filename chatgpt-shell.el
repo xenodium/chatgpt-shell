@@ -1485,6 +1485,7 @@ STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
   (let ((shell-buffer (chatgpt-shell-start t t t model-version system-prompt)))
     (with-current-buffer shell-buffer
       (setq-local shell-maker-prompt-before-killing-buffer nil)
+      (setq-local kill-buffer-query-functions nil)
       (setq-local chatgpt-shell-streaming streaming)
       (insert query)
       (shell-maker--send-input
