@@ -2837,7 +2837,8 @@ compiling source blocks."
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
            (progress-reporter (make-progress-reporter "ChatGPT "))
            (response "")
-           (buffer (current-buffer)))
+           (buffer (current-buffer))
+           (prog-mode-p (derived-mode-p 'prog-mode)))
       ;; TODO: Add a helper that facilitates applying changes interactively
       ;; and reuse between chatgpt-shell-fix-error-at-point and
       ;; chatgpt-shell-quick-modify-region.
@@ -2863,6 +2864,11 @@ Do not wrap snippets in markdown blocks.\n\n"
                         (progress-reporter-update progress-reporter)
                         (setq response (concat response output))
                         (when finished
+                          ;; In prog mode, remove unnecessary
+                          ;; markdown blocks prior to insertion.
+                          (when prog-mode-p
+                            (setq response
+                                  (chatgpt-shell--remove-source-block-markers response)))
                           (fader-stop-fading)
                           (progress-reporter-done progress-reporter)
                           (with-current-buffer buffer
@@ -2892,12 +2898,13 @@ Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Write solutions in their entirety.")
            (progress-reporter (make-progress-reporter "ChatGPT "))
+           (prog-mode-p (derived-mode-p 'prog-mode))
            (query (read-string "ChatGPT request to modify: "))
            (response ""))
       (progn
         (deactivate-mark)
         (fader-start-fading-region start end)
-        (when (derived-mode-p 'prog-mode)
+        (when prog-mode-p
           (setq system-prompt
                 (format "%s\nUse `%s` programming language."
                         system-prompt
@@ -2914,6 +2921,11 @@ Write solutions in their entirety.")
                         (progress-reporter-update progress-reporter)
                         (setq response (concat response output))
                         (when finished
+                          ;; In prog mode, remove unnecessary
+                          ;; markdown blocks prior to insertion.
+                          (when prog-mode-p
+                            (setq response
+                                  (chatgpt-shell--remove-source-block-markers response)))
                           (fader-stop-fading)
                           (progress-reporter-done progress-reporter)
                           (pretty-smerge-insert
@@ -2925,6 +2937,13 @@ Write solutions in their entirety.")
                           (unless (string-empty-p (string-trim output))
                             (message "%s" output)))))))
     (error "Incomplete context")))
+
+(defun chatgpt-shell--remove-source-block-markers (text)
+  "Remove markdown code block markers TEXT."
+  (replace-regexp-in-string
+   (rx (optional "\n") bol "```" (zero-or-more (or alphanumeric "-" "+"))
+       (zero-or-more space) eol (optional "\n"))
+   "" text t))
 
 ;;; TODO: Move to chatgpt-shell-prompt-compose.el, but first update
 ;;; the MELPA recipe, so it can load additional files other than chatgpt-shell.el.
