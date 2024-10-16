@@ -3543,8 +3543,22 @@ NEW-LABEL (optional): To display for new text."
   "Minor mode to display overlays for conflict markers."
   :lighter " PrettySmerge"
   (if pretty-smerge-mode
-      (pretty-smerge--refresh)
-    (pretty-smerge-mode-remove--overlays)))
+      (progn
+        (pretty-smerge--refresh)
+        (add-hook 'after-change-functions
+                  #'pretty-smerge--autodisable
+                  nil t))
+    (pretty-smerge-mode-remove--overlays)
+    (remove-hook 'after-change-functions
+                 #'pretty-smerge--autodisable
+                 t)))
+
+(defun pretty-smerge--autodisable (_beg _end _len)
+  "Disable `pretty-smerge-mode' on edit."
+  (pretty-smerge-mode -1)
+  (remove-hook 'after-change-functions
+               #'pretty-smerge--autodisable
+               t))
 
 (defun pretty-smerge--refresh ()
   "Apply overlays to conflict markers."
