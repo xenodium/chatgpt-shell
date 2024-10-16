@@ -1225,12 +1225,9 @@ If region is active, append to prompt."
 
 See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
   (interactive)
-  (chatgpt-shell-request-and-insert-response
+  (chatgpt-shell-request-and-insert-merged-response
    :system-prompt chatgpt-shell-prompt-header-proofread-region
-   :streaming t
-   :query (if (region-active-p)
-              (buffer-substring (region-beginning) (region-end))
-            (error "No active region"))))
+   :query ""))
 
 ;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
@@ -2884,66 +2881,80 @@ Do not wrap snippets in markdown blocks.\n\n"
                             (message "%s" output)))))))
     (error "Nothing to fix")))
 
+(cl-defun chatgpt-shell-request-and-insert-merged-response (&key query
+                                                                 (buffer (current-buffer))
+                                                                 model-version
+                                                                 system-prompt
+                                                                 remove-block-markers)
+  "Send a contextless request (no history) and merge into BUFFER:
+
+QUERY: Request query text.
+BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
+MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+SYSTEM-PROMPT (optional): As string."
+  (unless query
+    (error "Missing mandatory \"query\" param"))
+  (unless (region-active-p)
+    (error "No region selected"))
+  (let ((start (save-excursion
+                 ;; Always select from beginning of line.
+                 (goto-char (region-beginning))
+                 (line-beginning-position)))
+        (end (region-end))
+        (progress-reporter (make-progress-reporter "ChatGPT "))
+        (response ""))
+    ;; Barf trailing space from selection.
+    (when (string-match "[ \n\t]+$"
+                        (buffer-substring-no-properties
+                         start
+                         end))
+      (setq end (- end (length (match-string 0)))))
+    (setq query (concat query "\n\n" (buffer-substring start end)))
+    (fader-start-fading-region start end)
+    (progress-reporter-update progress-reporter)
+    (chatgpt-shell-send-contextless-request
+     :model-version model-version
+     :system-prompt system-prompt
+     :query query
+     :streaming t
+     :on-output (lambda (_command output error finished)
+                  (progn
+                    (progress-reporter-update progress-reporter)
+                    (setq response (concat response output))
+                    (when finished
+                      (when remove-block-markers
+                        (setq response
+                              (chatgpt-shell--remove-source-block-markers response)))
+                      (fader-stop-fading)
+                      (progress-reporter-done progress-reporter)
+                      (pretty-smerge-insert
+                       :text response
+                       :start start
+                       :end end
+                       :buffer buffer))
+                    (when error
+                      (unless (string-empty-p (string-trim output))
+                        (message "%s" output))))))))
+
 (defun chatgpt-shell-quick-modify-region ()
   "Request from minibuffer to modify selection."
   (interactive)
   (unless (region-active-p)
     (error "No region selected"))
-  (if-let ((buffer (current-buffer))
-           (start (save-excursion
-                    (goto-char (region-beginning))
-                    (line-beginning-position)))
-           (end (region-end))
-           (system-prompt "Follow my instruction and only my instruction.
+  (let ((system-prompt "Follow my instruction and only my instruction.
 Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
-Write solutions in their entirety.")
-           (progress-reporter (make-progress-reporter "ChatGPT "))
-           (query (read-string "ChatGPT request to modify: "))
-           (response ""))
-      (progn
-        (deactivate-mark)
-        ;; Barf trailing space from selection.
-        (when (string-match "[ \n\t]+$"
-                            (buffer-substring-no-properties
-                             (region-beginning)
-                             (region-end)))
-          (setq end (- end (length (match-string 0)))))
-        (fader-start-fading-region start end)
-        (when (derived-mode-p 'prog-mode)
-          (setq system-prompt
-                (format "%s\nUse `%s` programming language."
-                        system-prompt
-                        (string-trim-right (symbol-name major-mode) "-mode"))))
-        (progress-reporter-update progress-reporter)
-        (chatgpt-shell-send-contextless-request
-         :system-prompt system-prompt
-         :query (concat query "\n\n"
-                        "Apply my instruction to: \n\n"
-                        (buffer-substring start end))
-         :streaming t
-         :on-output (lambda (_command output error finished)
-                      (progn
-                        (progress-reporter-update progress-reporter)
-                        (setq response (concat response output))
-                        (when finished
-                          ;; In prog mode, remove unnecessary
-                          ;; markdown blocks prior to insertion.
-                          (when (with-current-buffer buffer
-                                  (derived-mode-p 'prog-mode))
-                            (setq response
-                                  (chatgpt-shell--remove-source-block-markers response)))
-                          (fader-stop-fading)
-                          (progress-reporter-done progress-reporter)
-                          (pretty-smerge-insert
-                           :text response
-                           :start start
-                           :end end
-                           :buffer buffer))
-                        (when error
-                          (unless (string-empty-p (string-trim output))
-                            (message "%s" output)))))))
-    (error "Incomplete context")))
+Write solutions in their entirety."))
+    (when (derived-mode-p 'prog-mode)
+      (setq system-prompt (format "%s\nUse `%s` programming language."
+                                  system-prompt
+                                  (string-trim-right (symbol-name major-mode) "-mode"))))
+    (chatgpt-shell-request-and-insert-merged-response
+     :system-prompt system-prompt
+     :query (concat (read-string "ChatGPT request to modify: ")
+                    "\n\n"
+                    "Apply my instruction to:")
+     :remove-block-markers t)))
 
 (defun chatgpt-shell--remove-source-block-markers (text)
   "Remove markdown code block markers TEXT."
@@ -3495,8 +3506,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (and end (integerp end))
     (error ":end is missing or not an integer"))
   (with-current-buffer buffer
-    (let* ((orig-point (copy-marker (point)))
-           (orig-start (copy-marker start))
+    (let* ((orig-start (copy-marker start))
            (orig-end (copy-marker end))
            (orig-text (buffer-substring-no-properties orig-start
                                                       orig-end))
@@ -3635,6 +3645,7 @@ NEW-LABEL (optional): To display for new text."
 
 (defun fader-start-fading-region (start end)
   "Animate the background color of the region between START and END."
+  (deactivate-mark)
   (fader-stop-fading)
   (let ((colors (append (fader-palette)
                         (reverse (fader-palette)))))
