@@ -575,12 +575,12 @@ Set NEW-SESSION to start a separate new session.
 
 Set IGNORE-AS-PRIMARY to avoid making new buffer the primary one.
 
-Set MODEL-VERSION to override variable `chatgpt-shell-system-prompt'.
+Set MODEL-VERSION to override variable `chatgpt-shell-model-version'.
 
 Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   (let* ((chatgpt-shell--config
           (let ((config (copy-sequence chatgpt-shell--config))
-                (chatgpt-shell-model-version (or model-version chatgpt-shell-system-prompt))
+                (chatgpt-shell-model-version (or model-version chatgpt-shell-model-version))
                 (chatgpt-shell-system-prompt (or system-prompt chatgpt-shell-system-prompt)))
             (setf (shell-maker-config-prompt config)
                   (car (chatgpt-shell--prompt-pair)))
