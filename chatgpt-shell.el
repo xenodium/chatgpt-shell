@@ -2936,26 +2936,6 @@ SYSTEM-PROMPT (optional): As string."
                       (unless (string-empty-p (string-trim output))
                         (message "%s" output))))))))
 
-(defun chatgpt-shell-quick-modify-region ()
-  "Request from minibuffer to modify selection."
-  (interactive)
-  (unless (region-active-p)
-    (error "No region selected"))
-  (let ((system-prompt "Follow my instruction and only my instruction.
-Do not explain nor wrap in a markdown block.
-Do not balance unbalanced brackets or parenthesis at beginning or end of text.
-Write solutions in their entirety."))
-    (when (derived-mode-p 'prog-mode)
-      (setq system-prompt (format "%s\nUse `%s` programming language."
-                                  system-prompt
-                                  (string-trim-right (symbol-name major-mode) "-mode"))))
-    (chatgpt-shell-request-and-insert-merged-response
-     :system-prompt system-prompt
-     :query (concat (read-string "ChatGPT request to modify: ")
-                    "\n\n"
-                    "Apply my instruction to:")
-     :remove-block-markers t)))
-
 (defun chatgpt-shell--remove-source-block-markers (text)
   "Remove markdown code block markers TEXT."
   (replace-regexp-in-string
@@ -3021,23 +3001,26 @@ t if invoked from a transient frame (quitting closes the frame).")
 (defun chatgpt-shell-quick-insert()
   "Request from minibuffer and insert response into current buffer."
   (interactive)
-  (let ((query (read-string "ChatGPT request insert: "))
-        (system-prompt (format "Follow my instruction and only my instruction.
-Preferred programming language: %s
-Do NOT explain.
-Do NOT wrap text in markdown blocks.
-Write solutions in their entirety."
-                               (if (derived-mode-p 'prog-mode)
-                                   (string-trim-right (symbol-name major-mode) "-mode")
-                                 "none"))))
-    (chatgpt-shell-request-and-insert-response
-     :streaming t
-     :system-prompt system-prompt
-     :query (if (region-active-p)
-                (concat query ":\n\n"
-                        (buffer-substring (region-beginning)
-                                          (region-end)))
-              query))))
+  (let ((system-prompt "Follow my instruction and only my instruction.
+Do not explain nor wrap in a markdown block.
+Do not balance unbalanced brackets or parenthesis at beginning or end of text.
+Write solutions in their entirety.")
+        (query (read-string "ChatGPT request insert: ")))
+    (when (derived-mode-p 'prog-mode)
+      (setq system-prompt (format "%s\nUse `%s` programming language."
+                                  system-prompt
+                                  (string-trim-right (symbol-name major-mode) "-mode"))))
+    (if (region-active-p)
+        (chatgpt-shell-request-and-insert-merged-response
+         :system-prompt system-prompt
+         :query (concat query
+                        "\n\n"
+                        "Apply my instruction to:")
+         :remove-block-markers t)
+      (chatgpt-shell-request-and-insert-response
+       :streaming t
+       :system-prompt system-prompt
+       :query query))))
 
 ;;;###autoload
 (defun chatgpt-shell-prompt-compose (prefix)
