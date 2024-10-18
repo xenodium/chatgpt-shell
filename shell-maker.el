@@ -715,7 +715,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
     (string-to-number (match-string 1 string))))
 
-(defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback)
+(defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback &optional preprocess-response)
   "Run shell COMMAND asynchronously.
 Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
 response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
@@ -751,6 +751,8 @@ response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
                  (shell-maker--write-output-to-log-buffer
                   (format "// Filter output\n\n%s\n\n" output) config)
                  (setq remaining-text (concat remaining-text output))
+                 (when preprocess-response
+                   (setq remaining-text (funcall preprocess-response remaining-text)))
                  (setq preparsed (shell-maker--preparse-json remaining-text))
                  (if (car preparsed)
                      (mapc (lambda (obj)
@@ -904,6 +906,8 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   (let ((parsed)
         (remaining)
         (loc))
+    ;; TODO: Remove and rely on preprocess-response
+    ;; from `shell-maker-async-shell-command'.
     (setq json (replace-regexp-in-string (rx bol "data:") "" json))
     (with-temp-buffer ;; with-current-buffer (get-buffer-create "*preparse*")
       (erase-buffer)
