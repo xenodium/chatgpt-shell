@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.54.1
+;; Version: 0.55.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -120,7 +120,8 @@ For example:
   validate-command
   execute-command
   on-command-finished
-  redact-log-output)
+  redact-log-output
+  (api-version "1"))
 
 (defvar-local shell-maker--busy nil)
 
@@ -596,7 +597,7 @@ With prefix TREAT-AS-FAILURE, mark as failed."
 (defun shell-maker--eval-input (input-string &optional on-output no-announcement)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result.
 
-Use ON-OUTPUT function to handle outcome.
+Use ON-OUTPUT function to handle output.
 
 For example:
 
@@ -607,11 +608,7 @@ For example:
    (message \"Is finished: %s\" finished))
 
 NO-ANNOUNCEMENT skips announcing response when in background."
-  (let ((buffer (shell-maker-buffer shell-maker--config))
-        (prefix-newline "")
-        (suffix-newline "\n\n")
-        (response-count 0)
-        (errored))
+  (let ((buffer (shell-maker-buffer shell-maker--config)))
     (unless shell-maker--busy
       (setq shell-maker--busy t)
       (cond
@@ -644,66 +641,14 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                                     (concat "\n" (shell-maker-prompt shell-maker--config)))
         (setq shell-maker--busy nil))
        (t
-        ;; For viewing prompt delimiter (used to handle multiline prompts).
-        ;; (shell-maker--output-filter (shell-maker--process) "<shell-maker-end-of-prompt>")
-        (shell-maker--output-filter (shell-maker--process)
-                                    (propertize "<shell-maker-end-of-prompt>"
-                                                'invisible (not shell-maker--show-invisible-markers)))
-        (funcall (shell-maker-config-execute-command shell-maker--config)
-                 input-string
-                 (shell-maker--extract-history
-                  (with-current-buffer buffer
-                    (buffer-string))
-                  (shell-maker-prompt-regexp shell-maker--config))
-                 (lambda (response partial)
-                   (setq response-count (1+ response-count))
-                   (setq prefix-newline (if (> response-count 1)
-                                            ""
-                                          "\n"))
-                   (if response
-                       (if partial
-                           (progn
-                             (shell-maker--write-partial-reply (concat prefix-newline response))
-                             (setq shell-maker--busy partial)
-                             (when on-output
-                               (funcall on-output
-                                        input-string response nil nil)))
-                         (shell-maker--write-reply (concat prefix-newline response suffix-newline))
-                         (unless no-announcement
-                           (shell-maker--announce-response buffer))
-                         (setq shell-maker--busy nil)
-                         (shell-maker--write-input-ring-history shell-maker--config)
-                         (when (shell-maker-config-on-command-finished shell-maker--config)
-                           ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                           (when on-output
-                             (funcall on-output
-                                      input-string response nil t))
-                           (funcall (shell-maker-config-on-command-finished shell-maker--config)
-                                    input-string
-                                    (shell-maker-last-output)))
-                         (goto-char (point-max)))
-                     (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
-                     (setq shell-maker--busy nil)
-                     (unless no-announcement
-                       (shell-maker--announce-response buffer))
-                     (when on-output
-                       (funcall on-output
-                                input-string (shell-maker-last-output) t t))))
-                 (lambda (error)
-                   (unless errored
-                     (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
-                     (setq errored t))
-                   (setq shell-maker--busy nil)
-                   (unless no-announcement
-                     (shell-maker--announce-response buffer))
-                   (when on-output
-                     (funcall on-output
-                              input-string error t t))
-                   (when (shell-maker-config-on-command-finished shell-maker--config)
-                     (funcall (shell-maker-config-on-command-finished shell-maker--config)
-                              input-string
-                              error)
-                     (goto-char (point-max))))))))))
+        (if (equal (shell-maker-config-api-version shell-maker--config) "1")
+            (shell-maker--eval-input-on-buffer-v1 :input input-string
+                                                  :buffer buffer
+                                                  :on-output on-output
+                                                  :no-announcement no-announcement)
+          (shell-maker--write-reply (format "\nUnsupported shell-maker api-version: %s\n\n"
+                                            (shell-maker-config-api-version shell-maker--config)))
+          (setq shell-maker--busy nil)))))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
@@ -717,8 +662,9 @@ NO-ANNOUNCEMENT skips announcing response when in background."
 
 (defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback &optional preprocess-response)
   "Run shell COMMAND asynchronously.
-Set STREAMING to enable it.  Calls RESPONSE-EXTRACTOR to extract the
-response and feeds it to CALLBACK or ERROR-CALLBACK accordingly."
+Set STREAMING to enable it.  Calls PREPROCESS-RESPONSE prior to invoking
+RESPONSE-EXTRACTOR to extract the response and feeds it to CALLBACK or
+ERROR-CALLBACK accordingly."
   (let* ((buffer (shell-maker-buffer shell-maker--config))
          (request-id (shell-maker--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
@@ -846,7 +792,7 @@ Used by `shell-maker--send-input's call."
 (defun shell-maker--send-input (&optional on-output no-announcement)
   "Send text after the prompt.
 
-Use ON-OUTPUT function to handle outcome.
+Use ON-OUTPUT function to handle output.
 
 For example:
 
@@ -1379,6 +1325,80 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
                         (lambda (_)
                           (funcall action)))
     (buffer-string)))
+
+(cl-defun shell-maker--eval-input-on-buffer-v1 (&key input buffer on-output no-announcement)
+  "Evaluate INPUT string and output to shell BUFFER.
+
+Use ON-OUTPUT function to get notified of output events.
+
+With NO-ANNOUNCEMENT, skip announcing response when shell is in the background."
+  (declare (obsolete nil "v0.55.1"))
+  (unless buffer
+    (error "Missing mandatory :buffer param"))
+  ;; For viewing prompt delimiter (used to handle multiline prompts).
+  ;; (shell-maker--output-filter (shell-maker--process) "<shell-maker-end-of-prompt>")
+  (shell-maker--output-filter (shell-maker--process)
+                              (propertize "<shell-maker-end-of-prompt>"
+                                          'invisible (not shell-maker--show-invisible-markers)))
+  (let ((prefix-newline "")
+        (suffix-newline "\n\n")
+        (response-count 0)
+        (errored))
+    (funcall (shell-maker-config-execute-command shell-maker--config)
+             input
+             (shell-maker--extract-history
+              (with-current-buffer buffer
+                (buffer-string))
+              (shell-maker-prompt-regexp shell-maker--config))
+             (lambda (response partial)
+               (setq response-count (1+ response-count))
+               (setq prefix-newline (if (> response-count 1)
+                                        ""
+                                      "\n"))
+               (if response
+                   (if partial
+                       (progn
+                         (shell-maker--write-partial-reply (concat prefix-newline response))
+                         (setq shell-maker--busy partial)
+                         (when on-output
+                           (funcall on-output
+                                    input response nil nil)))
+                     (shell-maker--write-reply (concat prefix-newline response suffix-newline))
+                     (unless no-announcement
+                       (shell-maker--announce-response buffer))
+                     (setq shell-maker--busy nil)
+                     (shell-maker--write-input-ring-history shell-maker--config)
+                     (when (shell-maker-config-on-command-finished shell-maker--config)
+                       ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
+                       (when on-output
+                         (funcall on-output
+                                  input response nil t))
+                       (funcall (shell-maker-config-on-command-finished shell-maker--config)
+                                input
+                                (shell-maker-last-output)))
+                     (goto-char (point-max)))
+                 (shell-maker--write-reply "Error: that's all is known" t) ;; comeback
+                 (setq shell-maker--busy nil)
+                 (unless no-announcement
+                   (shell-maker--announce-response buffer))
+                 (when on-output
+                   (funcall on-output
+                            input (shell-maker-last-output) t t))))
+             (lambda (error)
+               (unless errored
+                 (shell-maker--write-reply (concat (string-trim error) suffix-newline) t)
+                 (setq errored t))
+               (setq shell-maker--busy nil)
+               (unless no-announcement
+                 (shell-maker--announce-response buffer))
+               (when on-output
+                 (funcall on-output
+                          input error t t))
+               (when (shell-maker-config-on-command-finished shell-maker--config)
+                 (funcall (shell-maker-config-on-command-finished shell-maker--config)
+                          input
+                          error)
+                 (goto-char (point-max)))))))
 
 (provide 'shell-maker)
 
