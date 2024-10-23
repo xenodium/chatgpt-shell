@@ -2040,6 +2040,67 @@ For example:
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
 
+(defun chatgpt-shell--parse-chatgpt-response (raw-response)
+  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+            ;; .error.message
+            (response (let-alist whole
+                        .error.message)))
+      response
+    (when-let ((chunks (chatgpt-shell--split-chatgpt-response raw-response))
+               (response ""))
+      (mapc (lambda (chunk)
+              ;; Response chunks come in the form:
+              ;;   data: {...}
+              ;;   data: {...}
+              (when-let* ((is-data (equal (map-elt chunk :key) "data"))
+                          (obj (shell-maker--json-parse-string (map-elt chunk :value)))
+                          (text (or
+                                 ;; .choices[i].message.content
+                                 ;; .choices[i].delta.content
+                                 (let-alist obj
+                                   (mapconcat (lambda (choice)
+                                                (let-alist choice
+                                                  (or .delta.content
+                                                      .message.content)))
+                                              .choices))))
+                          (non-empty (not (string-empty-p text))))
+                (setq response (concat response text))))
+            chunks)
+      (unless (string-empty-p response)
+        response))))
+
+(defun chatgpt-shell--split-chatgpt-response (response)
+  "Splits RESPONSE text into an alist.
+
+RESPONSE if of the form:
+
+\"
+event: text1
+data: text2
+\"
+
+returned alist is of the form:
+
+(((:key . \"event\")
+  (:value . \"text1\"))
+ ((:key . \"data\")
+  (:value . \"text2\")))"
+  (let ((lines (split-string response "\n"))
+        (result '()))
+    (dolist (line lines)
+      (if (string-match (rx (group (+ (not ":"))) ":"
+                            (group (* nonl)))
+                        line)
+          (let* ((key (match-string 1 line))
+                 (value (string-trim (match-string 2 line))))
+            (push (list (cons :key key)
+                        (cons :value value)) result))
+        (when-let* ((value (string-trim line))
+                    (non-empty (not (string-empty-p value))))
+          (push (list (cons :key "unknown")
+                      (cons :value value)) result))))
+    (reverse result)))
+
 (defun chatgpt-shell--extract-chatgpt-response (json)
   "Extract ChatGPT response from JSON."
   (if (eq (type-of json) 'cons)

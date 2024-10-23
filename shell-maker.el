@@ -683,9 +683,9 @@ ERROR-CALLBACK accordingly."
          (process-connection-type nil))
     (when request-process
       (setq shell-maker--request-process request-process)
-      (shell-maker--write-output-to-log-buffer "// Request\n\n" config)
-      (shell-maker--write-output-to-log-buffer (string-join command " ") config)
-      (shell-maker--write-output-to-log-buffer "\n\n" config)
+      (shell-maker--log config "// Request\n\n")
+      (shell-maker--log config (string-join command " "))
+      (shell-maker--log config "\n\n")
       (when streaming
         (set-process-filter
          request-process
@@ -694,8 +694,8 @@ ERROR-CALLBACK accordingly."
                (when (and (eq request-id (with-current-buffer buffer
                                            (shell-maker--current-request-id)))
                           (buffer-live-p buffer))
-                 (shell-maker--write-output-to-log-buffer
-                  (format "// Filter output\n\n%s\n\n" output) config)
+                 (shell-maker--log
+                  config "// Filter output\n\n%s\n\n" output)
                  (setq remaining-text (concat remaining-text output))
                  (when preprocess-response
                    (setq remaining-text (funcall preprocess-response remaining-text)))
@@ -723,12 +723,12 @@ ERROR-CALLBACK accordingly."
                    (output (with-current-buffer (process-buffer process)
                              (buffer-string)))
                    (exit-status (process-exit-status process)))
-               (shell-maker--write-output-to-log-buffer
-                (format "// Response (%s)\n\n" (if active "active" "inactive")) config)
-               (shell-maker--write-output-to-log-buffer
-                (format "Exit status: %d\n\n" exit-status) config)
-               (shell-maker--write-output-to-log-buffer output config)
-               (shell-maker--write-output-to-log-buffer "\n\n" config)
+               (shell-maker--log
+                config "// Response (%s)\n\n" (if active "active" "inactive"))
+               (shell-maker--log
+                config "Exit status: %d\n\n" exit-status)
+               (shell-maker--log config output)
+               (shell-maker--log config "\n\n")
                (with-current-buffer buffer
                  (if (= exit-status 0)
                      (funcall callback
@@ -880,21 +880,20 @@ NO-ANNOUNCEMENT skips announcing response when in background."
                        (eq (length items) 1)))
         (seq-first items)))))
 
-(defun shell-maker--write-output-to-log-buffer (output config)
-  "Write OUTPUT to log buffer using CONFIG."
-  (unless output
-    (setq output "<nil>"))
+(defun shell-maker--log (config format &rest args)
+  "Write FORMAT with ARGS, using CONFIG."
+  (unless format
+    (setq format "<nil>"))
+  (when args
+    (setq format (apply #'format format args)))
   (when (and shell-maker-logging config)
     (when (shell-maker-config-redact-log-output config)
-      (setq output
-            (funcall (shell-maker-config-redact-log-output config) output)))
+      (setq format
+            (funcall (shell-maker-config-redact-log-output config) format)))
     (with-current-buffer (get-buffer-create (format "*%s-log*"
                                                     (shell-maker-process-name config)))
-      (let ((beginning-of-input (goto-char (point-max))))
-        (insert output)
-        (when (and (require 'json nil t)
-                   (ignore-errors (shell-maker--json-parse-string output)))
-          (json-pretty-print beginning-of-input (point)))))))
+      (goto-char (point-max))
+      (insert format))))
 
 (defun shell-maker--process nil
   "Get shell buffer process."
