@@ -266,7 +266,8 @@ Set BUFFER-NAME to override the buffer name."
   (add-to-list 'kill-buffer-query-functions #'shell-maker-kill-buffer-query)
   (setq-local paragraph-separate "\\'")
   (setq-local paragraph-start comint-prompt-regexp)
-  (setq comint-input-sender 'shell-maker--input-sender)
+  (setq comint-input-sender (lambda (_proc input)
+                              (setq shell-maker--input input)))
   (setq comint-process-echoes nil)
   (setq-local comint-prompt-read-only t)
   (setq comint-get-old-input 'shell-maker--get-old-input)
@@ -789,29 +790,6 @@ ERROR-CALLBACK accordingly."
   "Return the process mark of the current buffer."
   (process-mark (get-buffer-process
                  (shell-maker-buffer shell-maker--config))))
-
-(defun shell-maker--input-sender (_proc input)
-  "Set the variable `shell-maker--input' to INPUT.
-Used by `shell-maker--send-input's call."
-  (setq shell-maker--input input))
-
-(defun shell-maker--send-input (&optional on-output no-announcement)
-  "Send text after the prompt.
-
-Use ON-OUTPUT function to handle output.
-
-For example:
-
-\(lambda (command output error finished)
-   (message \"Command: %s\" command)
-   (message \"Output: %s\" output)
-   (message \"Has error: %s\" output)
-   (message \"Is finished: %s\" finished))
-
-NO-ANNOUNCEMENT skips announcing response when in background."
-  (let ((shell-maker--input))
-    (comint-send-input)
-    (shell-maker--eval-input shell-maker--input on-output no-announcement)))
 
 (defun shell-maker--get-old-input nil
   "Return the previous input surrounding point."
