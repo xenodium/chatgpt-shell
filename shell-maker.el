@@ -1367,11 +1367,10 @@ With NO-ANNOUNCEMENT, skip announcing response when shell is in the background."
                        (shell-maker--announce-response buffer))
                      (setq shell-maker--busy nil)
                      (shell-maker--write-input-ring-history shell-maker--config)
+                     ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
+                     (when on-output
+                       (funcall on-output input response nil t))
                      (when (shell-maker-config-on-command-finished shell-maker--config)
-                       ;; FIXME use (concat prefix-newline response suffix-newline) if not streaming.
-                       (when on-output
-                         (funcall on-output
-                                  input response nil t))
                        (funcall (shell-maker-config-on-command-finished shell-maker--config)
                                 input
                                 (shell-maker-last-output)))
