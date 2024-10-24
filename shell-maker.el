@@ -594,6 +594,51 @@ With prefix TREAT-AS-FAILURE, mark as failed."
        (concat "\n" (shell-maker-prompt shell-maker--config))))
     (setq shell-maker--busy nil)))
 
+(defun shell-maker--clear-input-for-execution (input)
+  "Clear INPUT prior to shell execution.
+
+Return t if INPUT us cleared.  nil otherwise."
+  (unless shell-maker--busy
+    (setq shell-maker--busy t)
+    (cond
+     ((string-equal "help" (string-trim input))
+      (shell-maker--print-help)
+      (setq shell-maker--busy nil)
+      nil)
+     ((string-equal "clear" (string-trim input))
+      (call-interactively #'shell-maker-clear-buffer)
+      (shell-maker--output-filter (shell-maker--process)
+                                  (shell-maker-prompt shell-maker--config))
+      (setq shell-maker--busy nil)
+      (set-buffer-modified-p nil)
+      nil)
+     ((string-equal "config" (string-trim input))
+      (shell-maker--write-reply (shell-maker--dump-config shell-maker--config))
+      (setq shell-maker--busy nil)
+      nil)
+     ((not (shell-maker--curl-version-supported))
+      (shell-maker--write-reply "\nYou need curl version 7.76 or newer.\n\n")
+      (setq shell-maker--busy nil)
+      nil)
+     ((and (shell-maker-config-validate-command
+            shell-maker--config)
+           (funcall (shell-maker-config-validate-command
+                     shell-maker--config) input))
+      (shell-maker--write-reply
+       (concat "\n"
+               (funcall (shell-maker-config-validate-command
+                         shell-maker--config) input)
+               "\n\n"))
+      (setq shell-maker--busy nil)
+      nil)
+     ((string-empty-p (string-trim input))
+      (shell-maker--output-filter (shell-maker--process)
+                                  (concat "\n" (shell-maker-prompt shell-maker--config)))
+      (setq shell-maker--busy nil)
+      nil)
+     (t
+      t))))
+
 (defun shell-maker--eval-input (input-string &optional on-output no-announcement)
   "Evaluate the Lisp expression INPUT-STRING, and pretty-print the result.
 
@@ -609,46 +654,11 @@ For example:
 
 NO-ANNOUNCEMENT skips announcing response when in background."
   (let ((buffer (shell-maker-buffer shell-maker--config)))
-    (unless shell-maker--busy
-      (setq shell-maker--busy t)
-      (cond
-       ((string-equal "help" (string-trim input-string))
-        (shell-maker--print-help)
-        (setq shell-maker--busy nil))
-       ((string-equal "clear" (string-trim input-string))
-        (call-interactively #'shell-maker-clear-buffer)
-        (shell-maker--output-filter (shell-maker--process) (shell-maker-prompt shell-maker--config))
-        (setq shell-maker--busy nil)
-        (set-buffer-modified-p nil))
-       ((string-equal "config" (string-trim input-string))
-        (shell-maker--write-reply (shell-maker--dump-config shell-maker--config))
-        (setq shell-maker--busy nil))
-       ((not (shell-maker--curl-version-supported))
-        (shell-maker--write-reply "\nYou need curl version 7.76 or newer.\n\n")
-        (setq shell-maker--busy nil))
-       ((and (shell-maker-config-validate-command
-              shell-maker--config)
-             (funcall (shell-maker-config-validate-command
-                       shell-maker--config) input-string))
-        (shell-maker--write-reply
-         (concat "\n"
-                 (funcall (shell-maker-config-validate-command
-                           shell-maker--config) input-string)
-                 "\n\n"))
-        (setq shell-maker--busy nil))
-       ((string-empty-p (string-trim input-string))
-        (shell-maker--output-filter (shell-maker--process)
-                                    (concat "\n" (shell-maker-prompt shell-maker--config)))
-        (setq shell-maker--busy nil))
-       (t
-        (if (equal (shell-maker-config-api-version shell-maker--config) "1")
-            (shell-maker--eval-input-on-buffer-v1 :input input-string
-                                                  :buffer buffer
-                                                  :on-output on-output
-                                                  :no-announcement no-announcement)
-          (shell-maker--write-reply (format "\nUnsupported shell-maker api-version: %s\n\n"
-                                            (shell-maker-config-api-version shell-maker--config)))
-          (setq shell-maker--busy nil)))))))
+    (when (shell-maker--clear-input-for-execution input-string)
+      (shell-maker--eval-input-on-buffer-v1 :input input-string
+                                            :buffer buffer
+                                            :on-output on-output
+                                            :no-announcement no-announcement))))
 
 (defun shell-maker--announce-response (buffer)
   "Announce response if BUFFER is not active."
