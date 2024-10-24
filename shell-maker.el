@@ -841,7 +841,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
   (if (fboundp 'json-parse-string)
       (condition-case nil
           (json-parse-string json :object-type 'alist)
-        (json-parse-error nil))
+        (error nil))
     (condition-case _err
         (json-read-from-string json)
       (error nil))))
