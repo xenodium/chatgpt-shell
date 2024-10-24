@@ -809,7 +809,7 @@ For example:
    (message \"Is finished: %s\" finished))
 
 NO-ANNOUNCEMENT skips announcing response when in background."
-  (let (shell-maker--input)
+  (let ((shell-maker--input))
     (comint-send-input)
     (shell-maker--eval-input shell-maker--input on-output no-announcement)))
 
