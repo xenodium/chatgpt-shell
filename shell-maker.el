@@ -899,7 +899,7 @@ NO-ANNOUNCEMENT skips announcing response when in background."
     (with-current-buffer (get-buffer-create (format "*%s-log*"
                                                     (shell-maker-process-name config)))
       (goto-char (point-max))
-      (insert format))))
+      (insert (concat "\n" (format-time-string "%Y-%m-%dT%H:%M:%S") ": " format)))))
 
 (defun shell-maker--process nil
   "Get shell buffer process."
