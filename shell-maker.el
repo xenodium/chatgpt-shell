@@ -693,9 +693,8 @@ ERROR-CALLBACK accordingly."
          (process-connection-type nil))
     (when request-process
       (setq shell-maker--request-process request-process)
-      (shell-maker--log config "// Request\n\n")
-      (shell-maker--log config (string-join command " "))
-      (shell-maker--log config "\n\n")
+      (shell-maker--log config "Command")
+      (shell-maker--log config "%s" command)
       (when streaming
         (set-process-filter
          request-process
@@ -704,8 +703,8 @@ ERROR-CALLBACK accordingly."
                (when (and (eq request-id (with-current-buffer buffer
                                            (shell-maker--current-request-id)))
                           (buffer-live-p buffer))
-                 (shell-maker--log
-                  config "// Filter output\n\n%s\n\n" output)
+                 (shell-maker--log config "Filter output")
+                 (shell-maker--log config output)
                  (setq remaining-text (concat remaining-text output))
                  (when preprocess-response
                    (setq remaining-text (funcall preprocess-response remaining-text)))
@@ -733,12 +732,9 @@ ERROR-CALLBACK accordingly."
                    (output (with-current-buffer (process-buffer process)
                              (buffer-string)))
                    (exit-status (process-exit-status process)))
-               (shell-maker--log
-                config "// Response (%s)\n\n" (if active "active" "inactive"))
-               (shell-maker--log
-                config "Exit status: %d\n\n" exit-status)
+               (shell-maker--log config "Response (%s)" (if active "active" "inactive"))
+               (shell-maker--log config "Exit status: %d" exit-status)
                (shell-maker--log config output)
-               (shell-maker--log config "\n\n")
                (with-current-buffer buffer
                  (if (= exit-status 0)
                      (funcall callback
