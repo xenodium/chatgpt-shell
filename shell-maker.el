@@ -120,8 +120,7 @@ For example:
   validate-command
   execute-command
   on-command-finished
-  redact-log-output
-  (api-version "1"))
+  redact-log-output)
 
 (defvar-local shell-maker--busy nil)
 
@@ -340,7 +339,7 @@ Of the form:
          (command-handler (shell-maker-config-execute-command shell-maker--config))
          (is-command-v2 (and (closurep command-handler)
                              (> (length command-handler) 1)
-                             (equal 'shell-maker-async-shell-command-v2
+                             (equal 'shell-maker-execute-command
                                     (car (car (aref (shell-maker-config-execute-command shell-maker--config) 1))))))
          (shell-maker--input))
     (comint-send-input) ;; Sets shell-maker--input
@@ -356,10 +355,6 @@ Of the form:
                                                   :shell-buffer shell-buffer
                                                   :on-response-broadcast on-response
                                                   :on-finished-broadcast on-finished)
-          (when (or on-response on-finished)
-            (message (concat "on-response/on-finished ignored for "
-                             "`shell-maker-async-shell-command'. "
-                             "Use `shell-maker-async-shell-command-v2'.")))
           (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
                                                 :shell-buffer shell-buffer))))))
 
@@ -692,7 +687,7 @@ Return t if INPUT us cleared.  nil otherwise."
   (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
     (string-to-number (match-string 1 string))))
 
-(cl-defun shell-maker-async-shell-command-v2 (&key command extract-response on-response on-finished)
+(cl-defun shell-maker-execute-command (&key command extract-response on-response on-finished)
   "Execute COMMAND list (command + params).
 
 EXTRACT-RESPONSE: A function to extract the command response from raw command
@@ -752,12 +747,14 @@ ON-FINISHED: A function to notify when command has finished.
                         (with-current-buffer shell-buffer
                           (funcall on-response (format "\n\n%s" err)))) ))
            :stderr (make-pipe-process
-                   :name (format "%s-stderr" (shell-maker-buffer-name shell-maker--config))
-                   :filter (lambda (_process raw-output)
-                             (shell-maker--log shell-config "Stderr")
-                             (shell-maker--log shell-config raw-output)
-                             (with-current-buffer shell-buffer
-                               (funcall on-response (concat "\n" (string-trim raw-output))))))
+                    :name (format "%s-stderr" (shell-maker-buffer-name shell-maker--config))
+                    :filter (lambda (_process raw-output)
+                              (shell-maker--log shell-config "Stderr")
+                              (shell-maker--log shell-config raw-output)
+                              (with-current-buffer shell-buffer
+                                (funcall on-response (concat "\n" (string-trim raw-output)))))
+                    :sentinel (lambda (process _event)
+                                (kill-buffer (process-buffer process))))
            :sentinel (lambda (process _event)
                        (condition-case err
                            (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
@@ -775,7 +772,7 @@ ON-FINISHED: A function to notify when command has finished.
 (defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback &optional preprocess-response)
   "Run shell COMMAND asynchronously (deprecated).
 
-Use `shell-maker-async-shell-command-v2'.
+Use `shell-maker-execute-command'.
 
 Set STREAMING to enable it.  Calls PREPROCESS-RESPONSE prior to invoking
 RESPONSE-EXTRACTOR to extract the response and feeds it to CALLBACK or
@@ -1472,7 +1469,8 @@ Of the form:
 Use ON-OUTPUT function to get notified of output events.
 
 With NO-ANNOUNCEMENT, skip announcing response when shell is in the background."
-  (declare (obsolete nil "v0.55.1"))
+  (message (concat "`shell-maker-async-shell-command' is deprecated "
+                   "(will be removed). Use `shell-maker-execute-command'."))
   (unless shell-buffer
     (error "Missing mandatory :buffer param"))
   ;; For viewing prompt delimiter (used to handle multiline prompts).
