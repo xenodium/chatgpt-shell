@@ -1890,7 +1890,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
 
 (defun chatgpt-shell--temp-dir ()
   "Get chatgpt-shell's temp directory."
-  (let* ((temp-dir (file-name-concat temporary-file-directory "chatgpt-shell")))
+  (let ((temp-dir (file-name-concat temporary-file-directory "chatgpt-shell")))
     (make-directory temp-dir t)
     temp-dir))
 
