@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.32.2
-;; Package-Requires: ((emacs "27.1") (chatgpt-shell "1.0.3"))
+;; Version: 0.33.2
+;; Package-Requires: ((emacs "27.1") (chatgpt-shell "1.16.1"))
 
 ;;; License:
 
@@ -81,10 +81,10 @@ This function is called by `org-babel-execute-src-block'"
              (map-elt params :version)
              (map-elt params :temperature)))
       (chatgpt-shell-post-messages
-       messages
-       nil (map-elt params :version)
-       nil nil
-       (map-elt params :temperature)))))
+       :messages messages
+       :extract-response #'chatgpt-shell-extract-chatgpt-response
+       :version (map-elt params :version)
+       :temperature (map-elt params :temperature)))))
 
 (defun ob-chatgpt-shell--context (&optional context-name)
   "Return the context (what was asked and responded) for matching

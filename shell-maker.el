@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.56.1
+;; Version: 0.57.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -338,9 +338,8 @@ Of the form:
          (called-interactively (called-interactively-p #'interactive))
          (command-handler (shell-maker-config-execute-command shell-maker--config))
          (is-command-v2 (and (closurep command-handler)
-                             (> (length command-handler) 1)
-                             (equal 'shell-maker-execute-command
-                                    (car (car (aref (shell-maker-config-execute-command shell-maker--config) 1))))))
+                             (string-match-p "shell-maker-execute-command"
+                                             (format "%s" command-handler))))
          (shell-maker--input))
     (comint-send-input) ;; Sets shell-maker--input
     (when (shell-maker--clear-input-for-execution shell-maker--input)
@@ -687,6 +686,125 @@ Return t if INPUT us cleared.  nil otherwise."
   (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
     (string-to-number (match-string 1 string))))
 
+(cl-defun shell-maker--execute-command-sync (&key command extract-response)
+  "Execute COMMAND list (command + params).
+
+EXTRACT-RESPONSE: A function to extract the command response from raw command
+output.
+
+  (lambda (raw-text)
+    ;; Must return alist of the form:
+    \='((:parsed . \"parsed response string\")
+        (:unparsed . \"unparsed string\")))
+
+Return extracted response."
+  (unless command
+    (error "Missing mandatory :command param"))
+  (unless extract-response
+    (error "Missing mandatory :extract-response param"))
+  (with-temp-buffer
+    (let* ((buffer (current-buffer))
+           (status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
+           (data (buffer-substring-no-properties (point-min) (point-max)))
+           (response (funcall extract-response data))
+           (text (or (map-elt response :parsed)
+                     (map-elt response :unparsed))))
+      (if (equal status 0)
+          text
+        (concat "Failed:\n\n" text)))))
+
+(cl-defun shell-maker--execute-command-async (&key command extract-response on-response on-finished)
+  "Execute COMMAND list (command + params) asynchronously.
+
+EXTRACT-RESPONSE: A function to extract the command response from raw command
+output.
+
+  (lambda (raw-text)
+    ;; Must return alist of the form:
+    \='((:parsed . \"parsed response string\")
+        (:unparsed . \"unparsed string\")))
+
+ON-RESPONSE: A function to notify of new responses.
+
+  (lambda (response))
+
+ON-FINISHED: A function to notify when command has finished.
+
+  (lambda (success))."
+  (unless command
+    (error "Missing mandatory :command param"))
+  (unless extract-response
+    (error "Missing mandatory :extract-response param"))
+  (let* ((shell-config shell-maker--config)
+         (shell-buffer (shell-maker-buffer shell-maker--config))
+         (request-id (with-current-buffer shell-buffer
+                       (shell-maker--increment-request-id)))
+         (pending))
+    (shell-maker--log shell-config "Async Command v2")
+    (shell-maker--log shell-config "%s" command)
+    (setq shell-maker--request-process
+          (make-process
+           :name (shell-maker-buffer-name shell-maker--config)
+           :buffer nil
+           :command command
+           :filter (lambda (_process raw-output)
+                     (condition-case err
+                         (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
+                                                                  (shell-maker--current-request-id)))
+                                                 (buffer-live-p shell-buffer))))
+                           (shell-maker--log shell-config "Filter pending")
+                           (shell-maker--log shell-config pending)
+                           (shell-maker--log shell-config "Filter output")
+                           (shell-maker--log shell-config raw-output)
+                           (setq raw-output (concat pending raw-output))
+                           (shell-maker--log shell-config "Filter combined")
+                           (shell-maker--log shell-config raw-output)
+                           (let ((response (funcall extract-response raw-output)))
+                             (unless (listp response)
+                               (when on-response
+                                 (funcall on-response
+                                          (concat "Extracted response must be of the form:\n\n"
+                                                  "'((:parsed . \"...\"))\n"
+                                                  "  (:unparsed . \"{...\")\n\n"
+                                                  "But received:\n\n"
+                                                  "\"" response "\""))))
+                             (shell-maker--log shell-config "Filter parsed")
+                             (shell-maker--log shell-config "%s" response)
+                             (when (map-elt response :parsed)
+                               (with-current-buffer shell-buffer
+                                 (when on-response
+                                   (funcall on-response (map-elt response :parsed)))))
+                             (setq pending (map-elt response :unparsed))))
+                       (error
+                        (with-current-buffer shell-buffer
+                          (when on-response
+                            (funcall on-response (format "\n\n%s" err))))) ))
+           :stderr (make-pipe-process
+                    :name (format "%s-stderr" (shell-maker-buffer-name shell-maker--config))
+                    :filter (lambda (_process raw-output)
+                              (shell-maker--log shell-config "Stderr")
+                              (shell-maker--log shell-config raw-output)
+                              (with-current-buffer shell-buffer
+                                (when on-response
+                                  (funcall on-response (concat "\n" (string-trim raw-output))))))
+                    :sentinel (lambda (process _event)
+                                (kill-buffer (process-buffer process))))
+           :sentinel (lambda (process _event)
+                       (condition-case err
+                           (when-let ((active (and (buffer-live-p shell-buffer)
+                                                   (eq request-id (with-current-buffer shell-buffer
+                                                                    (shell-maker--current-request-id)))))
+                                      (exit-status (process-exit-status process)))
+                             (shell-maker--log shell-config "Sentinel (%s)" (if active "active" "inactive"))
+                             (shell-maker--log shell-config "Exit status: %d" exit-status)
+                             (with-current-buffer shell-buffer
+                               (when on-finished
+                                 (funcall on-finished (= exit-status 0)))))
+                         (error
+                          (with-current-buffer shell-buffer
+                            (when on-response
+                              (funcall on-response (format "\n\n%s" err)))))))))))
+
 (cl-defun shell-maker-execute-command (&key command extract-response on-response on-finished)
   "Execute COMMAND list (command + params).
 
@@ -708,74 +826,28 @@ ON-FINISHED: A function to notify when command has finished.
   (unless command
     (error "Missing mandatory :command param"))
   (unless extract-response
-    (error "Missing mandatory :parse-output param"))
-  (unless on-response
-    (error "Missing mandatory :on-response param"))
-  (unless on-finished
-    (error "Missing mandatory :on-finished param"))
-  (let ((shell-config shell-maker--config)
-        (shell-buffer (shell-maker-buffer shell-maker--config))
-        (request-id (shell-maker--increment-request-id))
-        (pending))
-    (shell-maker--log shell-config "Async Command v2")
-    (shell-maker--log shell-config "%s" command)
-    (setq shell-maker--request-process
-          (make-process
-           :name (shell-maker-buffer-name shell-maker--config)
-           :buffer nil
-           :command command
-           :filter (lambda (_process raw-output)
-                     (condition-case err
-                         (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
-                                                                  (shell-maker--current-request-id)))
-                                                 (buffer-live-p shell-buffer))))
-                           (shell-maker--log shell-config "Filter pending")
-                           (shell-maker--log shell-config pending)
-                           (shell-maker--log shell-config "Filter output")
-                           (shell-maker--log shell-config raw-output)
-                           (setq raw-output (concat pending raw-output))
-                           (shell-maker--log shell-config "Filter combined")
-                           (shell-maker--log shell-config raw-output)
-                           (let ((response (funcall extract-response raw-output)))
-                             (shell-maker--log shell-config "Filter parsed")
-                             (shell-maker--log shell-config "%s" response)
-                             (when (map-elt response :parsed)
-                               (with-current-buffer shell-buffer
-                                 (funcall on-response (map-elt response :parsed))))
-                             (setq pending (map-elt response :unparsed))))
-                       (error
-                        (with-current-buffer shell-buffer
-                          (funcall on-response (format "\n\n%s" err)))) ))
-           :stderr (make-pipe-process
-                    :name (format "%s-stderr" (shell-maker-buffer-name shell-maker--config))
-                    :filter (lambda (_process raw-output)
-                              (shell-maker--log shell-config "Stderr")
-                              (shell-maker--log shell-config raw-output)
-                              (with-current-buffer shell-buffer
-                                (funcall on-response (concat "\n" (string-trim raw-output)))))
-                    :sentinel (lambda (process _event)
-                                (kill-buffer (process-buffer process))))
-           :sentinel (lambda (process _event)
-                       (condition-case err
-                           (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
-                                                                    (shell-maker--current-request-id)))
-                                                   (buffer-live-p shell-buffer)))
-                                      (exit-status (process-exit-status process)))
-                             (shell-maker--log shell-config "Sentinel (%s)" (if active "active" "inactive"))
-                             (shell-maker--log shell-config "Exit status: %d" exit-status)
-                             (with-current-buffer shell-buffer
-                               (funcall on-finished (= exit-status 0))))
-                         (error
-                          (with-current-buffer shell-buffer
-                            (funcall on-response (format "\n\n%s" err))))))))))
+    (error "Missing mandatory :extract-response param"))
+  ;; (unless on-response
+  ;;   (error "Missing mandatory :on-response param"))
+  ;; (unless on-finished
+  ;;   (error "Missing mandatory :on-finished param"))
+  (if (not on-response)
+      (shell-maker--execute-command-sync
+       :command command
+       :extract-response extract-response)
+    (shell-maker--execute-command-async
+     :command command
+     :extract-response extract-response
+     :on-response on-response
+     :on-finished on-finished)))
 
-(defun shell-maker-async-shell-command (command streaming response-extractor callback error-callback &optional preprocess-response)
+(defun shell-maker-async-shell-command (command streaming extract-response callback error-callback &optional preprocess-response)
   "Run shell COMMAND asynchronously (deprecated).
 
 Use `shell-maker-execute-command'.
 
 Set STREAMING to enable it.  Calls PREPROCESS-RESPONSE prior to invoking
-RESPONSE-EXTRACTOR to extract the response and feeds it to CALLBACK or
+EXTRACT-RESPONSE to extract the response and feeds it to CALLBACK or
 ERROR-CALLBACK accordingly."
   (let* ((buffer (shell-maker-buffer shell-maker--config))
          (request-id (shell-maker--increment-request-id))
@@ -814,7 +886,7 @@ ERROR-CALLBACK accordingly."
                  (if (car preparsed)
                      (mapc (lambda (obj)
                              (with-current-buffer buffer
-                               (funcall callback (funcall response-extractor obj) t)))
+                               (funcall callback (funcall extract-response obj) t)))
                            (car preparsed))
                    (with-current-buffer buffer
                      (let ((curl-exit-code (shell-maker--curl-exit-status-from-error-string (cdr preparsed))))
@@ -842,11 +914,11 @@ ERROR-CALLBACK accordingly."
                      (funcall callback
                               (if (string-empty-p (string-trim output))
                                   output
-                                (funcall response-extractor output))
+                                (funcall extract-response output))
                               nil)
                    (if-let ((error (if (string-empty-p (string-trim output))
                                        output
-                                     (funcall response-extractor output))))
+                                     (funcall extract-response output))))
                        (funcall error-callback error)
                      (funcall error-callback output)))))
            (kill-buffer output-buffer)
@@ -1411,7 +1483,7 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
     (buffer-string)))
 
 (cl-defun shell-maker--eval-input-on-buffer-v2 (&key input shell-buffer on-response-broadcast on-finished-broadcast)
-  "Evaluate INPUT in shell BUFFER.
+  "Evaluate INPUT in SHELL-BUFFER.
 
 Use ON-RESPONSE-BROADCAST: function to monitor command response text.
 
@@ -1437,34 +1509,39 @@ Of the form:
                                 (propertize "<shell-maker-end-of-prompt>"
                                             'invisible (not shell-maker--show-invisible-markers))))
   (shell-maker--write-partial-reply "\n")
-  (funcall (shell-maker-config-execute-command shell-maker--config)
-           ;; command
-           input
-           ;; history
-           (butlast
-            (shell-maker--extract-history
-             (with-current-buffer shell-buffer
-               (buffer-string))
-             (shell-maker-prompt-regexp shell-maker--config)))
-           ;; on-response
-           (lambda (response)
-             (shell-maker--write-partial-reply (or response "<nil-message>"))
-             (when on-response-broadcast
-               (funcall on-response-broadcast response)))
-           ;; on-finished
-           (lambda (success)
-             (setq shell-maker--busy nil)
-             (shell-maker--write-reply  "\n\n" (not success))
-             (goto-char (point-max))
-             (when on-finished-broadcast
-               (funcall on-finished-broadcast success))
-             (when (shell-maker-config-on-command-finished shell-maker--config)
-               (funcall (shell-maker-config-on-command-finished shell-maker--config)
-                        input
-                        (shell-maker-last-output))))))
+  (let* ((config shell-maker--config)
+         (executor (shell-maker-config-execute-command config))
+         (history (butlast
+                   (shell-maker--extract-history
+                    (with-current-buffer shell-buffer
+                      (buffer-string))
+                    (shell-maker-prompt-regexp config)))))
+    (funcall executor input history
+             ;; on-response
+             (lambda (response)
+               (shell-maker--write-partial-reply (or response "<nil-message>"))
+               (when on-response-broadcast
+                 (funcall on-response-broadcast response)))
+             ;; on-finished
+             (lambda (success)
+               (let ((last-output (shell-maker-last-output)))
+                 (setq shell-maker--busy nil)
+                 (shell-maker--write-reply  "\n\n" (not success))
+                 (goto-char (point-max))
+                 ;; Do not execute anything requiring a shell buffer
+                 ;; after this point, as on-finished or on-command-finished
+                 ;; subscribers may kill the shell buffers.
+                 ;; Use let-bound values to save anything that may require
+                 ;; the shell buffer.
+                 (when on-finished-broadcast
+                   (funcall on-finished-broadcast success))
+                 (when (shell-maker-config-on-command-finished config)
+                   (funcall (shell-maker-config-on-command-finished config)
+                            input
+                            last-output)))))))
 
 (cl-defun shell-maker--eval-input-on-buffer-v1 (&key input shell-buffer on-output no-announcement)
-  "Evaluate INPUT string and output to shell BUFFER.
+  "Evaluate INPUT string and output to SHELL-BUFFER.
 
 Use ON-OUTPUT function to get notified of output events.
 
