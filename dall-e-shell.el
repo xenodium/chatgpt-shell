@@ -249,6 +249,11 @@ With prefix IGNORE-ITEM, do not mark as failed."
         (shell-maker-buffer-name dall-e-shell--config)))
     (shell-maker-interrupt ignore-item)))
 
+(defun dall-e-shell-image-output-directory ()
+  "Returns the image output directory."
+  (make-directory dall-e-shell-image-output-directory t)
+  dall-e-shell-image-output-directory)
+
 (defun dall-e-shell--extract-response (json &optional no-download)
   "Extract DALL-E response from JSON.
 Set NO-DOWNLOAD to skip automatic downloading."
@@ -261,7 +266,7 @@ Set NO-DOWNLOAD to skip automatic downloading."
                 (created (number-to-string (let-alist parsed
                                              .created)))
                 (path (expand-file-name (concat created ".png")
-                                        dall-e-shell-image-output-directory))
+                                        (dall-e-shell-image-output-directory)))
                 (revised-prompt (or (let-alist parsed
                                       (let-alist (seq-first .data)
                                         .revised_prompt))
