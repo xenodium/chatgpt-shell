@@ -689,8 +689,8 @@ Return t if INPUT us cleared.  nil otherwise."
 (cl-defun shell-maker--execute-command-sync (&key command extract-response)
   "Execute COMMAND list (command + params).
 
-EXTRACT-RESPONSE: A function to extract the command response from raw command
-output.
+EXTRACT-RESPONSE: An optional function to extract the command response from raw
+command output.
 
   (lambda (raw-text)
     ;; Must return alist of the form:
@@ -701,14 +701,16 @@ Return extracted response."
   (unless command
     (error "Missing mandatory :command param"))
   (unless extract-response
-    (error "Missing mandatory :extract-response param"))
+    (setq extract-response #'identity))
   (with-temp-buffer
     (let* ((buffer (current-buffer))
            (status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
            (data (buffer-substring-no-properties (point-min) (point-max)))
            (response (funcall extract-response data))
            (text (or (map-elt response :parsed)
-                     (map-elt response :unparsed))))
+                     (map-elt response :unparsed)
+                     response
+                     "")))
       (if (equal status 0)
           text
         (concat "Failed:\n\n" text)))))
@@ -734,78 +736,90 @@ ON-FINISHED: A function to notify when command has finished.
   (unless command
     (error "Missing mandatory :command param"))
   (unless extract-response
-    (error "Missing mandatory :extract-response param"))
+    (setq extract-response #'identity))
   (let* ((shell-config shell-maker--config)
-         (shell-buffer (shell-maker-buffer shell-maker--config))
+         (shell-buffer (shell-maker-buffer shell-config))
          (request-id (with-current-buffer shell-buffer
                        (shell-maker--increment-request-id)))
          (pending))
-    (shell-maker--log shell-config "Async Command v2")
-    (shell-maker--log shell-config "%s" command)
-    (setq shell-maker--request-process
-          (make-process
-           :name (shell-maker-buffer-name shell-maker--config)
-           :buffer nil
-           :command command
-           :filter (lambda (_process raw-output)
-                     (condition-case err
-                         (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
-                                                                  (shell-maker--current-request-id)))
-                                                 (buffer-live-p shell-buffer))))
-                           (shell-maker--log shell-config "Filter pending")
-                           (shell-maker--log shell-config pending)
-                           (shell-maker--log shell-config "Filter output")
-                           (shell-maker--log shell-config raw-output)
-                           (setq raw-output (concat pending raw-output))
-                           (shell-maker--log shell-config "Filter combined")
-                           (shell-maker--log shell-config raw-output)
-                           (let ((response (funcall extract-response raw-output)))
-                             (unless (listp response)
-                               (when on-response
-                                 (funcall on-response
-                                          (concat "Extracted response must be of the form:\n\n"
-                                                  "'((:parsed . \"...\"))\n"
-                                                  "  (:unparsed . \"{...\")\n\n"
-                                                  "But received:\n\n"
-                                                  "\"" response "\""))))
-                             (shell-maker--log shell-config "Filter parsed")
-                             (shell-maker--log shell-config "%s" response)
-                             (when (map-elt response :parsed)
-                               (with-current-buffer shell-buffer
-                                 (when on-response
-                                   (funcall on-response (map-elt response :parsed)))))
-                             (setq pending (map-elt response :unparsed))))
-                       (error
-                        (with-current-buffer shell-buffer
-                          (when on-response
-                            (funcall on-response (format "\n\n%s" err))))) ))
-           :stderr (make-pipe-process
-                    :name (format "%s-stderr" (shell-maker-buffer-name shell-maker--config))
-                    :filter (lambda (_process raw-output)
-                              (shell-maker--log shell-config "Stderr")
-                              (shell-maker--log shell-config raw-output)
-                              (with-current-buffer shell-buffer
-                                (when on-response
-                                  (funcall on-response (concat "\n" (string-trim raw-output))))))
-                    :sentinel (lambda (process _event)
-                                (kill-buffer (process-buffer process))))
-           :sentinel (lambda (process _event)
+    (cl-flet ((log (format &rest args)
+                (apply #'shell-maker--log
+                       (append (list shell-config format) args))))
+      (log "Async Command v2")
+      (log "%s" command)
+      (setq shell-maker--request-process
+            (make-process
+             :name (shell-maker-buffer-name shell-config)
+             :buffer nil
+             :command command
+             :filter (lambda (_process raw-output)
                        (condition-case err
-                           (when-let ((active (and (buffer-live-p shell-buffer)
-                                                   (eq request-id (with-current-buffer shell-buffer
-                                                                    (shell-maker--current-request-id)))))
-                                      (exit-status (process-exit-status process)))
-                             (shell-maker--log shell-config "Sentinel (%s)" (if active "active" "inactive"))
-                             (shell-maker--log shell-config "Exit status: %d" exit-status)
-                             (with-current-buffer shell-buffer
-                               (when on-finished
-                                 (funcall on-finished (= exit-status 0)))))
+                           (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
+                                                                    (shell-maker--current-request-id)))
+                                                   (buffer-live-p shell-buffer))))
+                             (log "Filter pending")
+                             (log pending)
+                             (log "Filter output")
+                             (log raw-output)
+                             (setq raw-output (concat pending raw-output))
+                             (log "Filter combined")
+                             (log raw-output)
+                             (let ((response (with-current-buffer shell-buffer
+                                               (funcall extract-response raw-output))))
+                               (map-elt response :parsed)
+                               (cond ((null response)
+                                      (log "Ignored nil response"))
+                                     ((and (consp response) ;; partial extraction
+                                           (seq-contains-p (map-keys response) :parsed)
+                                           (seq-contains-p (map-keys response) :unparsed))
+                                      (with-current-buffer shell-buffer
+                                        (when on-response
+                                          (funcall on-response (or (map-elt response :parsed) ""))))
+                                      (setq pending (map-elt response :unparsed)))
+                                     ((stringp response)
+                                      (with-current-buffer shell-buffer
+                                        (when on-response
+                                          (funcall on-response response))))
+                                     (t
+                                      (with-current-buffer shell-buffer
+                                        (when on-response
+                                          (funcall on-response
+                                                   (concat "\n\nExtracted response must be of the form:\n\n"
+                                                           "'((:parsed . \"...\"))\n"
+                                                           "  (:unparsed . \"{...\")\n\n"
+                                                           (format "But received (%s):\n\n" (type-of response))
+                                                           (format "\"%s\"" response)))))))))
                          (error
                           (with-current-buffer shell-buffer
                             (when on-response
-                              (funcall on-response (format "\n\n%s" err)))))))))))
+                              (funcall on-response (format "\n\n%s" err)))))))
+             :stderr (make-pipe-process
+                      :name (format "%s-stderr" (shell-maker-buffer-name shell-config))
+                      :filter (lambda (_process raw-output)
+                                (log "Stderr")
+                                (log raw-output)
+                                (with-current-buffer shell-buffer
+                                  (when on-response
+                                    (funcall on-response (concat "\n" (string-trim raw-output))))))
+                      :sentinel (lambda (process _event)
+                                  (kill-buffer (process-buffer process))))
+             :sentinel (lambda (process _event)
+                         (condition-case err
+                             (when-let ((active (and (buffer-live-p shell-buffer)
+                                                     (eq request-id (with-current-buffer shell-buffer
+                                                                      (shell-maker--current-request-id)))))
+                                        (exit-status (process-exit-status process)))
+                               (log "Sentinel (%s)" (if active "active" "inactive"))
+                               (log "Exit status: %d" exit-status)
+                               (with-current-buffer shell-buffer
+                                 (when on-finished
+                                   (funcall on-finished (= exit-status 0)))))
+                           (error
+                            (with-current-buffer shell-buffer
+                              (when on-response
+                                (funcall on-response (format "\n\n%s" err))))))))))))
 
-(cl-defun shell-maker-execute-command (&key command extract-response on-response on-finished)
+(cl-defun shell-maker-execute-command (&key command extract-response on-response on-finished async)
   "Execute COMMAND list (command + params).
 
 EXTRACT-RESPONSE: A function to extract the command response from raw command
@@ -825,21 +839,17 @@ ON-FINISHED: A function to notify when command has finished.
   (lambda (success))."
   (unless command
     (error "Missing mandatory :command param"))
-  (unless extract-response
-    (error "Missing mandatory :extract-response param"))
-  ;; (unless on-response
-  ;;   (error "Missing mandatory :on-response param"))
-  ;; (unless on-finished
-  ;;   (error "Missing mandatory :on-finished param"))
-  (if (not on-response)
-      (shell-maker--execute-command-sync
+  (if async
+      (shell-maker--execute-command-async
        :command command
-       :extract-response extract-response)
-    (shell-maker--execute-command-async
+       :extract-response extract-response
+       :on-response on-response
+       :on-finished on-finished)
+    (when (or on-response on-finished)
+      (error ":sync t cannot be used with either :on-finished or :on-response"))
+    (shell-maker--execute-command-sync
      :command command
-     :extract-response extract-response
-     :on-response on-response
-     :on-finished on-finished)))
+     :extract-response extract-response)))
 
 (defun shell-maker-async-shell-command (command streaming extract-response callback error-callback &optional preprocess-response)
   "Run shell COMMAND asynchronously (deprecated).
