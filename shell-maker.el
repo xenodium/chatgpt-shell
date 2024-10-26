@@ -822,6 +822,8 @@ ON-FINISHED: A function to notify when command has finished.
 (cl-defun shell-maker-execute-command (&key command extract-response on-response on-finished async)
   "Execute COMMAND list (command + params).
 
+ASYNC: Optionally execute COMMAND asynchronously.
+
 EXTRACT-RESPONSE: A function to extract the command response from raw command
 output.
 
