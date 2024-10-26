@@ -530,12 +530,13 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :execute-command
-   (lambda (command history on-response on-finished)
+   (lambda (input history on-response on-finished)
      (shell-maker-execute-command
+      :async t
       :command (chatgpt-shell--make-curl-request-command-list
                 (chatgpt-shell--make-payload
-                 :command command
-                 :history history
+                 :prompt input
+                 :context history
                  :streaming chatgpt-shell-streaming
                  :temperature chatgpt-shell-model-temperature))
       :extract-response #'chatgpt-shell-extract-chatgpt-response
@@ -1731,6 +1732,7 @@ For example:
                       chatgpt-shell--config)
           ;; Async exec
           (shell-maker-execute-command
+           :async t
            :command (chatgpt-shell--make-curl-request-command-list
                       (chatgpt-shell-make-request-data messages version temperature other-params))
            :extract-response extract-response
@@ -1925,32 +1927,32 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                   "-H" (funcall chatgpt-shell-auth-header)
                   "-d" (format "@%s" json-path)))))
 
-(cl-defun chatgpt-shell--make-payload (&key command history temperature streaming)
+(cl-defun chatgpt-shell--make-payload (&key prompt context temperature streaming)
   "Create a ChatGPT request payload.
 
-COMMAND: The current command (should not already be in HISTORY).
+INPUT: The current prompt (should not already be in HISTORY).
 HISTORY: All previous interactions.
 TEMPERATURE: Model temperature.
 STREAMING: When non-nil, request streamed response."
-  ;; Only append command if not already in history.
-  (when-let* ((command command)
-              (last-item (last history))
+  ;; Only append prompt if not already in history.
+  (when-let* ((prompt prompt)
+              (last-item (last context))
               (last-command (car last-item))
               (last-response (car last-item))
-              (should-append (and (not (equal command last-command))
+              (should-append (and (not (equal prompt last-command))
                                   (not last-response))))
-    (setq history (append history (list (cons command nil)))))
-  ;; Append if history is empty.
-  (when (and command (not history))
-    (setq history (append history (list (cons command nil)))))
-  (setq history
+    (setq context (append context (list (cons prompt nil)))))
+  ;; Append if context is empty.
+  (when (and prompt (not context))
+    (setq context (append context (list (cons prompt nil)))))
+  (setq context
         (vconcat ;; Vector for json
          (chatgpt-shell--user-assistant-messages
-          (last history
+          (last context
                 (chatgpt-shell--unpaired-length
                  (if (functionp chatgpt-shell-transmitted-context-length)
                      (funcall chatgpt-shell-transmitted-context-length
-                              (chatgpt-shell-model-version) history)
+                              (chatgpt-shell-model-version) context)
                    chatgpt-shell-transmitted-context-length))))))
   ;; TODO: Use `chatgpt-shell-make-request-data'.
   (let ((request-data `((model . ,(chatgpt-shell-model-version))
@@ -1960,8 +1962,8 @@ STREAMING: When non-nil, request streamed response."
                                            (list
                                             (cons 'role "system")
                                             (cons 'content (chatgpt-shell-system-prompt))))
-                                          history)
-                                       history)))))
+                                          context)
+                                       context)))))
     (when temperature
       (push `(temperature . ,temperature) request-data))
     (when streaming
