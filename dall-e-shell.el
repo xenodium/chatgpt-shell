@@ -119,16 +119,14 @@ or
 
 (setq dall-e-shell-openai-key \"my-key\")"))
    :execute-command
-   (lambda (_command history callback error-callback)
-     (shell-maker-async-shell-command
-      (dall-e-shell--make-curl-request-command-list
-       (dall-e-shell--make-payload history))
-      nil ;; no streaming
-      #'dall-e-shell--extract-response
-      callback
-      error-callback))))
-
-(shell-maker-define-major-mode dall-e-shell--config)
+   (lambda (command _history on-response on-finished)
+     (shell-maker-execute-command
+      :command (dall-e-shell--make-curl-request-command-list
+                (dall-e-shell--make-payload command))
+      :extract-response #'dall-e-shell--extract-response
+      :async t
+      :on-response on-response
+      :on-finished on-finished))))
 
 ;;;###autoload
 (defun dall-e-shell (&optional new-session)
@@ -222,9 +220,9 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
   (dall-e-shell--update-prompt t)
   (dall-e-shell-interrupt nil))
 
-(defun dall-e-shell--make-payload (history)
-  "Create the request payload from HISTORY."
-  (let ((request-data `((prompt . ,(car (car (last history)))))))
+(defun dall-e-shell--make-payload (prompt)
+  "Create the request payload from PROMPT."
+  (let ((request-data `((prompt . ,prompt))))
     (when dall-e-shell-image-size
       (push `(size . ,dall-e-shell-image-size) request-data))
     (when dall-e-shell-image-quality
@@ -250,67 +248,73 @@ With prefix IGNORE-ITEM, do not mark as failed."
     (shell-maker-interrupt ignore-item)))
 
 (defun dall-e-shell-image-output-directory ()
-  "Returns the image output directory."
+  "Return the image output directory."
   (make-directory dall-e-shell-image-output-directory t)
   dall-e-shell-image-output-directory)
 
-(defun dall-e-shell--extract-response (json &optional no-download)
-  "Extract DALL-E response from JSON.
+(defun dall-e-shell--extract-response (raw-response &optional no-download)
+  "Extract DALL-E response from RAW-RESPONSE.
 Set NO-DOWNLOAD to skip automatic downloading."
-  (if-let ((parsed (shell-maker--json-parse-string-filtering
-                    json "^curl:.*\n?"))
-           (buffer (shell-maker-buffer shell-maker--config)))
-      (if-let* ((url (let-alist parsed
-                       (let-alist (seq-first .data)
-                         .url)))
-                (created (number-to-string (let-alist parsed
-                                             .created)))
-                (path (expand-file-name (concat created ".png")
-                                        (dall-e-shell-image-output-directory)))
-                (revised-prompt (or (let-alist parsed
-                                      (let-alist (seq-first .data)
-                                        .revised_prompt))
-                                    "")))
-          (if no-download
-              `((url . ,url)
-                (created . ,created)
-                (path . ,path)
-                (revised_prompt . ,revised-prompt))
-            (progn
-              (dall-e-shell--download-image
-               url path
-               (lambda (path)
-                 (let* ((loc (dall-e-shell--find-string-in-buffer
-                              buffer
-                              path))
-                        (start (car loc))
-                        (end (cdr loc)))
-                   (with-current-buffer buffer
-                     (remove-text-properties start end '(face nil))
-                     (add-text-properties
-                      start end
-                      `(display ,(create-image path nil nil :width 400)))
-                     (put-text-property start end
-                                        'keymap (let ((map (make-sparse-keymap)))
-                                                  (define-key map (kbd "RET")
-                                                    (lambda () (interactive)
-                                                      (find-file path)))
-                                                  map)))))
-               (lambda (error)
-                 (when-let* ((loc (dall-e-shell--find-string-in-buffer
-                                   buffer
-                                   path))
-                             (start (car loc))
-                             (end (cdr loc)))
-                   (with-current-buffer buffer
-                     (remove-text-properties start end '(face nil))
-                     (add-text-properties start end `(display ,error))))))
-              (if (string-empty-p revised-prompt)
-                  (propertize path 'display "[downloading...]")
-                (concat (propertize path 'display "[downloading...]")
-                        (format "\n\n%s" revised-prompt)))))
-        (let-alist parsed
-          .error.message))))
+  (if-let* ((buffer (shell-maker-buffer shell-maker--config))
+            (whole (shell-maker--json-parse-string raw-response))
+            (url (let-alist whole
+                   (let-alist (seq-first .data)
+                     .url)))
+            (created (number-to-string (let-alist whole
+                                         .created)))
+            (path (expand-file-name (concat created ".png")
+                                    (dall-e-shell-image-output-directory)))
+            (revised-prompt (or (let-alist whole
+                                  (let-alist (seq-first .data)
+                                    .revised_prompt))
+                                "")))
+      (if no-download
+          `((url . ,url)
+            (created . ,created)
+            (path . ,path)
+            (revised_prompt . ,revised-prompt))
+        (dall-e-shell-start-download buffer url path revised-prompt)
+        (if (string-empty-p revised-prompt)
+            (propertize path 'display "[downloading...]")
+          (concat (propertize path 'display "[downloading...]")
+                  (format "\n\n%s" revised-prompt))))
+    (list (cons :parsed nil)
+          (cons :unparsed raw-response))))
+
+(defun dall-e-shell-start-download (shell-buffer url path revised-prompt)
+  "Start downloading image from URL into PATH and modify SHELL-BUFFER."
+  (dall-e-shell--download-image
+   url path
+   (lambda (path)
+     (when-let* ((loc (dall-e-shell--find-string-in-buffer
+                       shell-buffer
+                       path))
+                 (start (car loc))
+                 (end (cdr loc)))
+       (with-current-buffer shell-buffer
+         (remove-text-properties start end '(face nil))
+         (add-text-properties
+          start end
+          `(display ,(create-image path nil nil :width 400)))
+         (put-text-property start end
+                            'keymap (let ((map (make-sparse-keymap)))
+                                      (define-key map (kbd "RET")
+                                                  (lambda () (interactive)
+                                                    (find-file path)))
+                                      map)))))
+   (lambda (error)
+     (when-let* ((loc (dall-e-shell--find-string-in-buffer
+                       shell-buffer
+                       path))
+                 (start (car loc))
+                 (end (cdr loc)))
+       (with-current-buffer shell-buffer
+         (remove-text-properties start end '(face nil))
+         (add-text-properties start end `(display ,error))))))
+  (if (string-empty-p revised-prompt)
+      (propertize path 'display "[downloading...]")
+    (concat (propertize path 'display "[downloading...]")
+            (format "\n\n%s" revised-prompt))))
 
 (defun dall-e-shell-post-prompt (prompt &optional version image-size show-revised-prompt)
   "Make a single DALL-E request with PROMPT.
