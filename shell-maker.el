@@ -695,8 +695,8 @@ FILTER: An optional function filter command output.  Use it for convertions.
     ;; Must return either a string
     ;; or
     ;; an alist of the form:
-    \='((:parsed . \"parsed response string\")
-        (:unparsed . \"unparsed string\")))
+    \='((:filtered . \"filtered response string\")
+        (:pending . \"pending string\")))
 
 Return extracted response."
   (unless command
@@ -708,8 +708,8 @@ Return extracted response."
            (status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
            (data (buffer-substring-no-properties (point-min) (point-max)))
            (response (funcall filter data))
-           (text (or (map-elt response :parsed)
-                     (map-elt response :unparsed)
+           (text (or (map-elt response :filtered)
+                     (map-elt response :pending)
                      response
                      "")))
       (if (equal status 0)
@@ -725,8 +725,8 @@ FILTER: An optional function filter command output.  Use it for convertions.
     ;; Must return either a string
     ;; or
     ;; an alist of the form:
-    \='((:parsed . \"parsed response string\")
-        (:unparsed . \"unparsed string\")))
+    \='((:filtered . \"filtered response string\")
+        (:pending . \"pending string\")))
 
 ON-OUTPUT: A function to notify of output.
 
@@ -768,16 +768,16 @@ ON-FINISHED: A function to notify when command is finished.
                              (log raw-output)
                              (let ((response (with-current-buffer shell-buffer
                                                (funcall filter raw-output))))
-                               (map-elt response :parsed)
+                               (map-elt response :filtered)
                                (cond ((null response)
                                       (log "Ignored nil response"))
                                      ((and (consp response) ;; partial extraction
-                                           (seq-contains-p (map-keys response) :parsed)
-                                           (seq-contains-p (map-keys response) :unparsed))
+                                           (seq-contains-p (map-keys response) :filtered)
+                                           (seq-contains-p (map-keys response) :pending))
                                       (with-current-buffer shell-buffer
                                         (when on-output
-                                          (funcall on-output (or (map-elt response :parsed) ""))))
-                                      (setq pending (map-elt response :unparsed)))
+                                          (funcall on-output (or (map-elt response :filtered) ""))))
+                                      (setq pending (map-elt response :pending)))
                                      ((stringp response)
                                       (with-current-buffer shell-buffer
                                         (when on-output
@@ -787,8 +787,8 @@ ON-FINISHED: A function to notify when command is finished.
                                         (when on-output
                                           (funcall on-output
                                                    (concat "\n\nExtracted response must be of the form:\n\n"
-                                                           "'((:parsed . \"...\"))\n"
-                                                           "  (:unparsed . \"{...\")\n\n"
+                                                           "'((:filtered . \"...\"))\n"
+                                                           "  (:pending . \"{...\")\n\n"
                                                            (format "But received (%s):\n\n" (type-of response))
                                                            (format "\"%s\"" response)))))))))
                          (error
@@ -832,8 +832,8 @@ FILTER: An optional function filter command output.  Use it for convertions.
     ;; Must return either a string
     ;; or
     ;; an alist of the form:
-    \='((:parsed . \"parsed response string\")
-        (:unparsed . \"unparsed string\")))
+    \='((:filtered . \"filtered response string\")
+        (:pending . \"pending string\")))
 
 SHELL: The shell context to write command output to."
   (unless command

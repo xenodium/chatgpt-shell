@@ -2042,10 +2042,10 @@ Otherwise:
                                            (or .delta.content
                                                .message.content)))
                                        .choices)))))
-      (list (cons :parsed response))
+      (list (cons :filtered response))
     (when-let ((chunks (chatgpt-shell--split-response raw-response)))
       (let ((response)
-            (unparsed)
+            (pending)
             (result))
         (mapc (lambda (chunk)
                 ;; Response chunks come in the form:
@@ -2064,14 +2064,14 @@ Otherwise:
                                               .choices)))))
                     (unless (string-empty-p text)
                       (setq response (concat response text)))
-                  (setq unparsed (concat unparsed
+                  (setq pending (concat pending
                                          (or (map-elt chunk :key) "")
                                          (map-elt chunk :value)))))
               chunks)
         (setq result
-              (list (cons :parsed (unless (string-empty-p response)
+              (list (cons :filtered (unless (string-empty-p response)
                                     response))
-                    (cons :unparsed unparsed)))
+                    (cons :pending pending)))
         result))))
 
 (defun chatgpt-shell--split-response (response)

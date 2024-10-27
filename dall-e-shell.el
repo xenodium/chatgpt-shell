@@ -277,8 +277,8 @@ Set NO-DOWNLOAD to skip automatic downloading."
             (propertize path 'display "[downloading...]")
           (concat (propertize path 'display "[downloading...]")
                   (format "\n\n%s" revised-prompt))))
-    (list (cons :parsed nil)
-          (cons :unparsed raw-response))))
+    (list (cons :filtered nil)
+          (cons :pending raw-response))))
 
 (defun dall-e-shell-start-download (shell-buffer url path revised-prompt)
   "Start downloading image from URL into PATH and modify SHELL-BUFFER."
