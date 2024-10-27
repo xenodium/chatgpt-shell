@@ -119,14 +119,13 @@ or
 
 (setq dall-e-shell-openai-key \"my-key\")"))
    :execute-command
-   (lambda (command _history on-response on-finished)
+   (lambda (command shell)
      (shell-maker-execute-command
       :command (dall-e-shell--make-curl-request-command-list
                 (dall-e-shell--make-payload command))
-      :extract-response #'dall-e-shell--extract-response
+      :filter #'dall-e-shell--extract-response
       :async t
-      :on-response on-response
-      :on-finished on-finished))))
+      :shell shell))))
 
 ;;;###autoload
 (defun dall-e-shell (&optional new-session)

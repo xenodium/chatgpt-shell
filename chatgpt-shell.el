@@ -530,18 +530,17 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :execute-command
-   (lambda (input history on-response on-finished)
+   (lambda (command shell)
      (shell-maker-execute-command
       :async t
       :command (chatgpt-shell--make-curl-request-command-list
                 (chatgpt-shell--make-payload
-                 :prompt input
-                 :context history
+                 :prompt command
+                 :context (map-elt shell :history)
                  :streaming chatgpt-shell-streaming
                  :temperature chatgpt-shell-model-temperature))
-      :extract-response #'chatgpt-shell-extract-chatgpt-response
-      :on-response on-response
-      :on-finished on-finished))
+      :filter #'chatgpt-shell-filter-chatgpt-response
+      :shell shell))
    :on-command-finished
    (lambda (command output)
      (chatgpt-shell--put-source-block-overlays)
@@ -1680,7 +1679,7 @@ Set SAVE-EXCURSION to prevent point from moving."
          (content . ,(vconcat
                       `(((type . "text")
                          (text . ,term))))))))
-     :extract-response #'chatgpt-shell-extract-chatgpt-response
+     :filter #'chatgpt-shell-filter-chatgpt-response
      :on-response
      (lambda (response)
        (with-current-buffer translation-buffer
@@ -1695,12 +1694,12 @@ Set SAVE-EXCURSION to prevent point from moving."
      :other-params '(max_tokens . 300))))
 
 ;; TODO: Review. Can it become service agnostic?
-(cl-defun chatgpt-shell-post-messages (&key messages extract-response version
+(cl-defun chatgpt-shell-post-messages (&key messages filter version
                                             other-params on-response on-finished
                                             temperature)
-  "Make a single ChatGPT request with MESSAGES and EXTRACT-RESPONSE.
+  "Make a single ChatGPT request with MESSAGES and FILTER.
 
-`chatgpt-shell-extract-chatgpt-response' typically used as extractor.
+`chatgpt-shell-filter-chatgpt-response' typically used as extractor.
 
 Optionally pass model VERSION, ON-RESPONSE, ON-FINISHED, TEMPERATURE
 and OTHER-PARAMS.
@@ -1721,8 +1720,8 @@ For example:
    (message \"%s\" error)))"
   (unless messages
     (error "Missing mandatory \"messages\" param"))
-  (unless extract-response
-    (error "Missing mandatory \"extract-response\" param"))
+  (unless filter
+    (error "Missing mandatory \"filter\" param"))
   (if (or on-response on-finished)
       (progn
         (unless (boundp 'shell-maker--current-request-id)
@@ -1734,15 +1733,15 @@ For example:
           (shell-maker-execute-command
            :async t
            :command (chatgpt-shell--make-curl-request-command-list
-                      (chatgpt-shell-make-request-data messages version temperature other-params))
-           :extract-response extract-response
+                     (chatgpt-shell-make-request-data messages version temperature other-params))
+           :filter filter
            :on-response on-response
            :on-finished on-finished)))
     ;; Sync exec
     (shell-maker-execute-command
      :command (chatgpt-shell--make-curl-request-command-list
                (chatgpt-shell-make-request-data messages version temperature other-params))
-     :extract-response extract-response)))
+     :filter filter)))
 
 ;;;###autoload
 (defun chatgpt-shell-describe-image ()
@@ -1855,7 +1854,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
     (let ((description))
       (chatgpt-shell-post-messages
        :messages messages
-       :extract-response #'chatgpt-shell-extract-chatgpt-response
+       :filter #'chatgpt-shell-filter-chatgpt-response
        :version "gpt-4o"
        :on-response (lambda (response)
                       (setq description
@@ -1930,8 +1929,8 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
 (cl-defun chatgpt-shell--make-payload (&key prompt context temperature streaming)
   "Create a ChatGPT request payload.
 
-INPUT: The current prompt (should not already be in HISTORY).
-HISTORY: All previous interactions.
+PROMPT: The new prompt (should not be in HISTORY).
+CONTEXT: All previous interactions.
 TEMPERATURE: Model temperature.
 STREAMING: When non-nil, request streamed response."
   ;; Only append prompt if not already in history.
@@ -1939,9 +1938,13 @@ STREAMING: When non-nil, request streamed response."
               (last-item (last context))
               (last-command (car last-item))
               (last-response (car last-item))
-              (should-append (and (not (equal prompt last-command))
-                                  (not last-response))))
+              (should-append (not (equal prompt last-command))))
     (setq context (append context (list (cons prompt nil)))))
+
+  ;; Context still empty, add prompt.
+  (unless context
+    (setq context (append context (list (cons prompt nil)))))
+
   ;; Append if context is empty.
   (when (and prompt (not context))
     (setq context (append context (list (cons prompt nil)))))
@@ -2019,7 +2022,7 @@ STREAMING: When non-nil, request streamed response."
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
 
-(defun chatgpt-shell-extract-chatgpt-response (raw-response)
+(defun chatgpt-shell-filter-chatgpt-response (raw-response)
   "Extract ChatGPT response from RAW-RESPONSE.
 
 When ChatGPT responses are streamed, they arrive in the form:
