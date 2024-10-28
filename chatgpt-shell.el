@@ -2042,7 +2042,7 @@ Otherwise:
                                            (or .delta.content
                                                .message.content)))
                                        .choices)))))
-      (list (cons :filtered response))
+      response
     (when-let ((chunks (chatgpt-shell--split-response raw-response)))
       (let ((response)
             (pending)

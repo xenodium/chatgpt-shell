@@ -786,7 +786,8 @@ ON-FINISHED: A function to notify when command is finished.
                                       (with-current-buffer shell-buffer
                                         (when on-output
                                           (funcall on-output
-                                                   (concat "\n\nExtracted response must be of the form:\n\n"
+                                                   (concat "\n\n:filter output must be either a string, "
+                                                           "nil, or an alist of the form: \n\n"
                                                            "'((:filtered . \"...\"))\n"
                                                            "  (:pending . \"{...\")\n\n"
                                                            (format "But received (%s):\n\n" (type-of response))
