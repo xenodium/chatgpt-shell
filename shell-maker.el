@@ -772,8 +772,8 @@ ON-FINISHED: A function to notify when command is finished.
                                (cond ((null response)
                                       (log "Ignored nil response"))
                                      ((and (consp response) ;; partial extraction
-                                           (seq-contains-p (map-keys response) :filtered)
-                                           (seq-contains-p (map-keys response) :pending))
+                                           (or (seq-contains-p (map-keys response) :filtered)
+                                               (seq-contains-p (map-keys response) :pending)))
                                       (with-current-buffer shell-buffer
                                         (when on-output
                                           (funcall on-output (or (map-elt response :filtered) ""))))
