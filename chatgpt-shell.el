@@ -1596,19 +1596,21 @@ Set SAVE-EXCURSION to prevent point from moving."
    (chatgpt-shell-parse-elisp-code code)))
 
 
-(defun chatgpt-shell-make-request-data (messages &optional version temperature other-params)
-  "Make request data from MESSAGES, VERSION, TEMPERATURE, and OTHER-PARAMS."
-  (let ((request-data `((model . ,(or version
-                                      (chatgpt-shell-model-version)))
-                        (messages . ,(vconcat ;; Vector for json
-                                      messages)))))
-    (when (or temperature chatgpt-shell-model-temperature)
-      (push `(temperature . ,(or temperature chatgpt-shell-model-temperature))
-            request-data))
-    (when other-params
-      (push other-params
-            request-data))
-    request-data))
+(cl-defun chatgpt-shell-make-request-data (&key messages version temperature streaming other-params)
+  "Make request data with MESSAGES.
+
+Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
+  (unless messages
+    (error "Missing mandatory :messages param"))
+  (setq temperature (or temperature chatgpt-shell-model-temperature))
+  (append
+   `((model . ,(or version (chatgpt-shell-model-version)))
+     (messages . ,(vconcat messages)))
+   (when temperature
+     `((temperature . ,temperature)))
+   (when streaming
+     `((stream . t)))
+   other-params))
 
 ;;;###autoload
 (defun chatgpt-shell-japanese-ocr-lookup ()
@@ -1691,7 +1693,7 @@ Set SAVE-EXCURSION to prevent point from moving."
                             map)))
          (read-only-mode +1))
        (display-buffer translation-buffer))
-     :other-params '(max_tokens . 300))))
+     :other-params '((max_tokens . 300)))))
 
 ;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-post-messages (&key messages filter version
@@ -1733,14 +1735,22 @@ For example:
           (shell-maker-execute-command
            :async t
            :command (chatgpt-shell--make-curl-request-command-list
-                     (chatgpt-shell-make-request-data messages version temperature other-params))
+                     (chatgpt-shell-make-request-data
+                      :messages messages
+                      :version version
+                      :temperature temperature
+                      :other-params other-params))
            :filter filter
-           :on-response on-response
+           :on-output on-response
            :on-finished on-finished)))
     ;; Sync exec
     (shell-maker-execute-command
      :command (chatgpt-shell--make-curl-request-command-list
-               (chatgpt-shell-make-request-data messages version temperature other-params))
+               (chatgpt-shell-make-request-data
+                :messages messages
+                :version version
+                :temperature temperature
+                :other-params other-params))
      :filter filter)))
 
 ;;;###autoload
@@ -1868,7 +1878,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                         (if on-failure
                             (funcall on-failure description)
                           (message description))))
-       :other-params '(max_tokens . 300)))))
+       :other-params '((max_tokens . 300))))))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
@@ -1926,52 +1936,36 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                   "-H" (funcall chatgpt-shell-auth-header)
                   "-d" (format "@%s" json-path)))))
 
-(cl-defun chatgpt-shell--make-payload (&key prompt context temperature streaming)
+(cl-defun chatgpt-shell--make-payload (&key prompt context version temperature streaming)
   "Create a ChatGPT request payload.
 
 PROMPT: The new prompt (should not be in HISTORY).
+VERSION: The model version.
 CONTEXT: All previous interactions.
 TEMPERATURE: Model temperature.
 STREAMING: When non-nil, request streamed response."
-  ;; Only append prompt if not already in history.
-  (when-let* ((prompt prompt)
-              (last-item (last context))
-              (last-command (car last-item))
-              (last-response (car last-item))
-              (should-append (not (equal prompt last-command))))
-    (setq context (append context (list (cons prompt nil)))))
+  (chatgpt-shell-make-request-data
+   :messages (vconcat
+              (when (chatgpt-shell-system-prompt)
+                `(((role . "system")
+                   (content . ,(chatgpt-shell-system-prompt)))))
+              (chatgpt-shell--user-assistant-messages
+               (chatgpt-shell-crop-context context))
+              (when prompt
+                `(((role . "user")
+                   (content . ,prompt)))))
+   :version version
+   :temperature temperature
+   :streaming streaming))
 
-  ;; Context still empty, add prompt.
-  (unless context
-    (setq context (append context (list (cons prompt nil)))))
-
-  ;; Append if context is empty.
-  (when (and prompt (not context))
-    (setq context (append context (list (cons prompt nil)))))
-  (setq context
-        (vconcat ;; Vector for json
-         (chatgpt-shell--user-assistant-messages
-          (last context
-                (chatgpt-shell--unpaired-length
-                 (if (functionp chatgpt-shell-transmitted-context-length)
-                     (funcall chatgpt-shell-transmitted-context-length
-                              (chatgpt-shell-model-version) context)
-                   chatgpt-shell-transmitted-context-length))))))
-  ;; TODO: Use `chatgpt-shell-make-request-data'.
-  (let ((request-data `((model . ,(chatgpt-shell-model-version))
-                        (messages . ,(if (chatgpt-shell-system-prompt)
-                                         (vconcat ;; Vector for json
-                                          (list
-                                           (list
-                                            (cons 'role "system")
-                                            (cons 'content (chatgpt-shell-system-prompt))))
-                                          context)
-                                       context)))))
-    (when temperature
-      (push `(temperature . ,temperature) request-data))
-    (when streaming
-      (push `(stream . t) request-data))
-    request-data))
+(defun chatgpt-shell-crop-context (context)
+  "Crop CONTEXT to fit current model limits."
+  (last context
+        (chatgpt-shell--unpaired-length
+         (if (functionp chatgpt-shell-transmitted-context-length)
+             (funcall chatgpt-shell-transmitted-context-length
+                      (chatgpt-shell-model-version) context)
+           chatgpt-shell-transmitted-context-length))))
 
 (defun chatgpt-shell--approximate-context-length (model messages)
   "Approximate the context length using MODEL and MESSAGES."

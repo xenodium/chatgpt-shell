@@ -839,8 +839,6 @@ FILTER: An optional function filter command output.  Use it for convertions.
 SHELL: The shell context to write command output to."
   (unless command
     (error "Missing mandatory :command param"))
-  (unless shell
-    (error "Missing mandatory :shell param"))
   (if async
       (shell-maker--execute-command-async
        :command command
