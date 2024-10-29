@@ -1570,7 +1570,7 @@ Use ON-OUTPUT function to get notified of output events.
 
 With NO-ANNOUNCEMENT, skip announcing response when shell is in the background."
   (message (concat "`shell-maker-async-shell-command' is deprecated "
-                   "(will be removed). Use `shell-maker-execute-command'."))
+                   "(and will be removed). Please use `shell-maker-execute-command'."))
   (unless shell-buffer
     (error "Missing mandatory :buffer param"))
   ;; For viewing prompt delimiter (used to handle multiline prompts).
