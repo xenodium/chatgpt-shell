@@ -146,7 +146,7 @@ post execution.
 For example:
 
 \(add-hook `chatgpt-shell-after-command-functions'
-   (lambda (command output)
+   (lambda (command output success)
      (message \"Command: %s\" command)
      (message \"Output: %s\" output)))"
   :type 'hook
@@ -544,10 +544,10 @@ or
       :filter #'chatgpt-shell-filter-chatgpt-output
       :shell shell))
    :on-command-finished
-   (lambda (command output)
+   (lambda (command output success)
      (chatgpt-shell--put-source-block-overlays)
      (run-hook-with-args 'chatgpt-shell-after-command-functions
-                         command output))
+                         command output success))
    :redact-log-output
    (lambda (output)
      (if (chatgpt-shell-openai-key)

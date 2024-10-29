@@ -1657,9 +1657,21 @@ Of the form:
                                          (when on-finished-broadcast
                                            (funcall on-finished-broadcast success))
                                          (when (shell-maker-config-on-command-finished config)
-                                           (funcall (shell-maker-config-on-command-finished config)
-                                                    input
-                                                    last-output)))))))))
+                                           (let* ((params (func-arity (shell-maker-config-on-command-finished config)))
+                                                  (params-max (cdr params)))
+                                             (cond ((= params-max 2)
+                                                    (funcall (shell-maker-config-on-command-finished config)
+                                                             input
+                                                             last-output))
+                                                   ((= params-max 3)
+                                                    (funcall (shell-maker-config-on-command-finished config)
+                                                             input
+                                                             last-output
+                                                             success))
+                                                   (t
+                                                    (message (concat ":on-command-finished expects "
+                                                                     "(lambda (command output)) or "
+                                                                     "(lambda (command output success))")))))))))))))
 
 ;; TODO: Remove in favor of shell-maker--eval-input-on-buffer-v2.
 (cl-defun shell-maker--eval-input-on-buffer-v1 (&key input shell-buffer on-output no-announcement)
