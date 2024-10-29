@@ -836,6 +836,10 @@ FILTER: An optional function filter command output.  Use it for convertions.
     \='((:filtered . \"filtered response string\")
         (:pending . \"pending string\")))
 
+For directing output, use ON-OUTPUT / ON-FINISHED
+
+or use send to the shell using the object exposed via :execute-command
+
 SHELL: The shell context to write command output to."
   (unless command
     (error "Missing mandatory :command param"))
