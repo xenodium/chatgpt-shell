@@ -58,6 +58,16 @@
   "Execute a block of ChatGPT prompt in BODY with org-babel header PARAMS.
 This function is called by `org-babel-execute-src-block'"
   (message "executing ChatGPT source code block")
+  (when (equal (map-elt params :version) "nil")
+    (map-put! params :version nil))
+  (when (equal (map-elt params :system) "nil")
+    (map-put! params :system nil))
+  (when (equal (map-elt params :context) "nil")
+    (map-put! params :context nil))
+  (when (equal (map-elt params :temperature) "nil")
+    (map-put! params :temperature nil))
+  (when (equal (map-elt params :preflight) "nil")
+    (map-put! params :preflight nil))
   (let* ((context
           (when-let ((context-name (map-elt params :context)))
             (if (string-equal context-name "t")
@@ -77,12 +87,11 @@ This function is called by `org-babel-execute-src-block'"
                (content . ,body)))))))
     (if (map-elt params :preflight)
         (pp (chatgpt-shell-make-request-data
-             messages
-             (map-elt params :version)
-             (map-elt params :temperature)))
+             :messages messages
+             :version (map-elt params :version)
+             :temperature (map-elt params :temperature)))
       (chatgpt-shell-post-chatgpt-messages
        :messages messages
-       :extract-response #'chatgpt-shell-extract-chatgpt-response
        :version (map-elt params :version)
        :temperature (map-elt params :temperature)))))
 

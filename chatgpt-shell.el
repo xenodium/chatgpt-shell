@@ -1722,8 +1722,6 @@ For example:
    (message \"%s\" error)))"
   (unless messages
     (error "Missing mandatory \"messages\" param"))
-  (unless filter
-    (error "Missing mandatory \"filter\" param"))
   (if (or on-response on-finished)
       (progn
         (unless (boundp 'shell-maker--current-request-id)
@@ -1740,7 +1738,7 @@ For example:
                       :version version
                       :temperature temperature
                       :other-params other-params))
-           :filter filter
+           :filter #'chatgpt-shell-filter-chatgpt-response
            :on-output on-response
            :on-finished on-finished)))
     ;; Sync exec
@@ -1751,7 +1749,7 @@ For example:
                 :version version
                 :temperature temperature
                 :other-params other-params))
-     :filter filter)))
+     :filter #'chatgpt-shell-filter-chatgpt-response)))
 
 ;;;###autoload
 (defun chatgpt-shell-describe-image ()
@@ -1864,7 +1862,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
     (let ((description))
       (chatgpt-shell-post-chatgpt-messages
        :messages messages
-       :filter #'chatgpt-shell-filter-chatgpt-response
        :version "gpt-4o"
        :on-response (lambda (response)
                       (setq description
