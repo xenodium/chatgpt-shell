@@ -313,8 +313,10 @@ Set BUFFER-NAME to override the buffer name."
                                       "")
                                     (shell-maker-prompt shell-maker--config))))))
 
-(cl-defun shell-maker-submit (&key on-output on-finished)
+(cl-defun shell-maker-submit (&key input on-output on-finished)
   "Submit current input.
+
+Optionally, insert INPUT into shell.
 
 If invoked programmatically, get notified:
 
@@ -329,7 +331,7 @@ Use ON-FINISHED: function to monitor when command is finished.
 
 Of the form:
 
- (lambda (success)
+ (lambda (input output success)
   (message \"Finished: %s\" success))."
   (interactive)
   (unless (eq major-mode (shell-maker-major-mode shell-maker--config))
@@ -343,6 +345,9 @@ Of the form:
                                  (string-match-p "shell-maker-make-http-request"
                                                  (format "%s" command-handler)))))
          (shell-maker--input))
+    (when input
+      (goto-char (point-max))
+      (insert input))
     (comint-send-input) ;; Sets shell-maker--input
     (when (shell-maker--clear-input-for-execution shell-maker--input)
       (if called-interactively
@@ -854,7 +859,6 @@ ON-OUTPUT: (lambda (output))
 ON-FINISHED: (lambda (result))."
   (unless url
     (error "Missing mandatory :url param"))
-  (message "PASSSSSS")
   (shell-maker-execute-command :async async
                                :command (shell-maker-make--curl-command :url url
                                                                         :data data
@@ -930,13 +934,14 @@ SHELL: The shell context to write command output to."
        :command command
        :filter filter
        :on-output (lambda (output)
-                    (when (map-elt shell :add-response)
-                      (funcall (map-elt shell :add-response) output))
+                    (when (map-elt shell :write-output)
+                      (funcall (map-elt shell :write-output) output))
                     (when on-output
                       (funcall on-output output)))
        :on-finished (lambda (result)
-                      (when (map-elt shell :finish-response)
-                        (funcall (map-elt shell :finish-response)
+                      (when (map-elt shell :finish-output)
+                        (funcall (map-elt shell :finish-output)
+                                 (map-elt result :output)
                                  (equal 0 (map-elt result :exit-status))))
                       (when on-finished
                         (funcall on-finished result))))
@@ -1616,7 +1621,7 @@ Use ON-FINISHED-BROADCAST: function to monitor when command is finished.
 
 Of the form:
 
- (lambda (success)
+ (lambda (input output success)
   (message \"Finished: %s\" success))."
   (unless shell-buffer
     (error "Missing mandatory :buffer param"))
@@ -1640,38 +1645,37 @@ Of the form:
              ;; shell attributes exposed to command executors.
              (list
               (cons :history history)
-              (cons :add-response (lambda (response)
-                                    (shell-maker--write-partial-reply (or response "<nil-message>"))
+              (cons :write-output (lambda (output)
+                                    (shell-maker--write-partial-reply (or output "<nil-message>"))
                                     (when on-output-broadcast
-                                      (funcall on-output-broadcast response))))
-              (cons :finish-response (lambda (success)
-                                       (let ((last-output (shell-maker-last-output)))
-                                         (setq shell-maker--busy nil)
-                                         (shell-maker--write-reply  "\n\n" (not success))
-                                         (goto-char (point-max))
-                                         ;; Do not execute anything requiring a shell buffer
-                                         ;; after this point, as on-finished or on-finished
-                                         ;; subscribers may kill the shell buffers.
-                                         ;; Use let-bound values to save anything that may require
-                                         ;; the shell buffer.
-                                         (when on-finished-broadcast
-                                           (funcall on-finished-broadcast success))
-                                         (when (shell-maker-config-on-command-finished config)
-                                           (let* ((params (func-arity (shell-maker-config-on-command-finished config)))
-                                                  (params-max (cdr params)))
-                                             (cond ((= params-max 2)
-                                                    (funcall (shell-maker-config-on-command-finished config)
-                                                             input
-                                                             last-output))
-                                                   ((= params-max 3)
-                                                    (funcall (shell-maker-config-on-command-finished config)
-                                                             input
-                                                             last-output
-                                                             success))
-                                                   (t
-                                                    (message (concat ":on-command-finished expects "
-                                                                     "(lambda (command output)) or "
-                                                                     "(lambda (command output success))")))))))))))))
+                                      (funcall on-output-broadcast output))))
+              (cons :finish-output (lambda (output success)
+                                       (setq shell-maker--busy nil)
+                                       (shell-maker--write-reply  "\n\n" (not success))
+                                       (goto-char (point-max))
+                                       ;; Do not execute anything requiring a shell buffer
+                                       ;; after this point, as on-finished or on-finished
+                                       ;; subscribers may kill the shell buffers.
+                                       ;; Use let-bound values to save anything that may require
+                                       ;; the shell buffer.
+                                       (when on-finished-broadcast
+                                         (funcall on-finished-broadcast input output success))
+                                       (when (shell-maker-config-on-command-finished config)
+                                         (let* ((params (func-arity (shell-maker-config-on-command-finished config)))
+                                                (params-max (cdr params)))
+                                           (cond ((= params-max 2)
+                                                  (funcall (shell-maker-config-on-command-finished config)
+                                                           input
+                                                           output))
+                                                 ((= params-max 3)
+                                                  (funcall (shell-maker-config-on-command-finished config)
+                                                           input
+                                                           output
+                                                           success))
+                                                 (t
+                                                  (message (concat ":on-command-finished expects "
+                                                                   "(lambda (command output)) or "
+                                                                   "(lambda (command output success))"))))))))))))
 
 ;; TODO: Remove in favor of shell-maker--eval-input-on-buffer-v2.
 (cl-defun shell-maker--eval-input-on-buffer-v1 (&key input shell-buffer on-output no-announcement)

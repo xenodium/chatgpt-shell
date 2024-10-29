@@ -1497,15 +1497,21 @@ STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
                                        :on-output on-output
                                        :on-finished on-finished))
 
-(defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
-  "Send TEXT to *chatgpt* shell buffer.
+(defun chatgpt-shell-send-to-buffer (input &optional review handler on-finished)
+  "Send INPUT to *chatgpt* shell buffer.
+
 Set REVIEW to make changes before submitting to ChatGPT.
 
-If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'
+If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style',
+and is of the form:
 
-ON-FINISHED is invoked when the entire interaction is finished."
+  (lambda (input output error finished))
+
+ON-FINISHED is invoked when the entire interaction is finished and of the form:
+
+  (lambda (input output success))."
   (if (eq chatgpt-shell-prompt-query-response-style 'other-buffer)
-      (let ((buffer (chatgpt-shell-prompt-compose-show-buffer text)))
+      (let ((buffer (chatgpt-shell-prompt-compose-show-buffer input)))
         (unless review
           (with-current-buffer buffer
             (chatgpt-shell-prompt-compose-send-buffer))))
@@ -1534,12 +1540,12 @@ ON-FINISHED is invoked when the entire interaction is finished."
       (cl-flet ((send ()
                   (when shell-maker--busy
                     (shell-maker-interrupt nil))
-                  (goto-char (point-max))
                   (if review
                       (save-excursion
-                        (insert text))
-                    (insert text)
+                        (goto-char (point-max))
+                        (insert input))
                     (shell-maker-submit
+                     :input input
                      :on-output (lambda (output)
                                   (setq output (or output ""))
                                   (when (buffer-live-p buffer)
@@ -1553,9 +1559,9 @@ ON-FINISHED is invoked when the entire interaction is finished."
                                           (insert output)
                                           (set-marker marker (+ (length output)
                                                                 (marker-position marker))))))))
-                     :on-finished (lambda (_success)
-                                    (when (and on-finished)
-                                      (funcall on-finished)))))))
+                     :on-finished (lambda (input output success)
+                                    (when on-finished
+                                      (funcall on-finished input output success)))))))
         (if (or (eq response-style 'inline)
                 handler)
             (with-current-buffer (chatgpt-shell--primary-buffer)
@@ -1683,7 +1689,6 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
          (content . ,(vconcat
                       `(((type . "text")
                          (text . ,term))))))))
-     :filter #'chatgpt-shell-filter-chatgpt-output
      :on-output
      (lambda (output)
        (with-current-buffer translation-buffer
@@ -1706,12 +1711,17 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
 
 `chatgpt-shell-filter-chatgpt-output' typically used as extractor.
 
-Optionally pass model VERSION, ON-OUTPUT, ON-SUCCESS, ON-FAILURE,
-TEMPERATURE and OTHER-PARAMS.
+Optionally pass model VERSION, TEMPERATURE and OTHER-PARAMS.
 
 OTHER-PARAMS are appended to the json object at the top level.
 
-If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
+ON-OUTPUT: (lambda (output))
+
+ON-SUCCESS: (lambda (output))
+
+ON-FAILURE: (lambda (output))
+
+If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously.
 
 For example:
 
@@ -1741,7 +1751,7 @@ For example:
                   :version version
                   :temperature temperature
                   :streaming streaming
-                  :other-params)
+                  :other-params other-params)
            :headers (list "Content-Type: application/json; charset=utf-8"
                           (funcall chatgpt-shell-auth-header))
            :filter #'chatgpt-shell-filter-chatgpt-output
@@ -3362,7 +3372,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
               (chatgpt-shell-send-to-buffer prompt))
           (let ((chatgpt-shell-prompt-query-response-style 'inline))
             (chatgpt-shell-send-to-buffer prompt nil nil
-                                          (lambda ()
+                                          (lambda (_input _output _success)
                                             (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                               (chatgpt-shell--put-source-block-overlays))))))))))
 
@@ -3455,7 +3465,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
     (chatgpt-shell-send-to-buffer prompt nil nil
-                                  (lambda ()
+                                  (lambda (_input _output _success)
                                     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                       (chatgpt-shell--put-source-block-overlays))))))
 
