@@ -539,7 +539,7 @@ or
                  :context (map-elt shell :history)
                  :streaming chatgpt-shell-streaming
                  :temperature chatgpt-shell-model-temperature))
-      :filter #'chatgpt-shell-filter-chatgpt-response
+      :filter #'chatgpt-shell-filter-chatgpt-output
       :shell shell))
    :on-command-finished
    (lambda (command output)
@@ -1428,7 +1428,7 @@ END (optional): End of region to replace (overrides active region)."
      :system-prompt system-prompt
      :query query
      :streaming t
-     :on-response (lambda (response)
+     :on-output (lambda (output)
                     (if streaming
                         (progn
                           (with-current-buffer buffer
@@ -1438,12 +1438,12 @@ END (optional): End of region to replace (overrides active region)."
                               (setq delete-text nil))
                             (save-excursion
                               (goto-char marker)
-                              (insert response)
-                              (set-marker marker (+ (length response)
+                              (insert output)
+                              (set-marker marker (+ (length output)
                                                     (marker-position marker))))))
                       (progn
                         (progress-reporter-update progress-reporter)
-                        (setq response (concat response response)))))
+                        (setq output (concat output output)))))
      :on-finished (lambda (success)
                     (if streaming
                         (with-current-buffer buffer
@@ -1468,12 +1468,12 @@ END (optional): End of region to replace (overrides active region)."
           (system-prompt "")
           query
           streaming
-          on-response
+          on-output
           on-finished)
   "Send a request with:
 
 QUERY: Request query text.
-ON-RESPONSE: Of the form (lambda (response))
+ON-OUTPUT: Of the form (lambda (output))
 ON-FINISHED: Of the form (lambda (success))
 MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
 SYSTEM-PROMPT (optional): As string.
@@ -1538,7 +1538,7 @@ ON-FINISHED is invoked when the entire interaction is finished."
                         (insert text))
                     (insert text)
                     (shell-maker-submit
-                     :on-response (lambda (output)
+                     :on-output (lambda (output)
                                   (setq output (or output ""))
                                   (when (buffer-live-p buffer)
                                     (with-current-buffer buffer
@@ -1681,13 +1681,13 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
          (content . ,(vconcat
                       `(((type . "text")
                          (text . ,term))))))))
-     :filter #'chatgpt-shell-filter-chatgpt-response
-     :on-response
-     (lambda (response)
+     :filter #'chatgpt-shell-filter-chatgpt-output
+     :on-output
+     (lambda (output)
        (with-current-buffer translation-buffer
          (let ((inhibit-read-only t))
            (erase-buffer)
-           (insert response)
+           (insert output)
            (use-local-map (let ((map (make-sparse-keymap)))
                             (define-key map (kbd "q") 'kill-buffer-and-window)
                             map)))
@@ -1697,13 +1697,13 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
 
 ;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-post-chatgpt-messages (&key messages version
-                                                    other-params on-response on-finished
-                                                    temperature)
+                                                    other-params on-output on-finished
+                                                    temperature streaming)
   "Make a single ChatGPT request with MESSAGES and FILTER.
 
-`chatgpt-shell-filter-chatgpt-response' typically used as extractor.
+`chatgpt-shell-filter-chatgpt-output' typically used as extractor.
 
-Optionally pass model VERSION, ON-RESPONSE, ON-FINISHED, TEMPERATURE
+Optionally pass model VERSION, ON-OUTPUT, ON-FINISHED, TEMPERATURE
 and OTHER-PARAMS.
 
 OTHER-PARAMS are appended to the json object at the top level.
@@ -1716,13 +1716,13 @@ For example:
  `(((role . \"user\")
     (content . \"hello\")))
  \"gpt-3.5-turbo\"
- (lambda (response)
+ (lambda (output)
    (message \"%s\" response))
  (lambda (error)
    (message \"%s\" error)))"
   (unless messages
     (error "Missing mandatory \"messages\" param"))
-  (if (or on-response on-finished)
+  (if (or on-output on-finished)
       (progn
         (unless (boundp 'shell-maker--current-request-id)
           (defvar-local shell-maker--current-request-id 0))
@@ -1737,9 +1737,10 @@ For example:
                       :messages messages
                       :version version
                       :temperature temperature
+                      :streaming streaming
                       :other-params other-params))
-           :filter #'chatgpt-shell-filter-chatgpt-response
-           :on-output on-response
+           :filter #'chatgpt-shell-filter-chatgpt-output
+           :on-output on-output
            :on-finished on-finished)))
     ;; Sync exec
     (shell-maker-execute-command
@@ -1748,8 +1749,9 @@ For example:
                 :messages messages
                 :version version
                 :temperature temperature
+                :streaming streaming
                 :other-params other-params))
-     :filter #'chatgpt-shell-filter-chatgpt-response)))
+     :filter #'chatgpt-shell-filter-chatgpt-output)))
 
 ;;;###autoload
 (defun chatgpt-shell-describe-image ()
@@ -1769,12 +1771,12 @@ If in a `dired' buffer, use selection (single image only for now)."
      (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
      file
      :on-success
-     (lambda (response)
+     (lambda (output)
        (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
          (with-current-buffer description-buffer
            (let ((inhibit-read-only t))
              (erase-buffer)
-             (insert response)
+             (insert output)
              (use-local-map (let ((map (make-sparse-keymap)))
                               (define-key map (kbd "q") 'kill-buffer-and-window)
                               map)))
@@ -1835,8 +1837,8 @@ URL-PATH can be either a local file path or an http:// URL.
 
 Optionally pass ON-SUCCESS and ON-FAILURE, like:
 
-\(lambda (response)
-  (message response))
+\(lambda (output)
+  (message output))
 
 \(lambda (error)
   (message error))"
@@ -1863,10 +1865,10 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
       (chatgpt-shell-post-chatgpt-messages
        :messages messages
        :version "gpt-4o"
-       :on-response (lambda (response)
-                      (setq description
-                            (concat description
-                                    response)))
+       :on-output (lambda (output)
+                    (setq description
+                          (concat description
+                                  output)))
        :on-finished (lambda (success)
                       (if success
                           (if on-success
@@ -2013,7 +2015,7 @@ STREAMING: When non-nil, request streamed response."
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
 
-(defun chatgpt-shell-filter-chatgpt-response (raw-response)
+(defun chatgpt-shell-filter-chatgpt-output (raw-response)
   "Extract ChatGPT response from RAW-RESPONSE.
 
 When ChatGPT responses are streamed, they arrive in the form:
@@ -2896,7 +2898,7 @@ Do not wrap snippets in markdown blocks.\n\n"
                         "Code: \n\n"
                         (map-elt flymake-context :content))
          :streaming t
-         :on-response (lambda (chunk)
+         :on-output (lambda (chunk)
                         (progress-reporter-update progress-reporter)
                         (setq response (concat response chunk)))
          :on-finished (lambda (success)
@@ -2956,7 +2958,7 @@ SYSTEM-PROMPT (optional): As string."
      :model-version model-version
      :system-prompt system-prompt
      :streaming t
-     :on-response (lambda (chunk)
+     :on-output (lambda (chunk)
                     (progress-reporter-update progress-reporter)
                     (setq response (concat response chunk)))
      :on-finished (lambda (success)

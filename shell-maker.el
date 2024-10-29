@@ -313,12 +313,12 @@ Set BUFFER-NAME to override the buffer name."
                                       "")
                                     (shell-maker-prompt shell-maker--config))))))
 
-(cl-defun shell-maker-submit (&key on-response on-finished)
+(cl-defun shell-maker-submit (&key on-output on-finished)
   "Submit current input.
 
 If invoked programmatically, get notified:
 
-Use ON-RESPONSE: function to monitor command response text.
+Use ON-OUTPUT: function to monitor command response text.
 
 Of the form:
 
@@ -352,7 +352,7 @@ Of the form:
         (if is-command-v2
             (shell-maker--eval-input-on-buffer-v2 :input shell-maker--input
                                                   :shell-buffer shell-buffer
-                                                  :on-response-broadcast on-response
+                                                  :on-output-broadcast on-output
                                                   :on-finished-broadcast on-finished)
           (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
                                                 :shell-buffer shell-buffer))))))
@@ -698,7 +698,7 @@ FILTER: An optional function filter command output.  Use it for convertions.
     \='((:filtered . \"filtered response string\")
         (:pending . \"pending string\")))
 
-Return extracted response."
+Return filtered response."
   (unless command
     (error "Missing mandatory :command param"))
   (unless filter
@@ -707,10 +707,10 @@ Return extracted response."
     (let* ((buffer (current-buffer))
            (status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
            (data (buffer-substring-no-properties (point-min) (point-max)))
-           (response (funcall filter data))
-           (text (or (map-elt response :filtered)
-                     (map-elt response :pending)
-                     response
+           (filtered (funcall filter data))
+           (text (or (map-elt filtered :filtered)
+                     (map-elt filtered :pending)
+                     filtered
                      "")))
       (if (equal status 0)
           text
@@ -1507,10 +1507,10 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
                           (funcall action)))
     (buffer-string)))
 
-(cl-defun shell-maker--eval-input-on-buffer-v2 (&key input shell-buffer on-response-broadcast on-finished-broadcast)
+(cl-defun shell-maker--eval-input-on-buffer-v2 (&key input shell-buffer on-output-broadcast on-finished-broadcast)
   "Evaluate INPUT in SHELL-BUFFER.
 
-Use ON-RESPONSE-BROADCAST: function to monitor command response text.
+Use ON-OUTPUT-BROADCAST: function to monitor command response text.
 
 Of the form:
 
@@ -1547,8 +1547,8 @@ Of the form:
               (cons :history history)
               (cons :add-response (lambda (response)
                                     (shell-maker--write-partial-reply (or response "<nil-message>"))
-                                    (when on-response-broadcast
-                                      (funcall on-response-broadcast response))))
+                                    (when on-output-broadcast
+                                      (funcall on-output-broadcast response))))
               (cons :finish-response (lambda (success)
                                        (let ((last-output (shell-maker-last-output)))
                                          (setq shell-maker--busy nil)
