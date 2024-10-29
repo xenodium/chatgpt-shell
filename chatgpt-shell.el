@@ -1480,20 +1480,20 @@ SYSTEM-PROMPT (optional): As string.
 STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
   (unless query
     (error "Missing mandatory \"query\" param"))
-  (unless on-response
-    (error "Missing mandatory \"on-response\" param of the form (lambda (response))"))
-  (let ((shell-buffer (chatgpt-shell-start t t t model-version system-prompt)))
-    (with-current-buffer shell-buffer
-      (setq-local shell-maker-prompt-before-killing-buffer nil)
-      (setq-local kill-buffer-query-functions nil)
-      (setq-local chatgpt-shell-streaming streaming)
-      (insert query)
-      (shell-maker-submit
-       :on-response on-response
-       :on-finished (lambda (success)
-                      (when on-finished
-                        (funcall on-finished success))
-                      (kill-buffer shell-buffer))))))
+  (unless on-output
+    (error "Missing mandatory \"on-output\" param of the form (lambda (output))"))
+  (chatgpt-shell-post-chatgpt-messages :messages
+                                       (vconcat ;; Convert to vector for json
+                                        `(((role . "system")
+                                           (content . ,system-prompt))
+                                          ((role . "user")
+                                           (content . ,(vconcat
+                                                        `(((type . "text")
+                                                           (text . ,query))))))))
+                                       :version model-version
+                                       :streaming streaming
+                                       :on-output on-output
+                                       :on-finished on-finished))
 
 (defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
   "Send TEXT to *chatgpt* buffer.
