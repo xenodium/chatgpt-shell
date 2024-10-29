@@ -1496,7 +1496,7 @@ STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
                                        :on-finished on-finished))
 
 (defun chatgpt-shell-send-to-buffer (text &optional review handler on-finished)
-  "Send TEXT to *chatgpt* buffer.
+  "Send TEXT to *chatgpt* shell buffer.
 Set REVIEW to make changes before submitting to ChatGPT.
 
 If HANDLER function is set, ignore `chatgpt-shell-prompt-query-response-style'
