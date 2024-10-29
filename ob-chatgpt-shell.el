@@ -80,7 +80,7 @@ This function is called by `org-babel-execute-src-block'"
              messages
              (map-elt params :version)
              (map-elt params :temperature)))
-      (chatgpt-shell-post-messages
+      (chatgpt-shell-post-chatgpt-messages
        :messages messages
        :extract-response #'chatgpt-shell-extract-chatgpt-response
        :version (map-elt params :version)

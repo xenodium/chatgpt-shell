@@ -1672,7 +1672,7 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
                                 "katakana: <fill-in-blank>\n"
                                 "romaji: <fill-in-blank>\n"
                                 "meaning: <fill-in-blank>")))
-    (chatgpt-shell-post-messages
+    (chatgpt-shell-post-chatgpt-messages
      :messages
      (vconcat ;; Convert to vector for json
       `(((role . "system")
@@ -1696,9 +1696,9 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
      :other-params '((max_tokens . 300)))))
 
 ;; TODO: Review. Can it become service agnostic?
-(cl-defun chatgpt-shell-post-messages (&key messages filter version
-                                            other-params on-response on-finished
-                                            temperature)
+(cl-defun chatgpt-shell-post-chatgpt-messages (&key messages version
+                                                    other-params on-response on-finished
+                                                    temperature)
   "Make a single ChatGPT request with MESSAGES and FILTER.
 
 `chatgpt-shell-filter-chatgpt-response' typically used as extractor.
@@ -1712,7 +1712,7 @@ If CALLBACK or ERROR-CALLBACK are missing, execute synchronously.
 
 For example:
 
-\(chatgpt-shell-post-messages
+\(chatgpt-shell-post-chatgpt-messages
  `(((role . \"user\")
     (content . \"hello\")))
  \"gpt-3.5-turbo\"
@@ -1862,7 +1862,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                                (image_url . ((url . ,url)))))))))))))
     (message "Requesting...")
     (let ((description))
-      (chatgpt-shell-post-messages
+      (chatgpt-shell-post-chatgpt-messages
        :messages messages
        :filter #'chatgpt-shell-filter-chatgpt-response
        :version "gpt-4o"
