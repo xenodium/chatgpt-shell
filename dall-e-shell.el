@@ -120,11 +120,13 @@ or
 (setq dall-e-shell-openai-key \"my-key\")"))
    :execute-command
    (lambda (command shell)
-     (shell-maker-execute-command
-      :command (dall-e-shell--make-curl-request-command-list
-                (dall-e-shell--make-payload command))
-      :filter #'dall-e-shell--extract-response
+     (shell-maker-make-http-request
       :async t
+      :url dall-e-shell--url
+      :data (dall-e-shell--make-payload command)
+      :headers (list "Content-Type: application/json; charset=utf-8"
+                     (funcall chatgpt-shell-auth-header))
+      :filter #'dall-e-shell--extract-response
       :shell shell))))
 
 ;;;###autoload

@@ -531,14 +531,16 @@ or
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :execute-command
    (lambda (command shell)
-     (shell-maker-execute-command
+     (shell-maker-make-http-request
       :async t
-      :command (chatgpt-shell--make-curl-request-command-list
-                (chatgpt-shell--make-payload
-                 :prompt command
-                 :context (map-elt shell :history)
-                 :streaming chatgpt-shell-streaming
-                 :temperature chatgpt-shell-model-temperature))
+      :url (chatgpt-shell--api-url)
+      :data (chatgpt-shell--make-payload
+             :prompt command
+             :context (map-elt shell :history)
+             :streaming chatgpt-shell-streaming
+             :temperature chatgpt-shell-model-temperature)
+      :headers (list "Content-Type: application/json; charset=utf-8"
+                     (funcall chatgpt-shell-auth-header))
       :filter #'chatgpt-shell-filter-chatgpt-output
       :shell shell))
    :on-command-finished
@@ -1697,14 +1699,15 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
 
 ;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-post-chatgpt-messages (&key messages version
-                                                    other-params on-output on-finished
+                                                    other-params on-output
+                                                    on-success on-failure
                                                     temperature streaming)
   "Make a single ChatGPT request with MESSAGES and FILTER.
 
 `chatgpt-shell-filter-chatgpt-output' typically used as extractor.
 
-Optionally pass model VERSION, ON-OUTPUT, ON-FINISHED, TEMPERATURE
-and OTHER-PARAMS.
+Optionally pass model VERSION, ON-OUTPUT, ON-SUCCESS, ON-FAILURE,
+TEMPERATURE and OTHER-PARAMS.
 
 OTHER-PARAMS are appended to the json object at the top level.
 
@@ -1722,7 +1725,7 @@ For example:
    (message \"%s\" error)))"
   (unless messages
     (error "Missing mandatory \"messages\" param"))
-  (if (or on-output on-finished)
+  (if (or on-output on-success on-failure)
       (progn
         (unless (boundp 'shell-maker--current-request-id)
           (defvar-local shell-maker--current-request-id 0))
@@ -1730,28 +1733,38 @@ For example:
           (setq-local shell-maker--config
                       chatgpt-shell--config)
           ;; Async exec
-          (shell-maker-execute-command
+          (shell-maker-make-http-request
            :async t
-           :command (chatgpt-shell--make-curl-request-command-list
-                     (chatgpt-shell-make-request-data
-                      :messages messages
-                      :version version
-                      :temperature temperature
-                      :streaming streaming
-                      :other-params other-params))
+           :url (chatgpt-shell--api-url)
+           :data (chatgpt-shell-make-request-data
+                  :messages messages
+                  :version version
+                  :temperature temperature
+                  :streaming streaming
+                  :other-params)
+           :headers (list "Content-Type: application/json; charset=utf-8"
+                          (funcall chatgpt-shell-auth-header))
            :filter #'chatgpt-shell-filter-chatgpt-output
            :on-output on-output
-           :on-finished on-finished)))
+           :on-finished (lambda (result)
+                          (if (equal 0 (map-elt result :exit-status))
+                              (when on-success
+                                (funcall on-success (map-elt result :output)))
+                            (when on-failure
+                              (funcall on-failure (map-elt result :output))))))))
     ;; Sync exec
-    (shell-maker-execute-command
-     :command (chatgpt-shell--make-curl-request-command-list
-               (chatgpt-shell-make-request-data
-                :messages messages
-                :version version
-                :temperature temperature
-                :streaming streaming
-                :other-params other-params))
-     :filter #'chatgpt-shell-filter-chatgpt-output)))
+    (let ((result (shell-maker-make-http-request
+                   :url (chatgpt-shell--api-url)
+                   :data (chatgpt-shell-make-request-data
+                          :messages messages
+                          :version version
+                          :temperature temperature
+                          :streaming streaming
+                          :other-params other-params)
+                   :headers (list "Content-Type: application/json; charset=utf-8"
+                                  (funcall chatgpt-shell-auth-header))
+                   :filter #'chatgpt-shell-filter-chatgpt-output)))
+      (map-elt result :output))))
 
 ;;;###autoload
 (defun chatgpt-shell-describe-image ()
@@ -1869,14 +1882,14 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                     (setq description
                           (concat description
                                   output)))
-       :on-finished (lambda (success)
-                      (if success
-                          (if on-success
-                              (funcall on-success description)
-                            (message description))
-                        (if on-failure
-                            (funcall on-failure description)
-                          (message description))))
+       :on-success (lambda (output)
+                     (if on-success
+                         (funcall on-success output)
+                       (message output)))
+       :on-failure (lambda (output)
+                     (if on-failure
+                         (funcall on-failure output)
+                       (message output)))
        :other-params '((max_tokens . 300))))))
 
 (defun chatgpt-shell-openai-key ()

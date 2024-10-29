@@ -338,8 +338,10 @@ Of the form:
          (called-interactively (called-interactively-p #'interactive))
          (command-handler (shell-maker-config-execute-command shell-maker--config))
          (is-command-v2 (and (closurep command-handler)
-                             (string-match-p "shell-maker-execute-command"
-                                             (format "%s" command-handler))))
+                             (or (string-match-p "shell-maker-execute-command"
+                                                 (format "%s" command-handler))
+                                 (string-match-p "shell-maker-make-http-request"
+                                                 (format "%s" command-handler)))))
          (shell-maker--input))
     (comint-send-input) ;; Sets shell-maker--input
     (when (shell-maker--clear-input-for-execution shell-maker--input)
@@ -681,11 +683,6 @@ Return t if INPUT us cleared.  nil otherwise."
   (unless (eq buffer (window-buffer (selected-window)))
     (message "%s responded" (buffer-name buffer))))
 
-(defun shell-maker--curl-exit-status-from-error-string (string)
-  "Extract exit status from curl error STRING."
-  (when (string-match (rx "curl: (" (group (one-or-more digit)) ")") string)
-    (string-to-number (match-string 1 string))))
-
 (cl-defun shell-maker--execute-command-sync (&key command filter)
   "Execute COMMAND list (command + params).
 
@@ -705,16 +702,16 @@ Return filtered response."
     (setq filter #'identity))
   (with-temp-buffer
     (let* ((buffer (current-buffer))
-           (status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
+           (exit-status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
            (data (buffer-substring-no-properties (point-min) (point-max)))
            (filtered (funcall filter data))
            (text (or (map-elt filtered :filtered)
                      (map-elt filtered :pending)
                      filtered
                      "")))
-      (if (equal status 0)
-          text
-        (concat "Failed:\n\n" text)))))
+      (list
+       :exit-status exit-status
+       :output text))))
 
 (cl-defun shell-maker--execute-command-async (&key command filter on-output on-finished)
   "Execute COMMAND list (command + params) asynchronously.
@@ -726,7 +723,7 @@ FILTER: An optional function filter command output.  Use it for convertions.
     ;; or
     ;; an alist of the form:
     \='((:filtered . \"filtered response string\")
-        (:pending . \"pending string\")))
+        (:pending . \"pending string\"))
 
 ON-OUTPUT: A function to notify of output.
 
@@ -743,6 +740,7 @@ ON-FINISHED: A function to notify when command is finished.
          (shell-buffer (shell-maker-buffer shell-config))
          (request-id (with-current-buffer shell-buffer
                        (shell-maker--increment-request-id)))
+         (output)
          (pending))
     (cl-flet ((log (format &rest args)
                 (apply #'shell-maker--log
@@ -775,14 +773,18 @@ ON-FINISHED: A function to notify when command is finished.
                                            (or (seq-contains-p (map-keys filtered) :filtered)
                                                (seq-contains-p (map-keys filtered) :pending)))
                                       (with-current-buffer shell-buffer
+                                        (setq output (concat output
+                                                             (or (map-elt filtered :filtered) "")))
                                         (when on-output
                                           (funcall on-output (or (map-elt filtered :filtered) ""))))
                                       (setq pending (map-elt filtered :pending)))
                                      ((stringp filtered)
+                                      (setq output (concat output filtered))
                                       (with-current-buffer shell-buffer
                                         (when on-output
                                           (funcall on-output filtered))))
                                      (t
+                                      (setq output (concat output (format "\"%s\"" filtered)))
                                       (with-current-buffer shell-buffer
                                         (when on-output
                                           (funcall on-output
@@ -816,11 +818,87 @@ ON-FINISHED: A function to notify when command is finished.
                                (log "Exit status: %d" exit-status)
                                (with-current-buffer shell-buffer
                                  (when on-finished
-                                   (funcall on-finished (= exit-status 0)))))
+                                   (funcall on-finished (list
+                                                         :exit-status exit-status
+                                                         :output output)))))
                            (error
                             (with-current-buffer shell-buffer
                               (when on-output
                                 (funcall on-output (format "\n\n%s" err))))))))))))
+
+(cl-defun shell-maker-make-http-request (&key async url data encoding timeout
+                                              headers filter on-output on-finished shell)
+  "Make HTTP request at URL.
+
+Optionally set:
+
+ASYNC: Non-nil if request should be asynchronous.
+DATA: Any data to be posted.
+ENCODING: Defaults to ='utf-8 (as per `coding-system-for-write').
+HEADERS: Of the form
+
+  (\"header1: value1\")
+   \"header2: value2\")
+
+TIMEOUT: defaults to 600ms.
+FILTER: An optional function filter command output.  Use it for convertions.
+
+  (lambda (raw-text)
+    ;; Must return either a string
+    ;; or
+    ;; an alist of the form:
+    \='((:filtered . \"filtered response string\")
+        (:pending . \"pending string\")))
+
+ON-OUTPUT: (lambda (output))
+ON-FINISHED: (lambda (result))."
+  (unless url
+    (error "Missing mandatory :url param"))
+  (message "PASSSSSS")
+  (shell-maker-execute-command :async async
+                               :command (shell-maker-make--curl-command :url url
+                                                                        :data data
+                                                                        :encoding encoding
+                                                                        :timeout timeout
+                                                                        :headers headers)
+                               :filter filter
+                               :on-output on-output
+                               :on-finished on-finished
+                               :shell shell))
+
+(cl-defun shell-maker-make--curl-command (&key url data encoding timeout headers)
+  "Build curl command list using URL.
+
+Optionally, add:
+
+DATA: To send.
+ENCODING: Defaults to ='utf-8 (as per `coding-system-for-write').
+HEADERS: Of the form
+
+  (\"header1: value1\")
+   \"header2: value2\")
+
+and TIMEOUT: defaults to 600ms."
+  (unless encoding
+    (setq encoding 'utf-8))
+  (unless timeout
+    (setq timeout 600))
+  (let ((data-file (when data
+                     (shell-maker--temp-file "curl-data"))))
+    (when data
+      (with-temp-file data-file
+        (setq-local coding-system-for-write encoding)
+        (insert (shell-maker--json-encode data))))
+    (append (list "curl" url
+                  "--fail-with-body"
+                  "--no-progress-meter"
+                  "-m" (number-to-string timeout))
+            (apply 'append
+                   (mapcar (lambda (header)
+                             (list "-H" header))
+                           headers))
+            (when data
+              (list "-d" (format "@%s" data-file))))))
 
 (cl-defun shell-maker-execute-command (&key async command filter on-output on-finished shell)
   "Execute COMMAND list (command + params).
@@ -836,7 +914,11 @@ FILTER: An optional function filter command output.  Use it for convertions.
     \='((:filtered . \"filtered response string\")
         (:pending . \"pending string\")))
 
-For directing output, use ON-OUTPUT / ON-FINISHED
+For directing output use:
+
+ON-OUTPUT: (lambda (output))
+
+ON-FINISHED: (lambda (result))
 
 or use send to the shell using the object exposed via :execute-command
 
@@ -852,11 +934,12 @@ SHELL: The shell context to write command output to."
                       (funcall (map-elt shell :add-response) output))
                     (when on-output
                       (funcall on-output output)))
-       :on-finished (lambda (success)
+       :on-finished (lambda (result)
                       (when (map-elt shell :finish-response)
-                        (funcall (map-elt shell :finish-response) success))
+                        (funcall (map-elt shell :finish-response)
+                                 (equal 0 (map-elt result :exit-status))))
                       (when on-finished
-                        (funcall on-finished success))))
+                        (funcall on-finished result))))
     (when (or shell
               on-output
               on-finished)
@@ -914,7 +997,9 @@ ERROR-CALLBACK accordingly."
                                (funcall callback (funcall extract-response obj) t)))
                            (car preparsed))
                    (with-current-buffer buffer
-                     (let ((curl-exit-code (shell-maker--curl-exit-status-from-error-string (cdr preparsed))))
+                     (let ((curl-exit-code (when (string-match (rx "curl: (" (group (one-or-more digit)) ")")
+                                                               (cdr preparsed))
+                                             (string-to-number (match-string 1 (cdr preparsed))))))
                        (cond ((eq 0 curl-exit-code)
                               (funcall callback (cdr preparsed) t))
                              ((numberp curl-exit-code)
@@ -1076,6 +1161,16 @@ ERROR-CALLBACK accordingly."
                                                     (shell-maker-process-name config)))
       (goto-char (point-max))
       (insert (concat "\n" (format-time-string "%Y-%m-%dT%H:%M:%S") ": " format)))))
+
+(defun shell-maker--temp-file (&rest components)
+  "Create temp file path for COMPONENTS."
+  (let ((temp-dir (apply #' file-name-concat
+                            (append (list
+                                     temporary-file-directory
+                                     "shell-maker")
+                                    components))))
+    (make-directory (file-name-directory temp-dir) t)
+    temp-dir))
 
 (defun shell-maker--process nil
   "Get shell buffer process."
