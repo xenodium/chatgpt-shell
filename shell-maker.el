@@ -766,22 +766,22 @@ ON-FINISHED: A function to notify when command is finished.
                              (setq raw-output (concat pending raw-output))
                              (log "Filter combined")
                              (log raw-output)
-                             (let ((response (with-current-buffer shell-buffer
+                             (let ((filtered (with-current-buffer shell-buffer
                                                (funcall filter raw-output))))
-                               (map-elt response :filtered)
-                               (cond ((null response)
-                                      (log "Ignored nil response"))
-                                     ((and (consp response) ;; partial extraction
-                                           (or (seq-contains-p (map-keys response) :filtered)
-                                               (seq-contains-p (map-keys response) :pending)))
+                               (map-elt filtered :filtered)
+                               (cond ((null filtered)
+                                      (log "Ignored nil filtered"))
+                                     ((and (consp filtered) ;; partial extraction
+                                           (or (seq-contains-p (map-keys filtered) :filtered)
+                                               (seq-contains-p (map-keys filtered) :pending)))
                                       (with-current-buffer shell-buffer
                                         (when on-output
-                                          (funcall on-output (or (map-elt response :filtered) ""))))
-                                      (setq pending (map-elt response :pending)))
-                                     ((stringp response)
+                                          (funcall on-output (or (map-elt filtered :filtered) ""))))
+                                      (setq pending (map-elt filtered :pending)))
+                                     ((stringp filtered)
                                       (with-current-buffer shell-buffer
                                         (when on-output
-                                          (funcall on-output response))))
+                                          (funcall on-output filtered))))
                                      (t
                                       (with-current-buffer shell-buffer
                                         (when on-output
@@ -790,8 +790,8 @@ ON-FINISHED: A function to notify when command is finished.
                                                            "nil, or an alist of the form: \n\n"
                                                            "'((:filtered . \"...\"))\n"
                                                            "  (:pending . \"{...\")\n\n"
-                                                           (format "But received (%s):\n\n" (type-of response))
-                                                           (format "\"%s\"" response)))))))))
+                                                           (format "But received (%s):\n\n" (type-of filtered))
+                                                           (format "\"%s\"" filtered)))))))))
                          (error
                           (with-current-buffer shell-buffer
                             (when on-output
