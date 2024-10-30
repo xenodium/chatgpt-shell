@@ -45,6 +45,7 @@
 (require 'ielm)
 (require 'shell-maker)
 (require 'smerge-mode)
+(provide 'ob-core)
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
@@ -571,6 +572,9 @@ With NEW-SESSION, start a new session."
   (interactive "P")
   (chatgpt-shell-start nil new-session))
 
+(defvar chatgpt-shell-mode-map (make-sparse-keymap)
+  "Keymap for `chatgpt-shell-mode'.")
+
 (defun chatgpt-shell-start (&optional no-focus new-session ignore-as-primary model-version system-prompt)
   "Start a ChatGPT shell programmatically.
 
@@ -1021,8 +1025,6 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
        (group (*? anychar)) ;; body
        (one-or-more "\n")
        (group "```") (or "\n" eol)))
-
-(defvar-local chatgpt-shell--is-primary-p nil)
 
 (defun chatgpt-shell-next-source-block ()
   "Move point to previous source block."
@@ -3224,7 +3226,6 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (when (boundp 'region-bindings-mode-disable-predicates)
         (add-to-list 'region-bindings-mode-disable-predicates
                      (lambda () buffer-read-only)))
-      (defvar-local chatgpt-shell--ring-index nil)
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
     (unless transient-frame-p
@@ -3688,6 +3689,11 @@ NEW-LABEL (optional): To display for new text."
 
 (defvar-local fader-overlays nil
   "List of overlays for the animated regions.")
+
+(defvar-local chatgpt-shell--is-primary-p nil
+  "Non-nil if shell buffer is considered primary.")
+
+(defvar-local chatgpt-shell--ring-index nil)
 
 (defun fader-start-fading-region (start end)
   "Animate the background color of the region between START and END."
