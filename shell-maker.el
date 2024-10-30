@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.58.1
+;; Version: 0.59.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -339,11 +339,9 @@ Of the form:
   (let* ((shell-buffer (shell-maker-buffer shell-maker--config))
          (called-interactively (called-interactively-p #'interactive))
          (command-handler (shell-maker-config-execute-command shell-maker--config))
-         (is-command-v2 (and (closurep command-handler)
-                             (or (string-match-p "shell-maker-execute-command"
-                                                 (format "%s" command-handler))
-                                 (string-match-p "shell-maker-make-http-request"
-                                                 (format "%s" command-handler)))))
+         (is-command-v1 (and (closurep command-handler)
+                             (string-match-p "shell-maker-async-shell-command"
+                                             (format "%s" command-handler))))
          (shell-maker--input))
     (when input
       (goto-char (point-max))
@@ -351,18 +349,18 @@ Of the form:
     (comint-send-input) ;; Sets shell-maker--input
     (when (shell-maker--clear-input-for-execution shell-maker--input)
       (if called-interactively
-          (if is-command-v2
-              (shell-maker--eval-input-on-buffer-v2 :input shell-maker--input
+          (if is-command-v1
+              (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
                                                     :shell-buffer shell-buffer)
-            (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
-                                                  :shell-buffer shell-buffer))
-        (if is-command-v2
             (shell-maker--eval-input-on-buffer-v2 :input shell-maker--input
-                                                  :shell-buffer shell-buffer
-                                                  :on-output-broadcast on-output
-                                                  :on-finished-broadcast on-finished)
-          (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
-                                                :shell-buffer shell-buffer))))))
+                                                  :shell-buffer shell-buffer))
+        (if is-command-v1
+            (shell-maker--eval-input-on-buffer-v1 :input shell-maker--input
+                                                  :shell-buffer shell-buffer)
+          (shell-maker--eval-input-on-buffer-v2 :input shell-maker--input
+                                                :shell-buffer shell-buffer
+                                                :on-output-broadcast on-output
+                                                :on-finished-broadcast on-finished))))))
 
 (defun shell-maker-clear-buffer ()
   "Clear the current shell buffer."
@@ -941,7 +939,6 @@ SHELL: The shell context to write command output to."
        :on-finished (lambda (result)
                       (when (map-elt shell :finish-output)
                         (funcall (map-elt shell :finish-output)
-                                 (map-elt result :output)
                                  (equal 0 (map-elt result :exit-status))))
                       (when on-finished
                         (funcall on-finished result))))
@@ -1640,16 +1637,19 @@ Of the form:
                    (shell-maker--extract-history
                     (with-current-buffer shell-buffer
                       (buffer-string))
-                    (shell-maker-prompt-regexp config)))))
+                    (shell-maker-prompt-regexp config))))
+         (full-output))
     (funcall executor input
              ;; shell attributes exposed to command executors.
              (list
               (cons :history history)
               (cons :write-output (lambda (output)
-                                    (shell-maker--write-partial-reply (or output "<nil-message>"))
+                                    (setq output (or output "<nil-message>"))
+                                    (shell-maker--write-partial-reply output)
                                     (when on-output-broadcast
-                                      (funcall on-output-broadcast output))))
-              (cons :finish-output (lambda (output success)
+                                      (funcall on-output-broadcast output))
+                                    (setq full-output (concat full-output output))))
+              (cons :finish-output (lambda (success)
                                        (setq shell-maker--busy nil)
                                        (shell-maker--write-reply  "\n\n" (not success))
                                        (goto-char (point-max))
@@ -1659,18 +1659,18 @@ Of the form:
                                        ;; Use let-bound values to save anything that may require
                                        ;; the shell buffer.
                                        (when on-finished-broadcast
-                                         (funcall on-finished-broadcast input output success))
+                                         (funcall on-finished-broadcast input full-output success))
                                        (when (shell-maker-config-on-command-finished config)
                                          (let* ((params (func-arity (shell-maker-config-on-command-finished config)))
                                                 (params-max (cdr params)))
                                            (cond ((= params-max 2)
                                                   (funcall (shell-maker-config-on-command-finished config)
                                                            input
-                                                           output))
+                                                           full-output))
                                                  ((= params-max 3)
                                                   (funcall (shell-maker-config-on-command-finished config)
                                                            input
-                                                           output
+                                                           full-output
                                                            success))
                                                  (t
                                                   (message (concat ":on-command-finished expects "
