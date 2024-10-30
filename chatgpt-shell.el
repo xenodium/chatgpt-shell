@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 1.17.1
-;; Package-Requires: ((emacs "27.1") (shell-maker "0.58.1"))
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.58.1"))
 (defconst chatgpt-shell--version "1.17.1")
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -39,13 +39,15 @@
 (require 'cl-lib)
 (require 'dired)
 (require 'esh-mode)
+(require 'em-prompt)
 (require 'eshell)
 (require 'find-func)
 (require 'flymake)
 (require 'ielm)
 (require 'shell-maker)
 (require 'smerge-mode)
-(provide 'ob-core)
+(require 'ob-core)
+(require 'color)
 
 (defcustom chatgpt-shell-openai-key nil
   "OpenAI key as a string or a function that loads and returns it."
@@ -209,8 +211,8 @@ Please submit contributions so more things work out of the box."
 
 Can be used compile or run source block at point."
   :type '(alist :key-type (string :tag "Language")
-                :value-type (list (cons (const 'primary-action-confirmation) (string :tag "Confirmation Prompt:"))
-                                  (cons (const 'primary-action) (function :tag "Action:"))))
+                :value-type (list (cons (const primary-action-confirmation) (string :tag "Confirmation Prompt:"))
+                                  (cons (const primary-action) (function :tag "Action:"))))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
@@ -373,7 +375,7 @@ Or nil if none."
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (when-let ((duplicates (chatgpt-shell-duplicate-map-keys chatgpt-shell-system-prompts)))
     (user-error "Duplicate prompt names found %s. Please remove" duplicates))
@@ -391,6 +393,8 @@ Or nil if none."
   (chatgpt-shell--update-prompt t)
   (chatgpt-shell-interrupt nil)
   (chatgpt-shell--save-variables))
+
+(declare-function pcsv-parse-file "pcsv" (file &optional coding-system))
 
 ;;;###autoload
 (defun chatgpt-shell-load-awesome-prompts ()
@@ -433,7 +437,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (setq-local chatgpt-shell-model-version
               (completing-read "Model version: "
@@ -617,8 +621,6 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
       (setq-local chatgpt-shell-system-prompt system-prompt)
       (chatgpt-shell--update-prompt t)
       (chatgpt-shell--add-menus))
-    ;; Disabling advice for now. It gets in the way.
-    ;; (advice-add 'keyboard-quit :around #'chatgpt-shell--adviced:keyboard-quit)
     (define-key chatgpt-shell-mode-map (kbd "C-M-h")
       #'chatgpt-shell-mark-at-point-dwim)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-c")
@@ -683,9 +685,12 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
 (defun chatgpt-shell-set-as-primary-shell ()
   "Set as primary shell when there are multiple sessions."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (chatgpt-shell--set-primary-buffer (current-buffer)))
+
+(defvar-local chatgpt-shell--is-primary-p nil
+  "Non-nil if shell buffer is considered primary.")
 
 (defun chatgpt-shell--set-primary-buffer (primary-shell-buffer)
   "Set PRIMARY-SHELL-BUFFER as primary buffer."
@@ -728,7 +733,7 @@ This is used for sending a prompt to in the background."
 
 (defun chatgpt-shell--add-menus ()
   "Add ChatGPT shell menu items."
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (when-let ((duplicates (chatgpt-shell-duplicate-map-keys chatgpt-shell-system-prompts)))
     (user-error "Duplicate prompt names found %s. Please remove.?" duplicates))
@@ -761,7 +766,7 @@ This is used for sending a prompt to in the background."
   "Update prompt and prompt regexp from `chatgpt-shell-model-versions'.
 
 Set RENAME-BUFFER to also rename the buffer accordingly."
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (shell-maker-set-prompt
    (car (chatgpt-shell--prompt-pair))
@@ -771,13 +776,6 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
      (current-buffer)
      (chatgpt-shell--make-buffer-name))))
 
-(defun chatgpt-shell--adviced:keyboard-quit (orig-fun &rest args)
-  "Advice around `keyboard-quit' interrupting active shell.
-
-Applies ORIG-FUN and ARGS."
-  (chatgpt-shell-interrupt nil)
-  (apply orig-fun args))
-
 (defun chatgpt-shell-interrupt (ignore-item)
   "Interrupt `chatgpt-shell' from any buffer.
 
@@ -785,7 +783,7 @@ With prefix IGNORE-ITEM, do not mark as failed."
   (interactive "P")
   (with-current-buffer
       (cond
-       ((eq major-mode 'chatgpt-shell-mode)
+       ((derived-mode-p 'chatgpt-shell-mode)
         (current-buffer))
        (t
         (shell-maker-buffer-name chatgpt-shell--config)))
@@ -825,7 +823,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
   "Markdown start/end cons if point at block.  nil otherwise."
   (save-excursion
     (save-restriction
-      (when (eq major-mode 'chatgpt-shell-mode)
+      (when (derived-mode-p 'chatgpt-shell-mode)
         (shell-maker-narrow-to-prompt))
       (let* ((language)
              (language-start)
@@ -1044,7 +1042,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
 
 Could be a prompt or a source block."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (when (comint-next-prompt (- 1))
@@ -1065,7 +1063,7 @@ Could be a prompt or a source block."
 
 Could be a prompt or a source block."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (when (comint-next-prompt 1)
@@ -1313,7 +1311,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 (defun chatgpt-shell--eshell-last-last-command ()
   "Get second to last eshell command."
   (save-excursion
-    (if (string= major-mode "eshell-mode")
+    (if (derived-mode-p 'eshell-mode)
         (let ((cmd-start)
               (cmd-end))
           ;; Find command start and end positions
@@ -1355,6 +1353,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 (defun chatgpt-shell-add-??-command-to-eshell ()
   "Add `??' command to `eshell'."
 
+  ;; Note: Must have "eshell/" prefix to be recognized as an eshell command.
   (defun eshell/?? (&rest _args)
     "Implements `??' eshell command."
     (interactive)
@@ -1385,7 +1384,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
   (add-hook 'eshell-post-command-hook
             (defun chatgpt-shell--eshell-post-??-execution ()
-              (when (string-match (symbol-name #'chatgpt-shell-command-line-from-prompt-file)
+              (when (string-match "chatgpt-shell-command-line-from-prompt-file"
                                   (string-join eshell-last-arguments " "))
                 (save-excursion
                   (save-restriction
@@ -1740,7 +1739,9 @@ For example:
   (if (or on-output on-success on-failure)
       (progn
         (unless (boundp 'shell-maker--current-request-id)
-          (defvar-local shell-maker--current-request-id 0))
+          (setq-local shell-maker--current-request-id 0))
+        ;; TODO: Remove the need to create a temporary
+        ;; shell configuration when invoking `shell-maker-make-http-request'.
         (with-temp-buffer
           (setq-local shell-maker--config
                       chatgpt-shell--config)
@@ -1813,9 +1814,9 @@ If in a `dired' buffer, use selection (single image only for now)."
   "Return buffer image file, Dired selected file, or image at point."
   (when (use-region-p)
     (user-error "No region selection supported"))
-  (cond ((eq major-mode 'image-mode)
+  (cond ((derived-mode-p 'image-mode)
          (buffer-file-name))
-        ((eq major-mode 'dired-mode)
+        ((derived-mode-p 'dired-mode)
          (let* ((dired-files (dired-get-marked-files))
                 (file (seq-first dired-files)))
            (unless dired-files
@@ -1843,7 +1844,7 @@ If in a `dired' buffer, use selection (single image only for now)."
     (user-error "No region selection supported"))
   (cond ((buffer-file-name)
          (buffer-file-name))
-        ((eq major-mode 'dired-mode)
+        ((derived-mode-p 'dired-mode)
          (let* ((dired-files (dired-get-marked-files))
                 (file (seq-first dired-files)))
            (unless dired-files
@@ -2133,7 +2134,7 @@ returned list is of the form:
 
 Very much EXPERIMENTAL."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (let* ((dir (when shell-maker-transcript-default-path
                 (file-name-as-directory shell-maker-transcript-default-path)))
@@ -2549,7 +2550,7 @@ If no LENGTH set, use 2048."
 (defun chatgpt-shell-view-at-point ()
   "View prompt and output at point in a separate buffer."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-mode)
+  (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
   (let ((prompt-pos (save-excursion
                       (goto-char (process-mark
@@ -2907,7 +2908,7 @@ compiling source blocks."
       ;; and reuse between chatgpt-shell-fix-error-at-point and
       ;; chatgpt-shell-quick-modify-region.
       (progn
-        (fader-start-fading-region (save-excursion
+        (chatgpt-shell--fader-start-fading-region (save-excursion
                                      (goto-char (map-elt flymake-context :point))
                                      (line-beginning-position))
                                    (save-excursion
@@ -2932,11 +2933,11 @@ Do not wrap snippets in markdown blocks.\n\n"
                         (when prog-mode-p
                           (setq response
                                 (chatgpt-shell--remove-source-block-markers response)))
-                        (fader-stop-fading)
+                        (chatgpt-shell--fader-stop-fading)
                         (progress-reporter-done progress-reporter)
                         (with-current-buffer buffer
                           (deactivate-mark))
-                        (pretty-smerge-insert
+                        (chatgpt-shell--pretty-smerge-insert
                          :text response
                          :start (map-elt flymake-context :start)
                          :end (map-elt flymake-context :end)
@@ -2976,7 +2977,7 @@ SYSTEM-PROMPT (optional): As string."
                          end))
       (setq end (- end (length (match-string 0)))))
     (setq query (concat query "\n\n" (buffer-substring start end)))
-    (fader-start-fading-region start end)
+    (chatgpt-shell--fader-start-fading-region start end)
     (progress-reporter-update progress-reporter)
     (chatgpt-shell-send-contextless-request
      :query query
@@ -2990,9 +2991,9 @@ SYSTEM-PROMPT (optional): As string."
                     (when remove-block-markers
                       (setq response
                             (chatgpt-shell--remove-source-block-markers response)))
-                    (fader-stop-fading)
+                    (chatgpt-shell--fader-stop-fading)
                     (progress-reporter-done progress-reporter)
-                    (pretty-smerge-insert
+                    (chatgpt-shell--pretty-smerge-insert
                      :text response
                      :start start
                      :end end
@@ -3008,10 +3009,6 @@ SYSTEM-PROMPT (optional): As string."
    (rx (optional "\n") bol "```" (zero-or-more (or alphanumeric "-" "+"))
        (zero-or-more space) eol (optional "\n"))
    "" text t))
-
-;;; TODO: Move to chatgpt-shell-prompt-compose.el, but first update
-;;; the MELPA recipe, so it can load additional files other than chatgpt-shell.el.
-;;; https://github.com/melpa/melpa/blob/master/recipes/chatgpt-shell
 
 (defvar-local chatgpt-shell-prompt-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
@@ -3059,7 +3056,7 @@ t if invoked from a transient frame (quitting closes the frame).")
 
 (define-minor-mode chatgpt-shell-prompt-compose-view-mode
   "Like `view-mode`, but extended for ChatGPT Compose."
-  :lighter "ChatGPT view"
+  :lighter " ChatGPT view"
   :keymap chatgpt-shell-prompt-compose-view-mode-map
   (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
@@ -3134,6 +3131,8 @@ to retry on disconnects.
   (interactive "P")
   (chatgpt-shell-prompt-compose-show-buffer nil prefix))
 
+(defvar-local chatgpt-shell--ring-index nil)
+
 (defun chatgpt-shell-prompt-compose-show-buffer (&optional content clear-history transient-frame-p)
   "Show a prompt compose buffer.
 
@@ -3142,7 +3141,7 @@ Prepopulate buffer with optional CONTENT.
 Set CLEAR-HISTORY to wipe any existing shell history.
 
 Set TRANSIENT-FRAME-P to also close frame on exit."
-  (let* ((exit-on-submit (eq major-mode 'chatgpt-shell-mode))
+  (let* ((exit-on-submit (derived-mode-p 'chatgpt-shell-mode))
          (region (or content
                      (when-let ((region-active (region-active-p))
                                 (region (buffer-substring (region-beginning)
@@ -3174,7 +3173,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                region
                                "\n"
                                "```"))
-                     (when (eq major-mode 'eshell-mode)
+                     (when (derived-mode-p 'eshell-mode)
                        (chatgpt-shell--eshell-last-last-command))
                      (when-let* ((diagnostic (flymake-diagnostics (point)))
                                  (line-start (line-beginning-position))
@@ -3235,7 +3234,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-prompt-compose-search-history ()
   "Search prompt history, select, and insert to current compose buffer."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((candidate (with-current-buffer (chatgpt-shell--primary-buffer)
                      (completing-read
@@ -3250,7 +3249,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
 (defun chatgpt-shell-prompt-compose-quit-and-close-frame ()
   "Quit compose and close frame if it's the last window."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((transient-frame-p chatgpt-shell-prompt-compose--transient-frame-p))
     (quit-restore-window (get-buffer-window (current-buffer)) 'kill)
@@ -3324,7 +3323,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
   "Send compose buffer content to shell for processing."
   (interactive)
   (catch 'exit
-    (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+    (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
       (user-error "Not in a shell compose buffer"))
     (with-current-buffer (chatgpt-shell--primary-buffer)
       (when shell-maker--busy
@@ -3413,7 +3412,7 @@ If BACKWARDS is non-nil, go to previous interaction."
 (defun chatgpt-shell-prompt-compose-cancel ()
   "Cancel and close compose buffer."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (chatgpt-shell-prompt-compose-quit-and-close-frame))
 
@@ -3424,7 +3423,7 @@ If BACKWARDS is non-nil, go to previous interaction."
 (defun chatgpt-shell-prompt-compose-swap-system-prompt ()
   "Swap the compose buffer's system prompt."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (chatgpt-shell-swap-system-prompt))
@@ -3433,7 +3432,7 @@ If BACKWARDS is non-nil, go to previous interaction."
 (defun chatgpt-shell-prompt-compose-swap-model-version ()
   "Swap the compose buffer's model version."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (chatgpt-shell-swap-model-version))
@@ -3453,7 +3452,7 @@ If BACKWARDS is non-nil, go to previous interaction."
 
 Useful if sending a request failed, perhaps from failed connectivity."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (when-let ((prompt (with-current-buffer (chatgpt-shell--primary-buffer)
                        (seq-first (delete-dups
@@ -3473,7 +3472,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-next-block ()
   "Jump to and select next code block."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((before (point)))
     (call-interactively #'chatgpt-shell-next-source-block)
@@ -3484,7 +3483,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-previous-block ()
   "Jump to and select previous code block."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((before (point)))
     (call-interactively #'chatgpt-shell-previous-source-block)
@@ -3495,7 +3494,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
@@ -3506,7 +3505,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-request-entire-snippet ()
   "If the response code is incomplete, request the entire snippet."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
@@ -3521,7 +3520,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-request-more ()
   "Request more data.  This is useful if you already requested examples."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
@@ -3536,13 +3535,13 @@ Useful if sending a request failed, perhaps from failed connectivity."
 (defun chatgpt-shell-prompt-compose-other-buffer ()
   "Jump to the shell buffer (compose's other buffer)."
   (interactive)
-  (unless (eq major-mode 'chatgpt-shell-prompt-compose-mode)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
 ;; pretty smerge start
 
-(cl-defun pretty-smerge-insert (&key text start end buffer)
+(cl-defun chatgpt-shell--pretty-smerge-insert (&key text start end buffer)
   "Insert TEXT, replacing content of START and END at BUFFER."
   (unless (and text (stringp text))
     (error ":text is missing or not a string"))
@@ -3557,7 +3556,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
            (orig-end (copy-marker end))
            (orig-text (buffer-substring-no-properties orig-start
                                                       orig-end))
-           (diff (pretty-smerge--make-merge-patch
+           (diff (chatgpt-shell--pretty-smerge--make-merge-patch
                   :old-label "Before" :old orig-text
                   :new-label "After" :new text)))
       (delete-region orig-start orig-end)
@@ -3568,7 +3567,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
       (smerge-mode +1)
       (ignore-errors
         (smerge-prev))
-      (pretty-smerge-mode +1)
+      (chatgpt-shell--pretty-smerge-mode +1)
       (condition-case nil
           (unwind-protect
               (progn
@@ -3576,12 +3575,12 @@ Useful if sending a request failed, perhaps from failed connectivity."
                     (smerge-keep-lower)
                   (smerge-keep-upper))
                 (smerge-mode -1))
-            (pretty-smerge-mode -1))
+            (chatgpt-shell--pretty-smerge-mode -1))
         (quit
-         (pretty-smerge-mode -1))
+         (chatgpt-shell--pretty-smerge-mode -1))
         (error nil)))))
 
-(cl-defun pretty-smerge--make-merge-patch (&key old new old-label new-label)
+(cl-defun chatgpt-shell--pretty-smerge--make-merge-patch (&key old new old-label new-label)
   "Write OLD and NEW to temporary files, run diff3, and return merge patch.
 OLD-LABEL (optional): To display for old text.
 NEW-LABEL (optional): To display for new text."
@@ -3618,30 +3617,30 @@ NEW-LABEL (optional): To display for new text."
         (buffer-substring-no-properties (point-min)
                                         (point-max))))))
 
-(define-minor-mode pretty-smerge-mode
+(define-minor-mode chatgpt-shell--pretty-smerge-mode
   "Minor mode to display overlays for conflict markers."
   :lighter " PrettySmerge"
-  (if pretty-smerge-mode
+  (if chatgpt-shell--pretty-smerge-mode
       (progn
-        (pretty-smerge--refresh)
+        (chatgpt-shell--pretty-smerge--refresh)
         (add-hook 'after-change-functions
-                  #'pretty-smerge--autodisable
+                  #'chatgpt-shell--pretty-smerge--autodisable
                   nil t))
-    (pretty-smerge-mode-remove--overlays)
+    (chatgpt-shell--pretty-smerge-mode-remove--overlays)
     (remove-hook 'after-change-functions
-                 #'pretty-smerge--autodisable
+                 #'chatgpt-shell--pretty-smerge--autodisable
                  t)))
 
-(defun pretty-smerge--autodisable (_beg _end _len)
-  "Disable `pretty-smerge-mode' on edit."
-  (pretty-smerge-mode -1)
+(defun chatgpt-shell--pretty-smerge--autodisable (_beg _end _len)
+  "Disable `chatgpt-shell--pretty-smerge-mode' on edit."
+  (chatgpt-shell--pretty-smerge-mode -1)
   (remove-hook 'after-change-functions
-               #'pretty-smerge--autodisable
+               #'chatgpt-shell--pretty-smerge--autodisable
                t))
 
-(defun pretty-smerge--refresh ()
+(defun chatgpt-shell--pretty-smerge--refresh ()
   "Apply overlays to conflict markers."
-  (pretty-smerge-mode-remove--overlays)
+  (chatgpt-shell--pretty-smerge-mode-remove--overlays)
   (save-excursion
     (goto-char (point-min))
     (while (re-search-forward
@@ -3676,7 +3675,7 @@ NEW-LABEL (optional): To display for new text."
         (overlay-put overlay 'face 'warning)
         (overlay-put overlay 'evaporate t)))))
 
-(defun pretty-smerge-mode-remove--overlays ()
+(defun chatgpt-shell--pretty-smerge-mode-remove--overlays ()
   "Remove all conflict marker overlays."
   (remove-overlays (point-min) (point-max) 'category 'conflict-marker))
 
@@ -3684,37 +3683,32 @@ NEW-LABEL (optional): To display for new text."
 
 ;; fader start
 
-(defvar-local fader-timer nil
+(defvar-local chatgpt-shell--fader-timer nil
   "Timer object for animating the region.")
 
-(defvar-local fader-overlays nil
+(defvar-local chatgpt-shell--fader-overlays nil
   "List of overlays for the animated regions.")
 
-(defvar-local chatgpt-shell--is-primary-p nil
-  "Non-nil if shell buffer is considered primary.")
-
-(defvar-local chatgpt-shell--ring-index nil)
-
-(defun fader-start-fading-region (start end)
+(defun chatgpt-shell--fader-start-fading-region (start end)
   "Animate the background color of the region between START and END."
   (deactivate-mark)
-  (fader-stop-fading)
-  (let ((colors (append (fader-palette)
-                        (reverse (fader-palette)))))
-    (dolist (ov fader-overlays) (delete-overlay ov))
-    (setq fader-overlays (list (make-overlay start end)))
-    (setq fader-timer
+  (chatgpt-shell--fader-stop-fading)
+  (let ((colors (append (chatgpt-shell--fader-palette)
+                        (reverse (chatgpt-shell--fader-palette)))))
+    (dolist (ov chatgpt-shell--fader-overlays) (delete-overlay ov))
+    (setq chatgpt-shell--fader-overlays (list (make-overlay start end)))
+    (setq chatgpt-shell--fader-timer
           (run-with-timer 0 0.01
                           (lambda ()
                             (let* ((color (pop colors)))
                               (if (and color
-                                       fader-overlays)
+                                       chatgpt-shell--fader-overlays)
                                   (progn
-                                    (overlay-put (car fader-overlays) 'face `(:background ,color :extend t))
+                                    (overlay-put (car chatgpt-shell--fader-overlays) 'face `(:background ,color :extend t))
                                     (setq colors (append colors (list color))))
-                                (fader-stop-fading))))))))
+                                (chatgpt-shell--fader-stop-fading))))))))
 
-(defun fader-palette ()
+(defun chatgpt-shell--fader-palette ()
   "Generate a gradient palette from the `region' face to the `default' face."
   (let* ((start-color (face-background 'region))
          (end-color (face-background 'default))
@@ -3722,30 +3716,30 @@ NEW-LABEL (optional): To display for new text."
          (end-rgb (color-name-to-rgb end-color))
          (steps 50))
     (mapcar (lambda (step)
-              (apply 'color-rgb-to-hex
+              (apply #'color-rgb-to-hex
                      (cl-mapcar (lambda (start end)
                                   (+ start (* step (/ (- end start) (1- steps)))))
                                 start-rgb end-rgb)))
             (number-sequence 0 (1- steps)))))
 
-(defun fader-start ()
+(defun chatgpt-shell--fader-start ()
   "Start animating the currently active region."
   (interactive)
   (if (use-region-p)
       (progn
         (deactivate-mark)
-        (fader-start-fading-region (region-beginning) (region-end)))
+        (chatgpt-shell--fader-start-fading-region (region-beginning) (region-end)))
     (message "No active region")))
 
-(defun fader-stop-fading ()
+(defun chatgpt-shell--fader-stop-fading ()
   "Stop animating and remove all overlays."
   (interactive)
-  (when fader-timer
-    (cancel-timer fader-timer)
-    (setq fader-timer nil))
-  (dolist (ov fader-overlays)
+  (when chatgpt-shell--fader-timer
+    (cancel-timer chatgpt-shell--fader-timer)
+    (setq chatgpt-shell--fader-timer nil))
+  (dolist (ov chatgpt-shell--fader-overlays)
     (delete-overlay ov))
-  (setq fader-overlays nil))
+  (setq chatgpt-shell--fader-overlays nil))
 
 ;; fader end
 
