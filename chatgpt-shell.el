@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.17.1
+;; Version: 1.18.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.58.1"))
 (defconst chatgpt-shell--version "1.17.1")
 
@@ -1423,7 +1423,6 @@ END (optional): End of region to replace (overrides active region)."
          (marker (if delete-text
                      (copy-marker (max delete-from delete-to))
                    (copy-marker (point))))
-         (response nil)
          (progress-reporter (unless streaming
                               (make-progress-reporter "ChatGPT "))))
     (chatgpt-shell-send-contextless-request
@@ -1445,10 +1444,9 @@ END (optional): End of region to replace (overrides active region)."
                               (set-marker marker (+ (length output)
                                                     (marker-position marker))))))
                       (progn
-                        (progress-reporter-update progress-reporter)
-                        (setq output (concat output output)))))
-     :on-finished (lambda (success)
-                    (if streaming
+                        (progress-reporter-update progress-reporter))))
+     :on-success (lambda (output)
+                   (if streaming
                         (with-current-buffer buffer
                           (goto-char point))
                       (progress-reporter-done progress-reporter)
@@ -1459,12 +1457,16 @@ END (optional): End of region to replace (overrides active region)."
                           (setq delete-text nil))
                         (save-excursion
                           (goto-char marker)
-                          (insert response))
-                        (goto-char point)))
-                    (when (and (not success)
-                               (not (string-empty-p (string-trim
-                                                     (or response "")))))
-                      (message (or response "failed")))))))
+                          (insert output))
+                        (goto-char point))))
+     :on-failure (lambda (output)
+                   (if streaming
+                       (with-current-buffer buffer
+                         (goto-char point))
+                     (progress-reporter-done progress-reporter))
+                   (when (not (string-empty-p (string-trim
+                                               (or output ""))))
+                     (message (or output "failed")))))))
 
 (cl-defun chatgpt-shell-send-contextless-request
     (&key (model-version chatgpt-shell-model-version)
@@ -1472,7 +1474,8 @@ END (optional): End of region to replace (overrides active region)."
           query
           streaming
           on-output
-          on-finished)
+          on-success
+          on-failure)
   "Send a request with:
 
 QUERY: Request query text.
@@ -1483,8 +1486,6 @@ SYSTEM-PROMPT (optional): As string.
 STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
   (unless query
     (error "Missing mandatory \"query\" param"))
-  (unless on-output
-    (error "Missing mandatory \"on-output\" param of the form (lambda (output))"))
   (chatgpt-shell-post-chatgpt-messages :messages
                                        (vconcat ;; Convert to vector for json
                                         `(((role . "system")
@@ -1496,7 +1497,8 @@ STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
                                        :version model-version
                                        :streaming streaming
                                        :on-output on-output
-                                       :on-finished on-finished))
+                                       :on-success on-success
+                                       :on-failure on-failure))
 
 (defun chatgpt-shell-send-to-buffer (input &optional review handler on-finished)
   "Send INPUT to *chatgpt* shell buffer.
@@ -2968,8 +2970,7 @@ SYSTEM-PROMPT (optional): As string."
                  (goto-char (region-beginning))
                  (line-beginning-position)))
         (end (region-end))
-        (progress-reporter (make-progress-reporter "ChatGPT "))
-        (response nil))
+        (progress-reporter (make-progress-reporter "ChatGPT ")))
     ;; Barf trailing space from selection.
     (when (string-match "[ \n\t]+$"
                         (buffer-substring-no-properties
@@ -2984,24 +2985,29 @@ SYSTEM-PROMPT (optional): As string."
      :model-version model-version
      :system-prompt system-prompt
      :streaming t
-     :on-output (lambda (chunk)
-                    (progress-reporter-update progress-reporter)
-                    (setq response (concat response chunk)))
-     :on-finished (lambda (success)
-                    (when remove-block-markers
-                      (setq response
-                            (chatgpt-shell--remove-source-block-markers response)))
-                    (chatgpt-shell--fader-stop-fading)
-                    (progress-reporter-done progress-reporter)
-                    (chatgpt-shell--pretty-smerge-insert
-                     :text response
-                     :start start
-                     :end end
-                     :buffer buffer)
-                    (when (and (not success)
-                               (not (string-empty-p (string-trim
-                                                     (or response "")))))
-                      (message (or response "failed")))))))
+     :on-output (lambda (_chunk)
+                    (progress-reporter-update progress-reporter))
+     :on-success (lambda (output)
+                   (with-current-buffer buffer
+                     (when remove-block-markers
+                       (chatgpt-shell--remove-source-block-markers output))
+                     (chatgpt-shell--fader-stop-fading)
+                     (progress-reporter-done progress-reporter)
+                     (chatgpt-shell--pretty-smerge-insert
+                      :text output
+                      :start start
+                      :end end
+                      :buffer buffer)))
+     :on-failure (lambda (output)
+                   (message "chatgpt-shell-request-and-insert-merged-response: on-failure \"%s\"" output)
+                   (with-current-buffer buffer
+                     (when remove-block-markers
+                       (chatgpt-shell--remove-source-block-markers output))
+                     (chatgpt-shell--fader-stop-fading)
+                     (progress-reporter-done progress-reporter)
+                     (when (not (string-empty-p (string-trim
+                                                 (or output ""))))
+                       (message (or output "failed"))))))))
 
 (defun chatgpt-shell--remove-source-block-markers (text)
   "Remove markdown code block markers TEXT."
