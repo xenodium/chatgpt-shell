@@ -2999,7 +2999,6 @@ SYSTEM-PROMPT (optional): As string."
                       :end end
                       :buffer buffer)))
      :on-failure (lambda (output)
-                   (message "chatgpt-shell-request-and-insert-merged-response: on-failure \"%s\"" output)
                    (with-current-buffer buffer
                      (chatgpt-shell--fader-stop-fading)
                      (progress-reporter-done progress-reporter)
@@ -3556,7 +3555,8 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (and end (integerp end))
     (error ":end is missing or not an integer"))
   (with-current-buffer buffer
-    (let* ((orig-start (copy-marker start))
+    (let* ((needs-wrapping (not visual-line-mode))
+           (orig-start (copy-marker start))
            (orig-end (copy-marker end))
            (orig-text (buffer-substring-no-properties orig-start
                                                       orig-end))
@@ -3568,6 +3568,8 @@ Useful if sending a request failed, perhaps from failed connectivity."
         (delete-char 1))
       (goto-char orig-start)
       (insert diff)
+      (when needs-wrapping
+        (visual-line-mode +1))
       (smerge-mode +1)
       (ignore-errors
         (smerge-prev))
@@ -3579,9 +3581,13 @@ Useful if sending a request failed, perhaps from failed connectivity."
                     (smerge-keep-lower)
                   (smerge-keep-upper))
                 (smerge-mode -1))
-            (chatgpt-shell--pretty-smerge-mode -1))
+            (chatgpt-shell--pretty-smerge-mode -1)
+            (when needs-wrapping
+              (visual-line-mode -1)))
         (quit
-         (chatgpt-shell--pretty-smerge-mode -1))
+         (chatgpt-shell--pretty-smerge-mode -1)
+         (when needs-wrapping
+           (visual-line-mode -1)))
         (error nil)))))
 
 (cl-defun chatgpt-shell--pretty-smerge--make-merge-patch (&key old new old-label new-label)
