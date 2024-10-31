@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.20.1
+;; Version: 1.21.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.58.1"))
-(defconst chatgpt-shell--version "1.20.1")
+(defconst chatgpt-shell--version "1.21.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1469,7 +1469,7 @@ END (optional): End of region to replace (overrides active region)."
                      (message (or output "failed")))))))
 
 (cl-defun chatgpt-shell-send-contextless-request
-    (&key (model-version chatgpt-shell-model-version)
+    (&key (model-version (chatgpt-shell-model-version))
           (system-prompt "")
           query
           streaming
@@ -2903,19 +2903,16 @@ compiling source blocks."
   (interactive)
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
            (progress-reporter (make-progress-reporter "ChatGPT "))
-           (response "")
            (buffer (current-buffer))
            (prog-mode-p (derived-mode-p 'prog-mode)))
-      ;; TODO: Add a helper that facilitates applying changes interactively
-      ;; and reuse between chatgpt-shell-fix-error-at-point and
-      ;; chatgpt-shell-quick-modify-region.
       (progn
-        (chatgpt-shell--fader-start-fading-region (save-excursion
-                                     (goto-char (map-elt flymake-context :point))
-                                     (line-beginning-position))
-                                   (save-excursion
-                                     (goto-char (map-elt flymake-context :point))
-                                     (line-end-position)))
+        (chatgpt-shell--fader-start-fading-region
+         (save-excursion
+           (goto-char (map-elt flymake-context :point))
+           (line-beginning-position))
+         (save-excursion
+           (goto-char (map-elt flymake-context :point))
+           (line-end-position)))
         (progress-reporter-update progress-reporter)
         (chatgpt-shell-send-contextless-request
          :system-prompt "Fix the error highlighted in code and show the entire snippet rewritten with the fix.
@@ -2926,28 +2923,29 @@ Do not wrap snippets in markdown blocks.\n\n"
                         "Code: \n\n"
                         (map-elt flymake-context :content))
          :streaming t
-         :on-output (lambda (chunk)
-                        (progress-reporter-update progress-reporter)
-                        (setq response (concat response chunk)))
-         :on-finished (lambda (success)
-                        ;; In prog mode, remove unnecessary
-                        ;; markdown blocks prior to insertion.
-                        (when prog-mode-p
-                          (setq response
-                                (chatgpt-shell--remove-source-block-markers response)))
-                        (chatgpt-shell--fader-stop-fading)
-                        (progress-reporter-done progress-reporter)
-                        (with-current-buffer buffer
-                          (deactivate-mark))
-                        (chatgpt-shell--pretty-smerge-insert
-                         :text response
-                         :start (map-elt flymake-context :start)
-                         :end (map-elt flymake-context :end)
-                         :buffer buffer)
-                        (when (and (not success)
-                                   (not (string-empty-p (string-trim
-                                                         (or response "")))))
-                          (message (or response "failed"))))))
+         :on-output (lambda (_chunk)
+                      (progress-reporter-update progress-reporter))
+         :on-success (lambda (output)
+                       (with-current-buffer buffer
+                         ;; In prog mode, remove unnecessary
+                         ;; markdown blocks prior to insertion.
+                         (when prog-mode-p
+                           (setq output
+                                 (chatgpt-shell--remove-source-block-markers output)))
+                         (chatgpt-shell--fader-stop-fading)
+                         (progress-reporter-done progress-reporter)
+                         (chatgpt-shell--pretty-smerge-insert
+                          :text output
+                          :start (map-elt flymake-context :start)
+                          :end (map-elt flymake-context :end)
+                          :buffer buffer)))
+         :on-failure (lambda (output)
+                       (with-current-buffer buffer
+                         (chatgpt-shell--fader-stop-fading)
+                         (progress-reporter-done progress-reporter)
+                         (when (not (string-empty-p (string-trim
+                                                     (or output ""))))
+                           (message (or output "failed")))))))
     (error "Nothing to fix")))
 
 (cl-defun chatgpt-shell-request-and-insert-merged-response (&key query
