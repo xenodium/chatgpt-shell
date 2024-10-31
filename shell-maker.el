@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.59.1
+;; Version: 0.60.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -37,6 +37,8 @@
 (require 'seq)
 (require 'shell)
 (require 'view)
+
+(declare-function closurep "src/data.c")
 
 (eval-when-compile
   (require 'cl-lib)
@@ -88,7 +90,7 @@ As a function, so it can also logic to generate a name.
 For example:
 
 \(lambda ()
-    (format-time-string \"%Y-%m-%d-%H:%M:%S-transcript.txt\"))"
+    (format-time-string \"%F-%T-transcript.txt\"))"
   :type 'function
   :group 'shell-maker)
 
@@ -806,6 +808,7 @@ ON-FINISHED: A function to notify when command is finished.
                       :filter (lambda (_process raw-output)
                                 (log "Stderr")
                                 (log raw-output)
+                                (setq output (concat output raw-output))
                                 (with-current-buffer shell-buffer
                                   (when on-output
                                     (funcall on-output (concat "\n" (string-trim raw-output))))))
@@ -895,7 +898,7 @@ and TIMEOUT: defaults to 600ms."
                   "--fail-with-body"
                   "--no-progress-meter"
                   "-m" (number-to-string timeout))
-            (apply 'append
+            (apply #'append
                    (mapcar (lambda (header)
                              (list "-H" header))
                            headers))
@@ -1162,7 +1165,7 @@ ERROR-CALLBACK accordingly."
     (with-current-buffer (get-buffer-create (format "*%s-log*"
                                                     (shell-maker-process-name config)))
       (goto-char (point-max))
-      (insert (concat "\n" (format-time-string "%Y-%m-%dT%H:%M:%S") ": " format)))))
+      (insert "\n" (format-time-string "%Y:%T") ": " format))))
 
 (defun shell-maker--temp-file (&rest components)
   "Create temp file path for COMPONENTS."
@@ -1521,9 +1524,8 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
                                         rows)))
         (space-str (make-string space-count ?\s)))
     (mapconcat (lambda (row)
-                 (format (concat "%-" (number-to-string first-col-width)
-                                 "s" space-str "%s\n%" (number-to-string first-col-width)
-                                 "s" space-str "%s")
+                 (format (format "%%-%ds%s%%s\n%%-%ds%s%%s"
+                                 first-col-width space-str first-col-width space-str)
                          (nth 0 row) (nth 1 row) "" (nth 2 row)))
                rows "\n\n")))
 
@@ -1531,7 +1533,7 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
   "Align columns in ROWS."
   (let* ((columns (length (car rows)))
          (max-widths (cl-mapcar (lambda (column)
-                                  (apply 'max
+                                  (apply #'max
                                          (mapcar (lambda (row)
                                                    (length (format "%s" (nth column row))))
                                                  rows)))
@@ -1541,7 +1543,7 @@ If KEEP-IN-HISTORY, don't mark to ignore it."
                  (format "%%-%ds" w))
                max-widths "   ")))
     (mapconcat
-     (lambda (row) (apply 'format fmt row))
+     (lambda (row) (apply #'format fmt row))
      rows "\n")))
 
 (defun shell-maker--make-ret-binding-map (fun)
