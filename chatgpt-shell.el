@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.18.1
+;; Version: 1.19.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.58.1"))
-(defconst chatgpt-shell--version "1.17.1")
+(defconst chatgpt-shell--version "1.19.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2990,7 +2990,7 @@ SYSTEM-PROMPT (optional): As string."
      :on-success (lambda (output)
                    (with-current-buffer buffer
                      (when remove-block-markers
-                       (chatgpt-shell--remove-source-block-markers output))
+                       (setq output (chatgpt-shell--remove-source-block-markers output)))
                      (chatgpt-shell--fader-stop-fading)
                      (progress-reporter-done progress-reporter)
                      (chatgpt-shell--pretty-smerge-insert
@@ -3001,8 +3001,6 @@ SYSTEM-PROMPT (optional): As string."
      :on-failure (lambda (output)
                    (message "chatgpt-shell-request-and-insert-merged-response: on-failure \"%s\"" output)
                    (with-current-buffer buffer
-                     (when remove-block-markers
-                       (chatgpt-shell--remove-source-block-markers output))
                      (chatgpt-shell--fader-stop-fading)
                      (progress-reporter-done progress-reporter)
                      (when (not (string-empty-p (string-trim
