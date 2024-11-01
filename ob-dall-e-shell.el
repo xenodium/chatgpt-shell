@@ -4,8 +4,8 @@
 
 ;; Author: Alvaro Ramirez
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.32.1
-;; Package-Requires: ((emacs "27.1") (dall-e-shell "0.42.1"))
+;; Version: 0.33.1
+;; Package-Requires: ((emacs "27.1") (dall-e-shell "0.43.1"))
 
 ;;; License:
 
