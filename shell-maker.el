@@ -4,7 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 0.61.1
+;; Version: 0.62.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -720,7 +720,7 @@ Return filtered response."
        :exit-status exit-status
        :output text))))
 
-(cl-defun shell-maker--execute-command-async (&key command filter on-output on-finished)
+(cl-defun shell-maker--execute-command-async (&key command filter on-output on-finished log)
   "Execute COMMAND list (command + params) asynchronously.
 
 FILTER: An optional function filter command output.  Use it for convertions.
@@ -738,16 +738,22 @@ ON-OUTPUT: A function to notify of output.
 
 ON-FINISHED: A function to notify when command is finished.
 
-  (lambda (success))."
+  (lambda (success)).
+
+LOG: A function to log to.
+
+  (lambda (format &rest))."
   (unless command
     (error "Missing mandatory :command param"))
   (unless filter
     (setq filter #'identity))
+  (unless log
+    (error "Missing mandatory :log param"))
   (let* ((process-name (make-temp-name "shell-maker--execute-command-async-"))
          (output)
          (pending))
     (cl-flet ((log (format &rest args)
-                (apply #'shell-maker--log (append (list format) args))))
+                (apply log (append (list format) args))))
       (log "Async Command v2")
       (log "%s" command)
       (setq shell-maker--request-process
@@ -890,12 +896,12 @@ and TIMEOUT: defaults to 600ms."
             (when data
               (list "-d" (format "@%s" data-file))))))
 
-(cl-defun shell-maker-execute-command (&key async command filter on-output on-finished shell)
+(cl-defun shell-maker-execute-command (&key async command filter on-output on-finished shell log)
   "Execute COMMAND list (command + params).
 
 ASYNC: Optionally execute COMMAND asynchronously.
 
-FILTER: An optional function filter command output.  Use it for convertions.
+FILTER: An optional function filter command output.  Use it for conversions.
 
   (lambda (raw-text)
     ;; Must return either a string
@@ -912,13 +918,18 @@ ON-FINISHED: (lambda (result))
 
 or use send to the shell using the object exposed via :execute-command
 
-SHELL: The shell context to write command output to."
+SHELL: The shell context to write command output to.
+
+LOG: A function to log to (lambda (format &rest))."
   (unless command
     (error "Missing mandatory :command param"))
+  (unless (or log (map-elt shell :log))
+    (setq log (lambda (_format &rest _args))))
   (if async
       (shell-maker--execute-command-async
        :command command
        :filter filter
+       :log (or log (map-elt shell :log))
        :on-output (lambda (output)
                     (when (map-elt shell :write-output)
                       (funcall (map-elt shell :write-output) output))
@@ -950,6 +961,7 @@ ERROR-CALLBACK accordingly."
   (let* ((buffer (shell-maker-buffer shell-maker--config))
          (request-id (shell-maker--increment-request-id))
          (output-buffer (generate-new-buffer " *temp*"))
+         (config shell-maker--config)
          (request-process (condition-case err
                               (apply #'start-process (append (list
                                                               (shell-maker-buffer-name shell-maker--config)
@@ -964,8 +976,8 @@ ERROR-CALLBACK accordingly."
          (process-connection-type nil))
     (when request-process
       (setq shell-maker--request-process request-process)
-      (shell-maker--log "Async Command v1")
-      (shell-maker--log command)
+      (shell-maker--log config "Async Command v1")
+      (shell-maker--log config command)
       (when streaming
         (set-process-filter
          request-process
@@ -974,8 +986,8 @@ ERROR-CALLBACK accordingly."
                (when (and (eq request-id (with-current-buffer buffer
                                            (shell-maker--current-request-id)))
                           (buffer-live-p buffer))
-                 (shell-maker--log "Filter output")
-                 (shell-maker--log output)
+                 (shell-maker--log config "Filter output")
+                 (shell-maker--log config output)
                  (setq remaining-text (concat remaining-text output))
                  (when preprocess-response
                    (setq remaining-text (funcall preprocess-response remaining-text)))
@@ -1005,9 +1017,9 @@ ERROR-CALLBACK accordingly."
                    (output (with-current-buffer (process-buffer process)
                              (buffer-string)))
                    (exit-status (process-exit-status process)))
-               (shell-maker--log "Response (%s)" (if active "active" "inactive"))
-               (shell-maker--log "Exit status: %d" exit-status)
-               (shell-maker--log output)
+               (shell-maker--log config "Response (%s)" (if active "active" "inactive"))
+               (shell-maker--log config "Exit status: %d" exit-status)
+               (shell-maker--log config output)
                (with-current-buffer buffer
                  (if (= exit-status 0)
                      (funcall callback
@@ -1141,15 +1153,20 @@ ERROR-CALLBACK accordingly."
                        (eq (length items) 1)))
         (seq-first items)))))
 
-(defun shell-maker--log (format &rest args)
-  "Write FORMAT with ARGS."
+(defun shell-maker--log (config format &rest args)
+  "Write FORMAT with ARGS, using CONFIG."
   (unless format
     (setq format "<nil>"))
   (when args
     (setq format (apply #'format format args)))
-  (with-current-buffer (get-buffer-create "*shell-maker log*")
-    (goto-char (point-max))
-    (insert "\n" (format-time-string "%Y:%T") ": " format)))
+  (when (and shell-maker-logging config)
+    (when (shell-maker-config-redact-log-output config)
+      (setq format
+            (funcall (shell-maker-config-redact-log-output config) format)))
+    (with-current-buffer (get-buffer-create (format "*%s-log*"
+                                                    (shell-maker-process-name config)))
+      (goto-char (point-max))
+      (insert "\n" (format-time-string "%Y:%T") ": " format))))
 
 (defun shell-maker--temp-file (&rest components)
   "Create temp file path for COMPONENTS."
@@ -1629,6 +1646,8 @@ Of the form:
              ;; shell attributes exposed to command executors.
              (list
               (cons :history history)
+              (cons :log (lambda (format &rest args)
+                           (apply #'shell-maker--log (append (list config format) args))))
               (cons :write-output (lambda (output)
                                     (setq output (or output "<nil-message>"))
                                     (when-let ((active (and (eq request-id (with-current-buffer shell-buffer
