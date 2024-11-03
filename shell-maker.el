@@ -709,16 +709,20 @@ Return filtered response."
     (setq filter #'identity))
   (with-temp-buffer
     (let* ((buffer (current-buffer))
-           (exit-status (apply #'call-process (seq-first command) nil buffer nil (cdr command)))
+           (stderr-file (make-temp-file "stderr-"))
+           (exit-status (apply #'call-process (seq-first command) nil (list buffer stderr-file) nil (cdr command)))
            (data (buffer-substring-no-properties (point-min) (point-max)))
            (filtered (funcall filter data))
            (text (or (map-elt filtered :filtered)
                      (map-elt filtered :pending)
                      filtered
+                     (with-temp-buffer
+                       (insert-file-contents stderr-file)
+                       (string-trim (buffer-string)))
                      "")))
       (list
-       :exit-status exit-status
-       :output text))))
+       (cons :exit-status exit-status)
+       (cons :output text)))))
 
 (cl-defun shell-maker--execute-command-async (&key command filter on-output on-finished log)
   "Execute COMMAND list (command + params) asynchronously.
@@ -817,14 +821,15 @@ LOG: A function to log to.
                                (log "Exit status: %d" exit-status)
                                (when on-finished
                                  (funcall on-finished (list
-                                                       :exit-status exit-status
-                                                       :output output))))
+                                                       (cons :exit-status exit-status)
+                                                       (cons :output output)))))
                            (error
                             (when on-output
-                              (funcall on-output (format "\n\n%s" err)))))))))))
+                              (funcall on-output (format "\n\n%s" err))))))))
+      shell-maker--request-process)))
 
 (cl-defun shell-maker-make-http-request (&key async url data encoding timeout
-                                              headers filter on-output on-finished shell)
+                                              headers fields filter on-output on-finished shell)
   "Make HTTP request at URL.
 
 Optionally set:
@@ -832,10 +837,15 @@ Optionally set:
 ASYNC: Non-nil if request should be asynchronous.
 DATA: Any data to be posted.
 ENCODING: Defaults to ='utf-8 (as per `coding-system-for-write').
-HEADERS: Of the form
+HEADERS: As a list of strings
 
   (\"header1: value1\")
    \"header2: value2\")
+
+FIELDS: As a list of strings
+
+  (\"field1=value1\")
+   \"field2=value2\")
 
 TIMEOUT: defaults to 600ms.
 FILTER: An optional function filter command output.  Use it for convertions.
@@ -851,28 +861,40 @@ ON-OUTPUT: (lambda (output))
 ON-FINISHED: (lambda (result))."
   (unless url
     (error "Missing mandatory :url param"))
-  (shell-maker-execute-command :async async
-                               :command (shell-maker-make--curl-command :url url
-                                                                        :data data
-                                                                        :encoding encoding
-                                                                        :timeout timeout
-                                                                        :headers headers)
-                               :filter filter
-                               :on-output on-output
-                               :on-finished on-finished
-                               :shell shell))
+  (let ((result (shell-maker-execute-command
+                 :async async
+                 :command (shell-maker-make--curl-command :url url
+                                                          :data data
+                                                          :encoding encoding
+                                                          :timeout timeout
+                                                          :headers headers
+                                                          :fields fields)
+                 :filter filter
+                 :on-output on-output
+                 :on-finished on-finished
+                 :shell shell)))
+    (when (and (listp result)
+               (map-elt result :exit-status))
+      (list
+       (cons :success (eq (map-elt result :exit-status) 0))
+       (cons :output (map-elt result :output))))))
 
-(cl-defun shell-maker-make--curl-command (&key url data encoding timeout headers)
+(cl-defun shell-maker-make--curl-command (&key url data encoding timeout headers fields)
   "Build curl command list using URL.
 
 Optionally, add:
 
 DATA: To send.
 ENCODING: Defaults to ='utf-8 (as per `coding-system-for-write').
-HEADERS: Of the form
+HEADERS: As a list of strings
 
   (\"header1: value1\")
    \"header2: value2\")
+
+FIELDS: As a list of strings
+
+  (\"field1=value1\")
+   \"field2=value2\")
 
 and TIMEOUT: defaults to 600ms."
   (unless encoding
@@ -893,6 +915,10 @@ and TIMEOUT: defaults to 600ms."
                    (mapcar (lambda (header)
                              (list "-H" header))
                            headers))
+            (apply #'append
+                   (mapcar (lambda (field)
+                             (list "-F" field))
+                           fields))
             (when data
               (list "-d" (format "@%s" data-file))))))
 
