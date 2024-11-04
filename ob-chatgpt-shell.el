@@ -55,6 +55,7 @@
                                                       (:preflight . nil)
                                                       (:assistant-id . nil)
                                                       (:file-id . nil)
+                                                      (:file . nil)
                                                       (:thread-id . nil)))
 
 (cl-defun ob-chatgpt-shell--post-assistant (&key body params)
@@ -74,6 +75,7 @@
     (message "Can't use :preflight with either :assistant-id, :file-id, or :thread-id"))
   (ob-chatgpt--query-file :prompt body
                           :file-id (map-elt params :file-id)
+                          :file (map-elt params :file)
                           :assistant-id (map-elt params :assistant-id)
                           :thread-id (map-elt params :thread-id)))
 
@@ -130,6 +132,7 @@ This function is called by `org-babel-execute-src-block'"
 (defun ob-chatgpt-shell--assistant-post-p (params)
   (or (map-elt params :assistant-id)
       (map-elt params :file-id)
+      (map-elt params :file)
       (map-elt params :thread-id)))
 
 (defun ob-chatgpt-shell--context (&optional context-name)
