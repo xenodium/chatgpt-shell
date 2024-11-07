@@ -1660,50 +1660,106 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
                                     (when (string= event "finished\n")
                                       (chatgpt-shell-japanese-lookup term))))))
 
-;;;###autoload
-(defun chatgpt-shell-japanese-lookup (&optional term)
-  "Look up Japanese TERM."
+(defun chatgpt-shell-japanese-lookup ()
+  "Look Japanese term up.
+
+Ask user for term. Alternatively, if point is on an image, extract Japanese
+data from the image.
+
+Display result in org table of the form:
+
+| Hiragana | Katakana | Kanji | Romaji | English | #Tags |
+|----------+----------+-------+--------+---------+-------|
+|          |          |       |        |         |       |"
   (interactive)
-  (unless term
-    (setq term (cond ((region-active-p)
-                      (let ((region (buffer-substring (region-beginning)
-                                                      (region-end))))
-                        (deactivate-mark)
-                        region))
-                     (t
-                      (read-string "Japanese look up: ")))))
-  (when (string-empty-p (string-trim term))
-    (user-error "Nothing to look up"))
-  (let* ((translation-buffer (get-buffer-create "*chatgpt japanese translation*"))
-         (system-prompt (concat "You are a japanese translator. "
-                                "Only provide katakana if applicable. "
-                                "provide respective:\n\n"
-                                "kanji: <fill-in-blank>\n"
-                                "hiragana: <fill-in-blank>\n"
-                                "katakana: <fill-in-blank>\n"
-                                "romaji: <fill-in-blank>\n"
-                                "meaning: <fill-in-blank>")))
-    (chatgpt-shell-post-chatgpt-messages
-     :messages
-     (vconcat ;; Convert to vector for json
-      `(((role . "system")
-         (content . ,system-prompt))
-        ((role . "user")
-         (content . ,(vconcat
-                      `(((type . "text")
-                         (text . ,term))))))))
-     :on-output
-     (lambda (output)
-       (with-current-buffer translation-buffer
-         (let ((inhibit-read-only t))
-           (erase-buffer)
-           (insert output)
-           (use-local-map (let ((map (make-sparse-keymap)))
-                            (define-key map (kbd "q") 'kill-buffer-and-window)
-                            map)))
-         (read-only-mode +1))
-       (display-buffer translation-buffer))
-     :other-params '((max_tokens . 300)))))
+  (let* ((file (chatgpt-shell--current-image-file))
+         (term (unless file
+                 (chatgpt-shell--read-string :prompt "Japanese lookup: ")))
+         (buffer "*Japanese lookup*"))
+    (chatgpt-shell-lookup :buffer buffer
+                          :prompt (if file
+                                      "Use for this image to extract each row data."
+                                    (format "Fill out a row for \"%s\"" term))
+                          :on-success (lambda (_output)
+                                        (with-current-buffer buffer
+                                          (goto-char (point-min))
+                                          (org-mode)
+                                          (let ((inhibit-read-only t))
+                                            (goto-char (point-min))
+                                            (org-table-align)
+                                            (when (fboundp 'valign-mode)
+                                              (valign-mode +1)))))
+                          :prompt-url file
+                          :streaming t
+                          :system-prompt "
+1. Fill out an org mode table using this format as an example:
+
+| Hiragana      | Katakana | Kanji | Romaji            | English | Tags              |
+|---------------+----------+-------+-------------------+---------+-------------------|
+| おなかすきました |          | 空腹   | onaka sukimashita | hungry  | #describe #myself |
+
+2. Fill out Hiragana only when appropriate.
+3. Fill out Katakana only when appropriate.
+4. Fill out Kanji only when appropriate.
+5. Show long romaji vowels (i.e ō).
+6. Ensure columns align.
+7. Do NOT wrap anything in Markdown source blocks.
+8. Do NOT add any text or explanations outside the org table.")))
+
+(cl-defun chatgpt-shell-lookup (&key buffer system-prompt prompt prompt-url streaming
+                                     on-success on-failure)
+  "Look something up as a one-off (no shell history) and output to BUFFER.
+
+Inputs:
+
+Either (or all) of SYSTEM-PROMPT, PROMPT, PROMPT-URL (image file).
+
+Optionally:
+
+STREAMING: Non-nil streams output to BUFFER.
+
+ON-SUCCESS: (lambda (output)) for completion event.
+
+ON-FAILURE: (lambda (output)) for completion event."
+  (setq buffer (get-buffer-create buffer))
+  (with-current-buffer buffer
+    (let ((inhibit-read-only t))
+      (erase-buffer))
+    (read-only-mode +1)
+    (use-local-map (let ((map (make-sparse-keymap)))
+                     (define-key map (kbd "q") 'kill-buffer-and-window)
+                     map)))
+  (display-buffer buffer)
+  (chatgpt-shell-post-chatgpt-messages
+   :messages
+   (chatgpt-shell--make-chatgpt-messages
+    :system-prompt system-prompt
+    :prompt prompt
+    :prompt-url prompt-url)
+   :streaming streaming
+   :on-success (lambda (output)
+                 (when on-success
+                   (funcall on-success output))
+                 (display-buffer buffer))
+   :on-failure (lambda (output)
+                 (when on-failure
+                   (funcall on-failure output))
+                 (display-buffer buffer))
+   :on-output
+   (lambda (output)
+     (with-current-buffer buffer
+       (let ((inhibit-read-only t))
+         (goto-char (point-max))
+         (insert output))))))
+
+(cl-defun chatgpt-shell--read-string (&key prompt)
+  "Like `read-string' but disallowing empty input.
+
+Specify PROMPT to signal the user."
+  (let ((input ""))
+    (while (string-empty-p (string-trim input))
+      (setq input (read-string (or prompt ""))))
+    input))
 
 ;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-post-chatgpt-messages (&key messages version
@@ -1789,28 +1845,22 @@ When visiting a buffer with an image, send that.
 
 If in a `dired' buffer, use selection (single image only for now)."
   (interactive)
-  (let* ((file (chatgpt-shell--current-image-file))
-         (extension (downcase (file-name-extension file)))
-         (name (file-name-nondirectory file)))
-    (unless (or (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
-                (equal name "image.request"))
-      (user-error "Must be using either .jpg, .jpeg, .png, .webp or .gif file"))
-    (chatgpt-shell-vision-make-request
-     (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
-     file
-     :on-success
-     (lambda (output)
-       (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
-         (with-current-buffer description-buffer
-           (let ((inhibit-read-only t))
-             (erase-buffer)
-             (insert output)
-             (use-local-map (let ((map (make-sparse-keymap)))
-                              (define-key map (kbd "q") 'kill-buffer-and-window)
-                              map)))
-           (message "Image description ready")
-           (read-only-mode +1))
-         (display-buffer description-buffer))))))
+  (chatgpt-shell-vision-make-request
+   :prompt (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
+   :url (chatgpt-shell--current-image-file)
+   :on-success
+   (lambda (output)
+     (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
+       (with-current-buffer description-buffer
+         (let ((inhibit-read-only t))
+           (erase-buffer)
+           (insert output)
+           (use-local-map (let ((map (make-sparse-keymap)))
+                            (define-key map (kbd "q") 'kill-buffer-and-window)
+                            map)))
+         (message "Image description ready")
+         (read-only-mode +1))
+       (display-buffer description-buffer)))))
 
 (defun chatgpt-shell--current-image-file ()
   "Return buffer image file, Dired selected file, or image at point."
@@ -1827,7 +1877,7 @@ If in a `dired' buffer, use selection (single image only for now)."
              (user-error "Only one file selection supported"))
            file))
         (t
-         (if-let* ((image (cdr (get-text-property (point) 'display)))
+         (when-let* ((image (cdr (get-text-property (point) 'display)))
                    (image-file (cond ((plist-get image :file)
                                       (plist-get image :file))
                                      ((plist-get image :data)
@@ -1837,8 +1887,7 @@ If in a `dired' buffer, use selection (single image only for now)."
                                         (set-buffer-multibyte nil)
                                         (insert (plist-get image :data)))
                                       (chatgpt-shell--image-request-file)))))
-             image-file
-           (user-error "Nothing found to work on")))))
+             image-file))))
 
 (defun chatgpt-shell--current-file ()
   "Return buffer file, Dired selected file, or image at point."
@@ -1857,10 +1906,30 @@ If in a `dired' buffer, use selection (single image only for now)."
         (t
          (user-error "Nothing found to work on"))))
 
-(cl-defun chatgpt-shell-vision-make-request (prompt url-path &key on-success on-failure)
-  "Make a vision request using PROMPT and URL-PATH.
+(defun chatgpt-shell--make-chatgpt-url (url)
+  "Create ChatGPT message content for URL."
+  (unless url
+    (error "URL missing"))
+  (let* ((extension (downcase (file-name-extension url)))
+         (name (file-name-nondirectory url)))
+    (unless (string-prefix-p "http" url)
+      (unless (file-exists-p url)
+        (error "File not found"))
+      (unless (or (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
+                  (equal name "image.request"))
+        (user-error "Must be using either .jpg, .jpeg, .png, .webp or .gif file"))
+      (setq url (concat "data:image/jpeg;base64,"
+                        (with-temp-buffer
+                          (insert-file-contents-literally url)
+                          (base64-encode-region (point-min) (point-max) t)
+                          (buffer-string)))))
+    url))
 
-PROMPT can be somethign like: \"Describe the image in detail\".
+(cl-defun chatgpt-shell-vision-make-request (&key system-prompt prompt url on-success on-failure)
+  "Make a vision request using PROMPT and URL.
+
+SYSTEM-PROMPT can be something like: \"You are a useful assistant for...\".
+PROMPT can be something like: \"Describe the image in detail\".
 URL-PATH can be either a local file path or an http:// URL.
 
 Optionally pass ON-SUCCESS and ON-FAILURE, like:
@@ -1870,42 +1939,27 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
 
 \(lambda (error)
   (message error))"
-  (let* ((url (if (string-prefix-p "http" url-path)
-                  url-path
-                (unless (file-exists-p url-path)
-                  (error "File not found"))
-                (concat "data:image/jpeg;base64,"
-                        (with-temp-buffer
-                          (insert-file-contents-literally url-path)
-                          (base64-encode-region (point-min) (point-max) t)
-                          (buffer-string)))))
-         (messages
-          (vconcat ;; Convert to vector for json
-           (append
-            `(((role . "user")
-               (content . ,(vconcat
-                            `(((type . "text")
-                               (text . ,prompt))
-                              ((type . "image_url")
-                               (image_url . ((url . ,url)))))))))))))
-    (message "Requesting...")
-    (let ((description))
-      (chatgpt-shell-post-chatgpt-messages
-       :messages messages
-       :version "gpt-4o"
-       :on-output (lambda (output)
-                    (setq description
-                          (concat description
-                                  output)))
-       :on-success (lambda (output)
-                     (if on-success
-                         (funcall on-success output)
-                       (message output)))
-       :on-failure (lambda (output)
-                     (if on-failure
-                         (funcall on-failure output)
-                       (message output)))
-       :other-params '((max_tokens . 300))))))
+  (message "Requesting...")
+  (let ((description))
+    (chatgpt-shell-post-chatgpt-messages
+     :messages (chatgpt-shell--make-chatgpt-messages
+                :system-prompt system-prompt
+                :prompt prompt
+                :prompt-url url)
+     :version "chatgpt-4o-latest"
+     :on-output (lambda (output)
+                  (setq description
+                        (concat description
+                                output)))
+     :on-success (lambda (output)
+                   (if on-success
+                       (funcall on-success output)
+                     (message output)))
+     :on-failure (lambda (output)
+                   (if on-failure
+                       (funcall on-failure output)
+                     (message output)))
+     :other-params '((max_tokens . 300)))))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
@@ -1963,10 +2017,39 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                   "-H" (funcall chatgpt-shell-auth-header)
                   "-d" (format "@%s" json-path)))))
 
+(cl-defun chatgpt-shell--make-chatgpt-messages (&key system-prompt prompt prompt-url context)
+  "Create ChatGPT messages.
+
+SYSTEM-PROMPT: string.
+
+PROMPT: string.
+
+PROMPT-URL: string.
+
+CONTEXT: Excludes PROMPT."
+  (when prompt-url
+    (setq prompt-url (chatgpt-shell--make-chatgpt-url prompt-url)))
+  (vconcat
+   (when system-prompt
+     `(((role . "system")
+        (content . ,system-prompt))))
+   (when context
+     (chatgpt-shell--user-assistant-messages
+      (chatgpt-shell-crop-context context)))
+   `(((role . "user")
+      (content . ,(vconcat
+                   (append
+                    (when prompt
+                      `(((type . "text")
+                         (text . ,prompt))))
+                    (when prompt-url
+                      `(((type . "image_url")
+                         (image_url . ,prompt-url)))))))))))
+
 (cl-defun chatgpt-shell--make-payload (&key prompt context version temperature streaming)
   "Create a ChatGPT request payload.
 
-PROMPT: The new prompt (should not be in HISTORY).
+PROMPT: The new prompt (should not be in CONTEXT).
 VERSION: The model version.
 CONTEXT: All previous interactions.
 TEMPERATURE: Model temperature.
