@@ -59,6 +59,9 @@
                                                       (:thread-id . nil)))
 
 (cl-defun ob-chatgpt-shell--post-assistant (&key body params)
+  "Post assistant query with BODY and PARAMS.
+
+Assistant queries leverage cloud context using :assistant-id, :file-id, and :thread-id."
   (unless body
     (error "Missing mandatory :body param"))
   (unless params
@@ -130,15 +133,19 @@ This function is called by `org-babel-execute-src-block'"
          :temperature (map-elt params :temperature))))))
 
 (defun ob-chatgpt-shell--assistant-post-p (params)
+  "Return non-nil if assistant usage is detected in PARAMS.
+
+Assistant usage leverages cloud context."
   (or (map-elt params :assistant-id)
       (map-elt params :file-id)
       (map-elt params :file)
       (map-elt params :thread-id)))
 
 (defun ob-chatgpt-shell--context (&optional context-name)
-  "Return the context (what was asked and responded) for matching
-previous src blocks. If CONTEXT-NAME is provided each src block
-have a :context arg with a value matching the CONTEXT-NAME."
+  "Return the context (what was asked and responded).
+
+This is used for matching previous src blocks.  If CONTEXT-NAME is provided
+each src block have a :context arg with a value matching the CONTEXT-NAME."
   (let ((context '()))
     (mapc
      (lambda (src-block)
@@ -172,9 +179,10 @@ have a :context arg with a value matching the CONTEXT-NAME."
   (add-to-list 'org-src-lang-modes '("chatgpt-shell" . text)))
 
 (defun ob-chatgpt--relevant-source-blocks-before-current (context-name)
-  "Return all previous source blocks relative to the current block with a
-:context arg with a value matching CONTEXT-NAME. If CONTEXT-NAME
-is nil then return all previous source blocks."
+  "Return all previous source blocks relative to the current block.
+
+Including only those with a :context arg with a value matching CONTEXT-NAME.
+If CONTEXT-NAME is nil then return all previous source blocks."
   (when-let ((current-block-pos (let ((element (org-element-context)))
                                   (when (eq (org-element-type element) 'src-block)
                                     (org-element-property :begin element)))))
@@ -207,6 +215,7 @@ is nil then return all previous source blocks."
                                (org-babel-read-result)))))))))
 
 (cl-defun ob-chatgpt--upload-file (&key purpose path)
+  "Upload file at PATH and describe PURPOSE."
   (unless purpose
     (error "Missing mandatory :purpose param"))
   (unless path
@@ -257,7 +266,9 @@ is nil then return all previous source blocks."
     output))
 
 (cl-defun ob-chatgpt--add-thread-message (&key thread-id file-id prompt)
-  "Create an OpenAI assistant thread."
+  "Add a prompt and file message to an OpenAI assistant thread.
+
+Requires message PROMPT, THREAD-ID, and FILE-ID."
   (interactive)
   (unless thread-id
     (error "Missing mandatory :thread-id param"))
@@ -290,6 +301,14 @@ is nil then return all previous source blocks."
     output))
 
 (cl-defun ob-chatgpt--query-file (&key prompt file-id file assistant-id thread-id)
+  "Query a file via assistant using PROMPT.
+
+Must provide either a FILE path or FILE-ID.
+
+Optionally provide an ASSISTANT-ID, THREAD-ID to reuse existing thread.
+
+If they are not provided, new ones will be created on cloud (along with
+associated costs)."
   (unless prompt
     (error "Missing mandatory :prompt param"))
   (unless (or file file-id)
@@ -306,7 +325,7 @@ is nil then return all previous source blocks."
     (unless thread-id
       (setq missing (append missing '("thread-id"))))
     (when (and missing
-               (y-or-n-p (format "Missing (%s). Request? " (string-join missing " "))))
+               (y-or-n-p (format "Missing (%s).  Request? " (string-join missing " "))))
       (unless assistant-id
         (setq assistant-name (read-string "Assistant name: "))
         (when (string-empty-p (string-trim assistant-name))
