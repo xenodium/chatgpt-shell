@@ -100,6 +100,8 @@ This function is called by `org-babel-execute-src-block'"
     (map-put! params :assistant-id nil))
   (when (equal (map-elt params :file-id) "nil")
     (map-put! params :file-id nil))
+  (when (equal (map-elt params :file) "nil")
+    (map-put! params :file nil))
   (when (equal (map-elt params :thread-id) "nil")
     (map-put! params :thread-id nil))
   (if (ob-chatgpt-shell--assistant-post-p params)
