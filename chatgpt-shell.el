@@ -1760,7 +1760,11 @@ ON-FAILURE: (lambda (output)) for completion event."
 Specify PROMPT to signal the user."
   (let ((input ""))
     (while (string-empty-p (string-trim input))
-      (setq input (read-string (or prompt ""))))
+      (setq input (read-string (or prompt "")
+                               (when (use-region-p)
+                                 (buffer-substring-no-properties
+                                  (region-beginning)
+                                  (region-end))))))
     input))
 
 ;; TODO: Review. Can it become service agnostic?
