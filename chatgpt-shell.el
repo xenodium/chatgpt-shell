@@ -1690,7 +1690,8 @@ Display result in org table of the form:
                                             (goto-char (point-min))
                                             (org-table-align)
                                             (when (fboundp 'valign-mode)
-                                              (valign-mode +1)))))
+                                              (valign-mode +1))
+                                            (visual-line-mode -1))))
                           :prompt-url file
                           :streaming t
                           :system-prompt "
