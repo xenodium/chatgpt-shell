@@ -1660,19 +1660,21 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
                                     (when (string= event "finished\n")
                                       (chatgpt-shell-japanese-lookup term))))))
 
-(defun chatgpt-shell-japanese-lookup ()
+(defun chatgpt-shell-japanese-lookup (&optional capture)
   "Look Japanese term up.
 
-Ask user for term. Alternatively, if point is on an image, extract Japanese
+Ask user for term.  Alternatively, if point is on an image, extract Japanese
 data from the image.
+
+If command invoked with prefix, CAPTURE a screenshot.
 
 Display result in org table of the form:
 
 | Hiragana | Katakana | Kanji | Romaji | English | #Tags |
 |----------+----------+-------+--------+---------+-------|
 |          |          |       |        |         |       |"
-  (interactive)
-  (let* ((file (chatgpt-shell--current-image-file))
+  (interactive "P")
+  (let* ((file (chatgpt-shell--current-image-file capture))
          (term (unless file
                  (chatgpt-shell--read-string :prompt "Japanese lookup: ")))
          (buffer "*Japanese lookup*"))
@@ -1838,56 +1840,69 @@ For example:
       (map-elt result :output))))
 
 ;;;###autoload
-(defun chatgpt-shell-describe-image ()
+(defun chatgpt-shell-describe-image (&optional capture)
   "Request OpenAI to describe image.
 
 When visiting a buffer with an image, send that.
 
-If in a `dired' buffer, use selection (single image only for now)."
-  (interactive)
-  (chatgpt-shell-vision-make-request
-   :prompt (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
-   :url (chatgpt-shell--current-image-file)
-   :on-success
-   (lambda (output)
-     (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
-       (with-current-buffer description-buffer
-         (let ((inhibit-read-only t))
-           (erase-buffer)
-           (insert output)
-           (use-local-map (let ((map (make-sparse-keymap)))
-                            (define-key map (kbd "q") 'kill-buffer-and-window)
-                            map)))
-         (message "Image description ready")
-         (read-only-mode +1))
-       (display-buffer description-buffer)))))
+If command invoked with prefix, CAPTURE a screenshot.
 
-(defun chatgpt-shell--current-image-file ()
-  "Return buffer image file, Dired selected file, or image at point."
-  (when (use-region-p)
+If in a `dired' buffer, use selection (single image only for now)."
+  (interactive "P")
+  (let ((file (chatgpt-shell--current-image-file capture)))
+    (unless file
+      (error "No image found"))
+    (chatgpt-shell-vision-make-request
+     :prompt (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
+     :url file
+     :on-success
+     (lambda (output)
+       (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
+         (with-current-buffer description-buffer
+           (let ((inhibit-read-only t))
+             (erase-buffer)
+             (insert output)
+             (use-local-map (let ((map (make-sparse-keymap)))
+                              (define-key map (kbd "q") 'kill-buffer-and-window)
+                              map)))
+           (message "Image description ready")
+           (read-only-mode +1))
+         (display-buffer description-buffer))))))
+
+(defun chatgpt-shell--current-image-file (&optional capture)
+  "Return buffer image file, Dired selected file, or image at point.
+
+If optional CAPTURE is non-nil, cature a screenshot."
+  (when (or (and (use-region-p) (derived-mode-p 'image-mode))
+            (and (use-region-p) (derived-mode-p 'dired-mode)))
     (user-error "No region selection supported"))
-  (cond ((derived-mode-p 'image-mode)
+  (cond (capture
+         (when-let ((file (make-temp-file "screenshot" nil ".png"))
+                    ;; TODO: Make screenshot utility configurable.
+                    (success (eq 0 (call-process "/usr/sbin/screencapture" nil nil nil "-i" file)))
+                    (found (file-exists-p file))
+                    (written (not (zerop (nth 7 (file-attributes file))))))
+           file))
+        ((derived-mode-p 'image-mode)
          (buffer-file-name))
         ((derived-mode-p 'dired-mode)
          (let* ((dired-files (dired-get-marked-files))
                 (file (seq-first dired-files)))
-           (unless dired-files
-             (user-error "No file selected"))
            (when (> (length dired-files) 1)
              (user-error "Only one file selection supported"))
            file))
         (t
          (when-let* ((image (cdr (get-text-property (point) 'display)))
-                   (image-file (cond ((plist-get image :file)
-                                      (plist-get image :file))
-                                     ((plist-get image :data)
-                                      (ignore-errors
-                                        (delete-file (chatgpt-shell--image-request-file)))
-                                      (with-temp-file (chatgpt-shell--image-request-file)
-                                        (set-buffer-multibyte nil)
-                                        (insert (plist-get image :data)))
-                                      (chatgpt-shell--image-request-file)))))
-             image-file))))
+                     (image-file (cond ((plist-get image :file)
+                                        (plist-get image :file))
+                                       ((plist-get image :data)
+                                        (ignore-errors
+                                          (delete-file (chatgpt-shell--image-request-file)))
+                                        (with-temp-file (chatgpt-shell--image-request-file)
+                                          (set-buffer-multibyte nil)
+                                          (insert (plist-get image :data)))
+                                        (chatgpt-shell--image-request-file)))))
+           image-file))))
 
 (defun chatgpt-shell--current-file ()
   "Return buffer file, Dired selected file, or image at point."
@@ -1917,7 +1932,7 @@ If in a `dired' buffer, use selection (single image only for now)."
         (error "File not found"))
       (unless (or (seq-contains-p '("jpg" "jpeg" "png" "webp" "gif") extension)
                   (equal name "image.request"))
-        (user-error "Must be using either .jpg, .jpeg, .png, .webp or .gif file"))
+        (user-error "Image must be either .jpg, .jpeg, .png, .webp or .gif"))
       (setq url (concat "data:image/jpeg;base64,"
                         (with-temp-buffer
                           (insert-file-contents-literally url)
@@ -1939,6 +1954,8 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
 
 \(lambda (error)
   (message error))"
+  (unless url
+    (error "Missing mandatory \"url\" param"))
   (message "Requesting...")
   (let ((description))
     (chatgpt-shell-post-chatgpt-messages
