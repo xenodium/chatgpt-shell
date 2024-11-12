@@ -167,6 +167,7 @@ Set BUFFER-NAME to override the buffer name."
       (when new-session
         (setq buffer-name (generate-new-buffer-name buffer-name)))
       ;; Alias with concrete shell symbols.
+      (fset (intern (concat namespace "-shell-clear-buffer")) #'shell-maker-clear-buffer)
       (fset (intern (concat namespace "-shell-previous-input")) #'comint-previous-input)
       (fset (intern (concat namespace "-shell-next-input")) #'comint-next-input)
       (fset (intern (concat namespace "-shell-submit")) #'shell-maker-submit)

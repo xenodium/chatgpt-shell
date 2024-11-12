@@ -163,8 +163,6 @@ For example:
 
 (defvaralias 'chatgpt-shell-root-path 'shell-maker-root-path)
 
-(defalias 'chatgpt-shell-clear-buffer #'shell-maker-clear-buffer)
-
 (defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 
 (defvar chatgpt-shell--prompt-history nil)
