@@ -1882,6 +1882,7 @@ If optional CAPTURE is non-nil, cature a screenshot."
             (and (use-region-p) (derived-mode-p 'dired-mode)))
     (user-error "No region selection supported"))
   (cond (capture
+         (redisplay) ;; Call process will block. Give redisplay a chance.
          (when-let ((file (make-temp-file "screenshot" nil ".png"))
                     ;; TODO: Make screenshot utility configurable.
                     (success (eq 0 (call-process "/usr/sbin/screencapture" nil nil nil "-i" file)))
