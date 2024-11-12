@@ -96,6 +96,13 @@ See `shell-maker-welcome-message' as an example."
   :type 'function
   :group 'dall-e-shell)
 
+(defcustom dall-e-shell-auth-header
+  (lambda ()
+    (format "Authorization: Bearer %s" (dall-e-shell-openai-key)))
+  "Function to generate the request's `Authorization' header string."
+  :type '(function :tag "Function")
+  :group 'chatgpt-shell)
+
 (defvaralias 'dall-e-shell-display-function 'shell-maker-display-function)
 
 (defvaralias 'dall-e-shell-read-string-function 'shell-maker-read-string-function)
@@ -125,9 +132,12 @@ or
       :url dall-e-shell--url
       :data (dall-e-shell--make-payload command)
       :headers (list "Content-Type: application/json; charset=utf-8"
-                     (funcall chatgpt-shell-auth-header))
+                     (funcall dall-e-shell-auth-header))
       :filter #'dall-e-shell--extract-response
       :shell shell))))
+
+(defvar dall-e-shell-mode-map (make-sparse-keymap)
+  "Keymap for `dall-e-shell-mode'.")
 
 ;;;###autoload
 (defun dall-e-shell (&optional new-session)
@@ -158,7 +168,7 @@ With NEW-SESSION, start a new session."
   "Update prompt and prompt regexp from `dall-e-shell-model-versions'.
 
 Set RENAME-BUFFER to also rename the buffer accordingly."
-  (unless (eq major-mode 'dall-e-shell-mode)
+  (unless (derived-mode-p 'dall-e-shell-mode)
     (user-error "Not in a shell"))
   (shell-maker-set-prompt
    (car (dall-e-shell--prompt-pair))
@@ -208,7 +218,7 @@ Set RENAME-BUFFER to also rename the buffer accordingly."
 (defun dall-e-shell-swap-model-version ()
   "Swap model version from `dall-e-shell-model-versions'."
   (interactive)
-  (unless (eq major-mode 'dall-e-shell-mode)
+  (unless (derived-mode-p 'dall-e-shell-mode)
     (user-error "Not in a shell"))
   (setq-local dall-e-shell-model-version
               (completing-read "Model version: "
@@ -242,7 +252,7 @@ With prefix IGNORE-ITEM, do not mark as failed."
   (interactive "P")
   (with-current-buffer
       (cond
-       ((eq major-mode 'dall-e-shell-mode)
+       ((derived-mode-p 'dall-e-shell-mode)
         (current-buffer))
        (t
         (shell-maker-buffer-name dall-e-shell--config)))
@@ -413,6 +423,18 @@ ERROR-CALLBACK otherwise."
                                     (funcall error-callback output))
                                   (kill-buffer output-buffer)))))))))
 
+(defun dall-e-shell-openai-key ()
+  "Get the OpenAI DALL-E key."
+  (cond ((stringp dall-e-shell-openai-key)
+         dall-e-shell-openai-key)
+        ((functionp dall-e-shell-openai-key)
+         (condition-case _err
+             (funcall dall-e-shell-openai-key)
+           (error
+            "KEY-NOT-FOUND")))
+        (t
+         nil)))
+
 (defun dall-e-shell--make-curl-request-command-list (request-data)
   "Build DALL-E curl command list using REQUEST-DATA."
   (append (list "curl" dall-e-shell--url)
@@ -441,12 +463,12 @@ ERROR-CALLBACK otherwise."
            (png-output (dall-e-shell-post-prompt
                         (concat "Please generate image for the following text: " image-description))))
       (goto-char (region-end))
-      (cond ((eq major-mode 'org-mode)
-             (insert (concat "\n\n[[file:" png-output "]]\n")))
-            ((eq major-mode 'markdown-mode)
-             (insert (concat "\n\n![](" png-output ")\n" )))
+      (cond ((derived-mode-p 'org-mode)
+             (insert "\n\n[[file:" png-output "]]\n"))
+            ((derived-mode-p 'markdown-mode)
+             (insert "\n\n![](" png-output ")\n"))
             (t (progn
-                 (insert (concat png-output "\n"))
+                 (insert png-output "\n")
                  (insert-image
                   (create-image png-output
                                 'png nil :width 400 :height 400))))))))
