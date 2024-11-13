@@ -1015,7 +1015,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
 ;; TODO: Move to shell-maker.
 (defvar chatgpt-shell--source-block-regexp
   (rx  bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
-       (group (zero-or-more (or alphanumeric "-" "+"))) ;; language
+       (group (zero-or-more (or alphanumeric "-" "+" "#"))) ;; languages like: emacs-lisp C++ C#
        (zero-or-more whitespace)
        (one-or-more "\n")
        (group (*? anychar)) ;; body
