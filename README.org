@@ -4,13 +4,18 @@
 
 * chatgpt-shell
 
-ChatGPT and DALL-E Emacs shells + [[https://orgmode.org/worg/org-contrib/babel/intro.html][Org Babel]].
+A ChatGPT Emacs shell + [[https://orgmode.org/worg/org-contrib/babel/intro.html][Org Babel]].
 
-Includes =shell-maker=, a way to create shells for any service (local or cloud).
+For related packages, see:
+
+- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate ChatGPT shell blocks in Emacs org babel blocks.
+- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks in Emacs org babel blocks.
+- [[https://github.com/xenodium/dall-e-shell][dall-e-shell]]: An Emacs shell for OpenAI's DALL-E.
+- [[https://github.com/xenodium/shell-maker][shell-maker]]: Create Emacs shells backed by either local or cloud services.
 
 ** Support this effort
 
-If you're finding =chatgpt-shell= useful, consider ✨[[https://github.com/sponsors/xenodium][sponsoring]]✨.
+If you're finding =chatgpt-shell= useful, help make the project sustainable and consider ✨[[https://github.com/sponsors/xenodium][sponsoring]]✨.
 
 =chatgpt-shell= is in development. Please report issues or send [[https://github.com/xenodium/chatgpt-shell/pulls][pull requests]] for improvements.
 
@@ -31,7 +36,6 @@ Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[
 * Install
 
 - Load =(require 'chatgpt-shell)=
-- Load =(require 'dall-e-shell)=
 
 ** MELPA
 
@@ -46,29 +50,11 @@ If using [[https://github.com/jwiegley/use-package][use-package]], you can insta
         (auth-source-pass-get 'secret "openai-key")))))
 #+end_src
 
-** Straight
-
-=chatgpt-shell= depends on =shell-maker=. This dependency is resolved without issues on MELPA but seems to run into issues with =straight=. I'm not familiar with =straight= but users have reported the following to work.
-
-#+begin_src emacs-lisp :lexical no
-  (use-package shell-maker
-    :straight (:host github :repo "xenodium/chatgpt-shell" :files ("shell-maker.el")))
-
-  (use-package chatgpt-shell
-    :requires shell-maker
-    :straight (:host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell.el")))
-#+end_src
-
-If you have a better =straight= solution, please send a pull request or open an issue with a suggestion.
-
-Read on for setting your OpenAI key in other ways.
-
 * Set OpenAI key
 
 You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
 
-** ChatGPT key
-*** As function
+** As function
 #+begin_src emacs-lisp
   ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
@@ -87,22 +73,18 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
           (auth-source-pick-first-password :host "api.openai.com")))
 #+end_src
 
-*** Manually
+** Manually
 =M-x set-variable chatgpt-shell-openai-key=
 
-*** As variable
+** As variable
 #+begin_src emacs-lisp
   (setq chatgpt-shell-openai-key "my key")
 #+end_src
 
-*** As an ENV variable
+** As an ENV variable
 #+begin_src emacs-lisp
 (setq chatgpt-shell-openai-key (getenv "OPENAI_API_KEY"))
 #+end_src
-
-** DALL-E key
-
-Same as ChatGPT, but use =dall-e-shell-openai-key= variable.
 * ChatGPT through proxy service
 
 If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like the following:
@@ -143,9 +125,9 @@ Configure the following variables:
 
 * Launch
 
-Launch with =M-x chatgpt-shell= or =dall-e-shell=.
+Launch with =M-x chatgpt-shell=.
 
-Note: =M-x chatgpt-shell= or =dall-e-shell= keeps a single shell around, refocusing if needed. To launch multiple shells, use =C-u M-x chatgpt-shell=.
+Note: =M-x chatgpt-shell= keeps a single shell around, refocusing if needed. To launch multiple shells, use =C-u M-x chatgpt-shell=.
 
 * Clear buffer
 
@@ -376,243 +358,6 @@ Please enable =M-x toggle-debug-on-error=, reproduce the error, and share the st
 Please enable logging =(setq chatgpt-shell-logging t)= and share the content of the =*chatgpt-log*= buffer in the bug report.
 ** Babel issues?
 Please also share the entire org snippet.
-* dall-e-shell customizations
-#+BEGIN_SRC emacs-lisp :results table :colnames '("Custom variable" "Description") :exports results
-  (let ((rows))
-    (mapatoms
-     (lambda (symbol)
-       (when (and (string-match "^dall-e-shell"
-                                (symbol-name symbol))
-                  (custom-variable-p symbol))
-         (push `(,symbol
-                 ,(car
-                   (split-string
-                    (or (get (indirect-variable symbol)
-                             'variable-documentation)
-                        (get symbol 'variable-documentation)
-                        "")
-                    "\n")))
-               rows))))
-    rows)
-#+END_SRC
-
-#+RESULTS:
-| Custom variable                      | Description                                                                 |
-|--------------------------------------+-----------------------------------------------------------------------------|
-| dall-e-shell-welcome-function        | Function returning welcome message or nil for no message.                   |
-| dall-e-shell-openai-key              | OpenAI key as a string or a function that loads and returns it.             |
-| dall-e-shell-image-size              | The default size of the requested image as a string.                        |
-| dall-e-shell-read-string-function    | Function to read strings from user.                                         |
-| dall-e-shell-request-timeout         | How long to wait for a request to time out.                                 |
-| dall-e-shell-model-version           | The used DALL-E OpenAI model.  For Dall-E 3, use "dall-e-3".                |
-| dall-e-shell-display-function        | Function to display the shell.  Set to `display-buffer' or custom function. |
-| dall-e-shell-model-versions          | The list of Dall-E OpenAI models to swap from.                              |
-| dall-e-shell-additional-curl-options | Additional options for `curl' command.                                      |
-| dall-e-shell-image-output-directory  | Output directory for the generated image.                                   |
-| dall-e-shell-image-quality           | Image quality: `standard' or `hd' (DALL-E 3 only feature).                  |
-
-* dall-e-shell commands
-#+BEGIN_SRC emacs-lisp :results table :colnames '("Command" "Description") :exports results
-    (let ((rows))
-      (mapatoms
-       (lambda (symbol)
-         (when (and (string-match "^dall-e-shell"
-                                  (symbol-name symbol))
-                    (commandp symbol))
-           (push `(,(string-join
-                     (seq-filter
-                      (lambda (symbol)
-                        (not (string-match "menu" symbol)))
-                      (mapcar
-                       (lambda (keys)
-                         (key-description keys))
-                       (or
-                        (where-is-internal
-                         (symbol-function symbol)
-                         comint-mode-map
-                         nil nil (command-remapping 'comint-next-input))
-                        (where-is-internal
-                         symbol dall-e-shell-mode-map nil nil (command-remapping symbol))
-                        (where-is-internal
-                         (symbol-function symbol)
-                         dall-e-shell-mode-map nil nil (command-remapping symbol)))))  " or ")
-                   ,(symbol-name symbol)
-                   ,(car
-                     (split-string
-                      (or (documentation symbol t) "")
-                      "\n")))
-                 rows))))
-      rows)
-#+END_SRC
-
-#+RESULTS:
-| C-<up> or M-p   | dall-e-shell-previous-input                       | Cycle backwards through input history, saving input.              |
-|                 | dall-e-shell                                      | Start a DALL-E shell.                                             |
-|                 | dall-e-shell-insert-image-from-region-description | Generate and insert an image using current region as description. |
-|                 | dall-e-shell-interrupt                            | Interrupt `dall-e-shell' from any buffer.                         |
-| S-<return>      | dall-e-shell-newline                              | Insert a newline, and move to left margin of the new line.        |
-| RET             | dall-e-shell-submit                               | Submit current input.                                             |
-| C-x C-s         | dall-e-shell-save-session-transcript              | Save shell transcript to file.                                    |
-| C-c C-v         | dall-e-shell-swap-model-version                   | Swap model version from `dall-e-shell-model-versions'.            |
-|                 | dall-e-shell-mode                                 | Major mode for DALL-E shell.                                      |
-| C-<down> or M-n | dall-e-shell-next-input                           | Cycle forwards through input history.                             |
-| M-r             | dall-e-shell-search-history                       | Search previous input history.                                    |
-|                 | dall-e-shell-rename-buffer                        | Rename current shell buffer.                                      |
-
-* ChatGPT org babel
-
-Load =(require 'ob-chatgpt-shell)= and invoke =(ob-chatgpt-shell-setup)=.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell
-    Hello
-  ,#+end_src
-
-  ,#+RESULTS:
-  : Hi there! How can I assist you today?
-#+end_src
-
-** :version
-
-Use =:version= to specify "gpt-4", "gpt-3.5-turbo", or something else.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell :version "gpt-4"
-   Hello
-  ,#+end_src
-
-  ,#+RESULTS:
-  Hello! How can I help you today?
-#+end_src
-
-** :system
-
-Use =:system= to set the system prompt.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell :system "always respond like a pirate"
-    hello
-  ,#+end_src
-
-  ,#+RESULTS:
-  Ahoy there, me hearty! How be ye today?
-#+end_src
-
-** :temperature
-
-Use =:temperature= to set the [[https://platform.openai.com/docs/api-reference/completions/create#completions/create-temperature][temperature]] parameter.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell :temperature 0.3
-    hello
-  ,#+end_src
-#+end_src
-
-** :context
-
-Use =:context t= to include all prior context in current buffer.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell
-    tell me a random day of the week
-  ,#+end_src
-
-  ,#+RESULTS:
-  Wednesday
-
-  ,#+begin_src chatgpt-shell :system "always respond like a pirate"
-    hello
-  ,#+end_src
-
-  ,#+RESULTS:
-  Ahoy there, me hearty! How be ye today?
-
-  ,#+begin_src chatgpt-shell :context t
-    what was the day you told me and what greeting?
-  ,#+end_src
-
-  ,#+RESULTS:
-  The day I told you was Wednesday, and the greeting I used was "Ahoy there, me hearty! How be ye today?"
-#+end_src
-
-If you'd like to cherrypick which blocks are part of a given context, add
-=:context CONTEXT-NAME= to each block where CONTEXT-NAME is any string. When
-this form is used only source blocks with same =CONTEXT-NAME= will be included
-as opposed to every previous block when using =:context t=.
-
-The example below shows how two different contexts can be interleaved.
-
-#+begin_src org
-  ,#+begin_src chatgpt-shell :context shakespeare :system "alway speak like shakespeare"
-  How do you do?
-  ,#+end_src
-
-  #+RESULTS:
-  How dost thou fare?
-
-  ,#+begin_src chatgpt-shell :context robot :system "always speak like a sci fi movie robot"
-  How do you do?
-  ,#+end_src
-
-  ,#+RESULTS:
-  Greetings, human. I am functioning at optimal capacity. How may I assist you in your endeavors today?
-
-  ,#+begin_src chatgpt-shell :context shakespeare
-  What did you call me?
-  ,#+end_src
-
-  ,#+RESULTS:
-  Mine apologies if mine words hath caused confusion. I merely addressed thee as 'sir' or 'madam', a term of respect in the language of the Bard. Pray, how may I assist thee further?
-#+end_src
-
-* DALL-E org babel
-
-Load =(require 'ob-dall-e-shell)= and invoke =(ob-dall-e-shell-setup)=.
-
-#+begin_src org
-  ,#+begin_src dall-e-shell
-    Pretty clouds
-  ,#+end_src
-
-  ,#+RESULTS:
-  [[file:/var/folders/m7/ky091cp56d5g68nyhl4y7frc0000gn/T/1680644778.png]]
-#+end_src
-
-** :version
-
-Use =:version= to set the model, for example: "dall-e-3".
-
-** :results
-
-For DALL-E 3, use =:results both= to also output the revised prompt.
-
-* shell-maker
-
-There are currently two shell implementations (ChatGPT and DALL-E). Other services (local or cloud) can be brought to Emacs as shells. =shell-maker= can help with that.
-
-=shell-maker= is a convenience wrapper around [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint mode]].
-
-Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implementation of a new shell looks as follows:
-
-#+begin_src emacs-lisp :lexical no
-  (require 'shell-maker)
-
-  (defvar greeter-shell--config
-    (make-shell-maker-config
-     :name "Greeter"
-     :execute-command
-     (lambda (command _history callback error-callback)
-       (funcall callback
-                (format "Hello \"%s\"" command)
-                nil))))
-
-  (defun greeter-shell ()
-    "Start a Greeter shell."
-    (interactive)
-    (shell-maker-start greeter-shell--config))
-#+end_src
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/greeter.gif" width="50%" />
 * Support my work
 
 👉 Find my work useful? [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]] or [[https://apps.apple.com/us/developer/xenodium-ltd/id304568690][buy my iOS apps]].
@@ -620,14 +365,22 @@ Both =chatgpt-shell= and =dall-e-shell= use =shell-maker=, but a basic implement
 * My other utilities, packages, apps, writing...
 
 - [[https://xenodium.com/][Blog (xenodium.com)]]
+- [[https://lmno.lol/alvaro][Blog (lmno.lol/alvaro)]]
 - [[https://plainorg.com][Plain Org]] (iOS)
 - [[https://flathabits.com][Flat Habits]] (iOS)
 - [[https://apps.apple.com/us/app/scratch/id1671420139][Scratch]] (iOS)
 - [[https://github.com/xenodium/macosrec][macosrec]] (macOS)
+- [[https://apps.apple.com/us/app/fresh-eyes/id6480411697?mt=12][Fresh Eyes]] (macOS)
 - [[https://github.com/xenodium/dwim-shell-command][dwim-shell-command]] (Emacs)
 - [[https://github.com/xenodium/company-org-block][company-org-block]] (Emacs)
 - [[https://github.com/xenodium/org-block-capf][org-block-capf]] (Emacs)
 - [[https://github.com/xenodium/ob-swiftui][ob-swiftui]] (Emacs)
+- [[https://github.com/xenodium/ready-player][ready-player]] (Emacs)
+- [[https://github.com/xenodium/sqlite-mode-extras][sqlite-mode-extras]]
+- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]] (Emacs)
+- [[https://github.com/xenodium/dall-e-shell][dall-e-shell]] (Emacs)
+- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]] (Emacs)
+- [[https://github.com/xenodium/shell-maker][shell-maker]] (Emacs)
 
 * Contributors
 
