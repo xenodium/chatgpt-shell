@@ -375,6 +375,7 @@ Please also share the entire org snippet.
 - [[https://github.com/xenodium/company-org-block][company-org-block]] (Emacs)
 - [[https://github.com/xenodium/org-block-capf][org-block-capf]] (Emacs)
 - [[https://github.com/xenodium/ob-swiftui][ob-swiftui]] (Emacs)
+- [[https://github.com/xenodium/chatgpt-shell][chatgpt-shell]] (Emacs)
 - [[https://github.com/xenodium/ready-player][ready-player]] (Emacs)
 - [[https://github.com/xenodium/sqlite-mode-extras][sqlite-mode-extras]]
 - [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]] (Emacs)
