@@ -4,7 +4,7 @@
 
 * chatgpt-shell
 
-A ChatGPT Emacs shell + [[https://orgmode.org/worg/org-contrib/babel/intro.html][Org Babel]].
+A ChatGPT Emacs shell.
 
 For related packages, see:
 
