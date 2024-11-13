@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.23.1
+;; Version: 1.24.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.62.1"))
-(defconst chatgpt-shell--version "1.23.1")
+(defconst chatgpt-shell--version "1.24.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -49,23 +49,7 @@
 (require 'ob-core)
 (require 'color)
 
-(defcustom chatgpt-shell-openai-key nil
-  "OpenAI key as a string or a function that loads and returns it."
-  :type '(choice (function :tag "Function")
-                 (string :tag "String"))
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-additional-curl-options nil
-  "Additional options for `curl' command."
-  :type '(repeat (string :tag "String"))
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-auth-header
-  (lambda ()
-    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-  "Function to generate the request's `Authorization' header string."
-  :type '(function :tag "Function")
-  :group 'chatgpt-shell)
+(require 'chatgpt-shell-openai)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -492,26 +476,6 @@ window."
                  (function :tag "Function"))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-api-url-base "https://api.openai.com"
-  "OpenAI API's base URL.
-
-`chatgpt-shell--api-url' =
-   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'
-
-If you use ChatGPT through a proxy service, change the URL base."
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-api-url-path "/v1/chat/completions"
-  "OpenAI API's URL path.
-
-`chatgpt-shell--api-url' =
-   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
-
 (defcustom chatgpt-shell-welcome-function #'shell-maker-welcome-message
   "Function returning welcome message or nil for no message.
 
@@ -536,8 +500,8 @@ or
    (lambda (command shell)
      (shell-maker-make-http-request
       :async t
-      :url (chatgpt-shell--api-url)
-      :data (chatgpt-shell--make-payload
+      :url (chatgpt-shell--chatgpt-api-url)
+      :data (chatgpt-shell--make-chatgpt-payload
              :prompt command
              :context (map-elt shell :history)
              :streaming chatgpt-shell-streaming
@@ -1604,23 +1568,6 @@ Set SAVE-EXCURSION to prevent point from moving."
      (prin1-to-string form))
    (chatgpt-shell-parse-elisp-code code)))
 
-
-(cl-defun chatgpt-shell-make-request-data (&key messages version temperature streaming other-params)
-  "Make request data with MESSAGES.
-
-Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
-  (unless messages
-    (error "Missing mandatory :messages param"))
-  (setq temperature (or temperature chatgpt-shell-model-temperature))
-  (append
-   `((model . ,(or version (chatgpt-shell-model-version)))
-     (messages . ,(vconcat messages)))
-   (when temperature
-     `((temperature . ,temperature)))
-   (when streaming
-     `((stream . t)))
-   other-params))
-
 ;;;###autoload
 (defun chatgpt-shell-japanese-ocr-lookup ()
   "Select a region of the screen to OCR and look up in Japanese."
@@ -1811,8 +1758,8 @@ For example:
           ;; Async exec
           (shell-maker-make-http-request
            :async t
-           :url (chatgpt-shell--api-url)
-           :data (chatgpt-shell-make-request-data
+           :url (chatgpt-shell--chatgpt-api-url)
+           :data (chatgpt-shell-make-chatgpt-request-data
                   :messages messages
                   :version version
                   :temperature temperature
@@ -1830,8 +1777,8 @@ For example:
                               (funcall on-failure (map-elt result :output))))))))
     ;; Sync exec
     (let ((result (shell-maker-make-http-request
-                   :url (chatgpt-shell--api-url)
-                   :data (chatgpt-shell-make-request-data
+                   :url (chatgpt-shell--chatgpt-api-url)
+                   :data (chatgpt-shell-make-chatgpt-request-data
                           :messages messages
                           :version version
                           :temperature temperature
@@ -1994,13 +1941,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
         (t
          nil)))
 
-(defun chatgpt-shell--api-url ()
-  "The complete URL OpenAI's API.
-
-`chatgpt-shell--api-url' =
-   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
-  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path))
-
 (defun chatgpt-shell--temp-dir ()
   "Get chatgpt-shell's temp directory."
   (let ((temp-dir (file-name-concat temporary-file-directory "chatgpt-shell")))
@@ -2022,21 +1962,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
   (with-temp-file (chatgpt-shell--json-request-file)
     (setq-local coding-system-for-write 'utf-8)
     (insert (shell-maker--json-encode data))))
-
-(defun chatgpt-shell--make-curl-request-command-list (request-data)
-  "Build ChatGPT curl command list using REQUEST-DATA."
-  (let ((json-path (chatgpt-shell--json-request-file)))
-    (with-temp-file json-path
-      (setq-local coding-system-for-write 'utf-8)
-      (insert (shell-maker--json-encode request-data)))
-    (append (list "curl" (chatgpt-shell--api-url))
-            chatgpt-shell-additional-curl-options
-            (list "--fail-with-body"
-                  "--no-progress-meter"
-                  "-m" (number-to-string chatgpt-shell-request-timeout)
-                  "-H" "Content-Type: application/json; charset=utf-8"
-                  "-H" (funcall chatgpt-shell-auth-header)
-                  "-d" (format "@%s" json-path)))))
 
 (cl-defun chatgpt-shell--make-chatgpt-messages (&key system-prompt prompt prompt-url context)
   "Create ChatGPT messages.
@@ -2066,28 +1991,6 @@ CONTEXT: Excludes PROMPT."
                     (when prompt-url
                       `(((type . "image_url")
                          (image_url . ,prompt-url)))))))))))
-
-(cl-defun chatgpt-shell--make-payload (&key prompt context version temperature streaming)
-  "Create a ChatGPT request payload.
-
-PROMPT: The new prompt (should not be in CONTEXT).
-VERSION: The model version.
-CONTEXT: All previous interactions.
-TEMPERATURE: Model temperature.
-STREAMING: When non-nil, request streamed response."
-  (chatgpt-shell-make-request-data
-   :messages (vconcat
-              (when (chatgpt-shell-system-prompt)
-                `(((role . "system")
-                   (content . ,(chatgpt-shell-system-prompt)))))
-              (chatgpt-shell--user-assistant-messages
-               (chatgpt-shell-crop-context context))
-              (when prompt
-                `(((role . "user")
-                   (content . ,prompt)))))
-   :version version
-   :temperature temperature
-   :streaming streaming))
 
 (defun chatgpt-shell-crop-context (context)
   "Crop CONTEXT to fit current model limits."
@@ -2146,58 +2049,6 @@ STREAMING: When non-nil, request streamed response."
     ;; Every reply is primed with <|start|>assistant<|message|>
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
-
-(defun chatgpt-shell-filter-chatgpt-output (raw-response)
-  "Extract ChatGPT response from RAW-RESPONSE.
-
-When ChatGPT responses are streamed, they arrive in the form:
-
-  data: {...json...}
-  data: {...jdon...}
-
-Otherwise:
-
-  {...json...}."
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
-            (response (or (let-alist whole
-                            .error.message)
-                          (let-alist whole
-                            (mapconcat (lambda (choice)
-                                         (let-alist choice
-                                           (or .delta.content
-                                               .message.content)))
-                                       .choices)))))
-      response
-    (when-let ((chunks (chatgpt-shell--split-response raw-response)))
-      (let ((response)
-            (pending)
-            (result))
-        (mapc (lambda (chunk)
-                ;; Response chunks come in the form:
-                ;;   data: {...}
-                ;;   data: {...}
-                (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
-                          (obj (shell-maker--json-parse-string (map-elt chunk :value)))
-                          (text (or
-                                 ;; .choices[i].message.content
-                                 ;; .choices[i].delta.content
-                                 (let-alist obj
-                                   (mapconcat (lambda (choice)
-                                                (let-alist choice
-                                                  (or .delta.content
-                                                      .message.content)))
-                                              .choices)))))
-                    (unless (string-empty-p text)
-                      (setq response (concat response text)))
-                  (setq pending (concat pending
-                                         (or (map-elt chunk :key) "")
-                                         (map-elt chunk :value)))))
-              chunks)
-        (setq result
-              (list (cons :filtered (unless (string-empty-p response)
-                                    response))
-                    (cons :pending pending)))
-        result))))
 
 (defun chatgpt-shell--split-response (response)
   "Splits RESPONSE text into chunks.
