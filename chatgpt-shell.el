@@ -198,19 +198,14 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '("chatgpt-4o-latest"
-    "o1-preview"
-    "o1-mini"
-    "gpt-4o"
-    "gpt-4-0125-preview"
-    "gpt-4-turbo-preview"
-    "gpt-4-1106-preview"
-    "gpt-4-0613"
-    "gpt-4"
-    "gpt-3.5-turbo-16k-0613"
-    "gpt-3.5-turbo-16k"
-    "gpt-3.5-turbo-0613"
-    "gpt-3.5-turbo")
+  '(((:name . "chatgpt-4o-latest")
+     (:provider . "OpenAI")
+     (:handler . chatgpt-shell--handle-chatgpt-command)
+     (:key . chatgpt-shell-openai-key)
+     (:path . "/v1/chat/completions")
+     (:token-width . 3)
+     ;; https://platform.openai.com/docs/models/gpt-4o
+     (:context-window . 128000)))
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
@@ -324,8 +319,15 @@ Or nil if none."
   (cond ((stringp chatgpt-shell-model-version)
          chatgpt-shell-model-version)
         ((integerp chatgpt-shell-model-version)
-         (nth chatgpt-shell-model-version
-              chatgpt-shell-model-versions))
+         (let ((item (nth chatgpt-shell-model-version
+                          chatgpt-shell-model-versions)))
+           (cond ((stringp item)
+                  item)
+                 ((stringp (map-elt item :name))
+                  (map-elt item :name))
+                 (t
+                  (error "Don't know how to resolve model to version %s"
+                         chatgpt-shell-model-version)))))
         (t
          nil)))
 
@@ -421,14 +423,30 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (setq-local chatgpt-shell-model-version
-              (completing-read "Model version: "
-                               (if (> (length chatgpt-shell-model-versions) 1)
-                                   (seq-remove
-                                    (lambda (item)
-                                      (string-equal item (chatgpt-shell-model-version)))
-                                    chatgpt-shell-model-versions)
-                                 chatgpt-shell-model-versions) nil t))
+  (if-let* ((all-models (seq-remove
+                         (lambda (item)
+                           (string-equal (map-elt item :name)
+                                         (chatgpt-shell-model-version)))
+                         chatgpt-shell-model-versions))
+            (width (let ((width))
+                     (mapc (lambda (model)
+                             (unless width
+                               (setq width 0))
+                             (when-let ((provider (map-elt model :provider))
+                                        (provider-width (length (map-elt model :provider)))
+                                        (longer (> provider-width width)))
+                               (setq width provider-width)))
+                           all-models)
+                     width))
+            (models (seq-map (lambda (model)
+                               (format (format "%%-%ds   %%s" width)
+                                       (map-elt model :provider)
+                                       (map-elt model :name)))
+                             all-models)))
+      (setq-local chatgpt-shell-model-version
+                  (nth 1 (string-split (completing-read "Model version: "
+                                                        models nil t))))
+    (error "No other providers found"))
   (chatgpt-shell--update-prompt t)
   (chatgpt-shell-interrupt nil))
 
@@ -498,18 +516,20 @@ or
 (setq chatgpt-shell-openai-key \"my-key\")"))
    :execute-command
    (lambda (command shell)
-     (shell-maker-make-http-request
-      :async t
-      :url (chatgpt-shell--chatgpt-api-url)
-      :data (chatgpt-shell--make-chatgpt-payload
-             :prompt command
-             :context (map-elt shell :history)
-             :streaming chatgpt-shell-streaming
-             :temperature chatgpt-shell-model-temperature)
-      :headers (list "Content-Type: application/json; charset=utf-8"
-                     (funcall chatgpt-shell-auth-header))
-      :filter #'chatgpt-shell-filter-chatgpt-output
-      :shell shell))
+     (if-let* ((model (chatgpt-shell--resolved-model))
+               (handler (map-elt model :handler)))
+         (funcall handler
+                  :model model
+                  :command command
+                  :context (chatgpt-shell-crop-context
+                            :model model
+                            :command command
+                            :context (map-elt shell :history))
+                  :shell shell
+                  :settings (list (cons :streaming chatgpt-shell-streaming)
+                                  (cons :temperature chatgpt-shell-model-temperature)
+                                  (cons :system-prompt (chatgpt-shell-system-prompt))))
+       (error "%s not found" (chatgpt-shell-model-version))))
    :on-command-finished
    (lambda (command output success)
      (chatgpt-shell--put-source-block-overlays)
@@ -529,6 +549,15 @@ or
 (defalias 'chatgpt-shell-mode #'text-mode)
 
 (shell-maker-define-major-mode chatgpt-shell--config)
+
+(cl-defun chatgpt-shell--resolved-model (&key named)
+  "Resolve model NAMED."
+  (or (seq-find (lambda (model)
+                  (equal (map-elt model :name)
+                         (or named (chatgpt-shell-model-version))))
+                chatgpt-shell-model-versions)
+      (error "Service %s not found"
+             (chatgpt-shell-model-version))))
 
 ;;;###autoload
 (defun chatgpt-shell (&optional new-session)
@@ -1432,6 +1461,7 @@ END (optional): End of region to replace (overrides active region)."
                                                (or output ""))))
                      (message (or output "failed")))))))
 
+;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-send-contextless-request
     (&key (model-version (chatgpt-shell-model-version))
           (system-prompt "")
@@ -1656,6 +1686,7 @@ Display result in org table of the form:
 7. Do NOT wrap anything in Markdown source blocks.
 8. Do NOT add any text or explanations outside the org table.")))
 
+;; TODO: Make service agnostic.
 (cl-defun chatgpt-shell-lookup (&key buffer system-prompt prompt prompt-url streaming
                                      on-success on-failure)
   "Look something up as a one-off (no shell history) and output to BUFFER.
@@ -1683,6 +1714,7 @@ ON-FAILURE: (lambda (output)) for completion event."
   (chatgpt-shell-post-chatgpt-messages
    :messages
    (chatgpt-shell--make-chatgpt-messages
+    :model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")
     :system-prompt system-prompt
     :prompt prompt
     :prompt-url prompt-url)
@@ -1760,7 +1792,11 @@ For example:
           ;; Async exec
           (shell-maker-make-http-request
            :async t
-           :url (chatgpt-shell--chatgpt-api-url)
+           ;; TODO: Remove the need to resolve just to get :path.
+           :url (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")))
+                  (concat chatgpt-shell-api-url-base
+                          (or (map-elt model :path)
+                              (error "Model :path not found"))))
            :data (chatgpt-shell-make-chatgpt-request-data
                   :messages messages
                   :version version
@@ -1779,7 +1815,11 @@ For example:
                               (funcall on-failure (map-elt result :output))))))))
     ;; Sync exec
     (let ((result (shell-maker-make-http-request
-                   :url (chatgpt-shell--chatgpt-api-url)
+                   ;; TODO: Remove the need to resolve just to get :path.
+                   :url (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")))
+                          (concat chatgpt-shell-api-url-base
+                                  (or (map-elt model :path)
+                                      (error "Model :path not found"))))
                    :data (chatgpt-shell-make-chatgpt-request-data
                           :messages messages
                           :version version
@@ -1910,13 +1950,15 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
   (unless url
     (error "Missing mandatory \"url\" param"))
   (message "Requesting...")
-  (let ((description))
+  (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest"))
+        (description))
     (chatgpt-shell-post-chatgpt-messages
      :messages (chatgpt-shell--make-chatgpt-messages
+                :model model
                 :system-prompt system-prompt
                 :prompt prompt
                 :prompt-url url)
-     :version "chatgpt-4o-latest"
+     :version (map-elt model :name)
      :on-output (lambda (output)
                   (setq description
                         (concat description
@@ -1930,18 +1972,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                        (funcall on-failure output)
                      (message output)))
      :other-params '((max_tokens . 300)))))
-
-(defun chatgpt-shell-openai-key ()
-  "Get the ChatGPT key."
-  (cond ((stringp chatgpt-shell-openai-key)
-         chatgpt-shell-openai-key)
-        ((functionp chatgpt-shell-openai-key)
-         (condition-case _err
-             (funcall chatgpt-shell-openai-key)
-           (error
-            "KEY-NOT-FOUND")))
-        (t
-         nil)))
 
 (defun chatgpt-shell--temp-dir ()
   "Get chatgpt-shell's temp directory."
@@ -1965,89 +1995,80 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
     (setq-local coding-system-for-write 'utf-8)
     (insert (shell-maker--json-encode data))))
 
-(cl-defun chatgpt-shell--make-chatgpt-messages (&key system-prompt prompt prompt-url context)
-  "Create ChatGPT messages.
+;; TODO: replace all chatgpt-shell-crop-context
+(cl-defun chatgpt-shell-crop-context (&key context model command)
+  "Crop CONTEXT to fit MODEL limits appending COMMAND."
+  (unless model
+    (error "Missing mandatory \"model\" param"))
+  ;; Temporarily appending command for context
+  ;; calculation and removing with butlast.
+  (let ((complete-context (append context
+                                  (list (cons command nil)))))
+    (butlast
+     (last complete-context
+           (chatgpt-shell--unpaired-length
+            (if (functionp chatgpt-shell-transmitted-context-length)
+                (funcall chatgpt-shell-transmitted-context-length
+                         model complete-context)
+              chatgpt-shell-transmitted-context-length)))
+     1)))
 
-SYSTEM-PROMPT: string.
+;; (defun chatgpt-shell--approximate-context-length (model context)
+;;   "Approximate the CONTEXT length using MODEL."
+;;   (let* ((approx-chars-per-token)
+;;          (context-window)
+;;          (original-length (length context))
+;;          (context-length original-length))
+;;     (if (map-elt model :token-width)
+;;         (setq approx-chars-per-token
+;;               (map-elt model :token-width))
+;;       (error "Don't know %s's approximate token width" model))
+;;     (if (map-elt model :context-window)
+;;         (setq context-window
+;;               (map-elt model :context-window))
+;;       (error "Don't know %s's max tokens context limit" model))
+;;     (while (> (chatgpt-shell--num-tokens-from-context
+;;                approx-chars-per-token context)
+;;               context-window)
+;;       ;; Keep dropping history until under context-window.
+;;       (setq context (cdr context)))
+;;     (setq context-length (length context))
+;;     (unless (eq original-length context-length)
+;;       (message "Warning: chatgpt-shell context clipped"))
+;;     context-length))
 
-PROMPT: string.
-
-PROMPT-URL: string.
-
-CONTEXT: Excludes PROMPT."
-  (when prompt-url
-    (setq prompt-url (chatgpt-shell--make-chatgpt-url prompt-url)))
-  (vconcat
-   (when system-prompt
-     `(((role . "system")
-        (content . ,system-prompt))))
-   (when context
-     (chatgpt-shell--user-assistant-messages
-      (chatgpt-shell-crop-context context)))
-   `(((role . "user")
-      (content . ,(vconcat
-                   (append
-                    (when prompt
-                      `(((type . "text")
-                         (text . ,prompt))))
-                    (when prompt-url
-                      `(((type . "image_url")
-                         (image_url . ,prompt-url)))))))))))
-
-(defun chatgpt-shell-crop-context (context)
-  "Crop CONTEXT to fit current model limits."
-  (last context
-        (chatgpt-shell--unpaired-length
-         (if (functionp chatgpt-shell-transmitted-context-length)
-             (funcall chatgpt-shell-transmitted-context-length
-                      (chatgpt-shell-model-version) context)
-           chatgpt-shell-transmitted-context-length))))
-
-(defun chatgpt-shell--approximate-context-length (model messages)
-  "Approximate the context length using MODEL and MESSAGES."
-  (let* ((tokens-per-message)
-         (max-tokens)
-         (original-length (floor (/ (length messages) 2)))
+(defun chatgpt-shell--approximate-context-length (model context)
+  "Approximate the CONTEXT length using MODEL."
+  (let* ((approx-chars-per-token)
+         (context-window)
+         (original-length (floor (/ (length context) 2)))
          (context-length original-length))
-    ;; Remove "ft:" from fine-tuned models and recognize as usual
-    (setq model (string-remove-prefix "ft:" model))
-    (cond
-     ((string-prefix-p "o1" model)
-      (setq tokens-per-message 3
-            ;; https://platform.openai.com/docs/models/o1
-            max-tokens 128000))
-     ((or (string-prefix-p "chatgpt-4o" model)
-          (string-prefix-p "gpt-4o" model))
-      (setq tokens-per-message 3
-            ;; https://platform.openai.com/docs/models/gpt-4o
-            max-tokens 128000))
-     ((string-prefix-p "gpt-3.5" model)
-      (setq tokens-per-message 4
-            ;; https://platform.openai.com/docs/models/gpt-3-5
-            max-tokens 4096))
-     ((string-prefix-p "gpt-4" model)
-      (setq tokens-per-message 3
-            ;; https://platform.openai.com/docs/models/gpt-4
-            max-tokens 8192))
-     (t
-      (error "Don't know '%s', so can't approximate context length" model)))
-    (while (> (chatgpt-shell--num-tokens-from-messages
-               tokens-per-message messages)
-              max-tokens)
-      (setq messages (cdr messages)))
-    (setq context-length (floor (/ (length messages) 2)))
+    (if (map-elt model :token-width)
+        (setq approx-chars-per-token
+              (map-elt model :token-width))
+      (error "Don't know %s's approximate token width" model))
+    (if (map-elt model :context-window)
+        (setq context-window
+              (map-elt model :context-window))
+      (error "Don't know %s's max tokens context limit" model))
+    (while (> (chatgpt-shell--num-tokens-from-context
+               approx-chars-per-token context)
+              context-window)
+      ;; Keep dropping history until under context-window.
+      (setq context (cdr context)))
+    (setq context-length (floor (/ (length context) 2)))
     (unless (eq original-length context-length)
       (message "Warning: chatgpt-shell context clipped"))
     context-length))
 
 ;; Very rough token approximation loosely based on num_tokens_from_messages from:
 ;; https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
-(defun chatgpt-shell--num-tokens-from-messages (tokens-per-message messages)
-  "Approximate number of tokens in MESSAGES using TOKENS-PER-MESSAGE."
+(defun chatgpt-shell--num-tokens-from-context (chars-per-token context)
+  "Approximate number of tokens in CONTEXT using approximate CHARS-PER-TOKEN."
   (let ((num-tokens 0))
-    (dolist (message messages)
-      (setq num-tokens (+ num-tokens tokens-per-message))
-      (setq num-tokens (+ num-tokens (/ (length (cdr message)) tokens-per-message))))
+    (dolist (message context)
+      (setq num-tokens (+ num-tokens chars-per-token))
+      (setq num-tokens (+ num-tokens (/ (length (cdr message)) chars-per-token))))
     ;; Every reply is primed with <|start|>assistant<|message|>
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
@@ -2550,29 +2571,6 @@ If no LENGTH set, use 2048."
   "Extract all command and responses in TEXT with PROMPT-REGEXP."
   (chatgpt-shell--user-assistant-messages
    (shell-maker--extract-history text prompt-regexp)))
-
-(defun chatgpt-shell--user-assistant-messages (history)
-  "Convert HISTORY to ChatGPT format.
-
-Sequence must be a vector for json serialization.
-
-For example:
-
- [
-   ((role . \"user\") (content . \"hello\"))
-   ((role . \"assistant\") (content . \"world\"))
- ]"
-  (let ((result))
-    (mapc
-     (lambda (item)
-       (when (car item)
-         (push (list (cons 'role "user")
-                     (cons 'content (car item))) result))
-       (when (cdr item)
-         (push (list (cons 'role "assistant")
-                     (cons 'content (cdr item))) result)))
-     history)
-    (nreverse result)))
 
 (defun chatgpt-shell-run-command (command callback)
   "Run COMMAND list asynchronously and call CALLBACK function.

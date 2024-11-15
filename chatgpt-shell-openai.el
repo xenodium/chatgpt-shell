@@ -52,6 +52,7 @@ If you use ChatGPT through a proxy service, change the URL base."
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
+;; TODO: Inline in chatgpt-shell--handle-chatgpt-command and remove?
 (defcustom chatgpt-shell-auth-header
   (lambda ()
     (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
@@ -59,34 +60,71 @@ If you use ChatGPT through a proxy service, change the URL base."
   :type '(function :tag "Function")
   :group 'chatgpt-shell)
 
-(defun chatgpt-shell--chatgpt-api-url ()
-  "The complete URL OpenAI's API.
-
-`chatgpt-shell--api-url' =
-   `chatgpt-shell--api-url-base' + `chatgpt-shell--api-url-path'"
-  (concat chatgpt-shell-api-url-base chatgpt-shell-api-url-path))
-
-(cl-defun chatgpt-shell--make-chatgpt-payload (&key prompt context version temperature streaming)
+(cl-defun chatgpt-shell--make-chatgpt-payload (&key prompt context version temperature streaming system-prompt)
   "Create a ChatGPT request payload.
 
 PROMPT: The new prompt (should not be in CONTEXT).
 VERSION: The model version.
 CONTEXT: All previous interactions.
 TEMPERATURE: Model temperature.
-STREAMING: When non-nil, request streamed response."
+STREAMING: When non-nil, request streamed response.
+SYSTEM-PROMPT: Optional system prompt."
   (chatgpt-shell-make-chatgpt-request-data
    :messages (vconcat
-              (when (chatgpt-shell-system-prompt)
+              (when system-prompt
                 `(((role . "system")
-                   (content . ,(chatgpt-shell-system-prompt)))))
-              (chatgpt-shell--user-assistant-messages
-               (chatgpt-shell-crop-context context))
+                   (content . ,system-prompt))))
+              (chatgpt-shell--user-assistant-messages context)
               (when prompt
                 `(((role . "user")
                    (content . ,prompt)))))
    :version version
    :temperature temperature
    :streaming streaming))
+
+(cl-defun chatgpt-shell--make-chatgpt-messages (&key model system-prompt prompt prompt-url context)
+  "Create ChatGPT messages using MODEL.
+
+SYSTEM-PROMPT: string.
+
+PROMPT: string.
+
+PROMPT-URL: string.
+
+CONTEXT: Excludes PROMPT."
+  (when prompt-url
+    (setq prompt-url (chatgpt-shell--make-chatgpt-url prompt-url)))
+  (vconcat
+   (when system-prompt
+     `(((role . "system")
+        (content . ,system-prompt))))
+   (when context
+     (chatgpt-shell--user-assistant-messages
+      (chatgpt-shell-crop-context
+       :model model
+       :command prompt
+       :context context)))
+   `(((role . "user")
+      (content . ,(vconcat
+                   (append
+                    (when prompt
+                      `(((type . "text")
+                         (text . ,prompt))))
+                    (when prompt-url
+                      `(((type . "image_url")
+                         (image_url . ,prompt-url)))))))))))
+
+(defun chatgpt-shell-openai-key ()
+  "Get the ChatGPT key."
+  (cond ((stringp chatgpt-shell-openai-key)
+         chatgpt-shell-openai-key)
+        ((functionp chatgpt-shell-openai-key)
+         (condition-case _err
+             (funcall chatgpt-shell-openai-key)
+           (error
+            "KEY-NOT-FOUND")))
+        (t
+         nil)))
 
 (cl-defun chatgpt-shell-make-chatgpt-request-data (&key messages version temperature streaming other-params)
   "Make request data with MESSAGES.
@@ -155,6 +193,47 @@ Otherwise:
                                       response))
                     (cons :pending pending)))
         result))))
+
+(cl-defun chatgpt-shell--handle-chatgpt-command (&key model command context shell settings)
+  "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
+  (shell-maker-make-http-request
+   :async t
+   :url (concat chatgpt-shell-api-url-base
+                (or (map-elt model :path)
+                    (error "Model :path not found")))
+   :data (chatgpt-shell--make-chatgpt-payload
+          :prompt command
+          :context context
+          :streaming (map-elt settings :streaming)
+          :temperature (map-elt settings :temperature)
+          :system-prompt (map-elt settings :system-prompt))
+   :headers (list "Content-Type: application/json; charset=utf-8"
+                  (funcall chatgpt-shell-auth-header))
+   :filter #'chatgpt-shell-filter-chatgpt-output
+   :shell shell))
+
+(defun chatgpt-shell--user-assistant-messages (history)
+  "Convert HISTORY to ChatGPT format.
+
+Sequence must be a vector for json serialization.
+
+For example:
+
+ [
+   ((role . \"user\") (content . \"hello\"))
+   ((role . \"assistant\") (content . \"world\"))
+ ]"
+  (let ((result))
+    (mapc
+     (lambda (item)
+       (when (car item)
+         (push (list (cons 'role "user")
+                     (cons 'content (car item))) result))
+       (when (cdr item)
+         (push (list (cons 'role "assistant")
+                     (cons 'content (cdr item))) result)))
+     history)
+    (nreverse result)))
 
 (provide 'chatgpt-shell-openai)
 
