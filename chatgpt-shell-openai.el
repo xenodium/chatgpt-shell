@@ -132,9 +132,8 @@ CONTEXT: Excludes PROMPT."
 Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
   (unless messages
     (error "Missing mandatory :messages param"))
-  (setq temperature (or temperature chatgpt-shell-model-temperature))
   (append
-   `((model . ,(or version (chatgpt-shell-model-version)))
+   `((model . ,version)
      (messages . ,(vconcat messages)))
    (when temperature
      `((temperature . ,temperature)))
