@@ -1799,7 +1799,7 @@ For example:
                   :streaming streaming
                   :other-params other-params)
            :headers (list "Content-Type: application/json; charset=utf-8"
-                          (funcall chatgpt-shell-auth-header))
+                          (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
            :filter #'chatgpt-shell-openai-filter-chatgpt-output
            :on-output on-output
            :on-finished (lambda (result)
@@ -1822,7 +1822,7 @@ For example:
                           :streaming streaming
                           :other-params other-params)
                    :headers (list "Content-Type: application/json; charset=utf-8"
-                                  (funcall chatgpt-shell-auth-header))
+                                  (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
                    :filter #'chatgpt-shell-openai-filter-chatgpt-output)))
       (map-elt result :output))))
 
