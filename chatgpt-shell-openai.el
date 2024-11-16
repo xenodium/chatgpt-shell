@@ -202,6 +202,7 @@ Otherwise:
                     (error "Model :path not found")))
    :data (chatgpt-shell--make-chatgpt-payload
           :prompt command
+          :version (map-elt model :name)
           :context context
           :streaming (map-elt settings :streaming)
           :temperature (map-elt settings :temperature)
