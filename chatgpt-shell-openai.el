@@ -27,8 +27,8 @@
 ;;; Code:
 
 (defcustom chatgpt-shell-openai-models
-  '(((:name . "chatgpt-4o-latest")
-     (:short-name . "4o-latest")
+  '(((:version . "chatgpt-4o-latest")
+     (:short-version . "4o-latest")
      (:label . "ChatGPT")
      (:provider . "OpenAI")
      (:handler . chatgpt-shell-openai--handle-chatgpt-command)
@@ -199,7 +199,7 @@ Otherwise:
                     (error "Model :path not found")))
    :data (chatgpt-shell-openai--make-chatgpt-payload
           :prompt command
-          :version (map-elt model :name)
+          :version (map-elt model :version)
           :context context
           :streaming (map-elt settings :streaming)
           :temperature (map-elt settings :temperature)

@@ -314,12 +314,12 @@ Or nil if none."
   (cond ((stringp chatgpt-shell-model-version)
          chatgpt-shell-model-version)
         ((integerp chatgpt-shell-model-version)
-         (let ((item (nth chatgpt-shell-model-version
+         (let ((model (nth chatgpt-shell-model-version
                           chatgpt-shell-model-versions)))
-           (cond ((stringp item)
-                  item)
-                 ((stringp (map-elt item :name))
-                  (map-elt item :name))
+           (cond ((stringp model)
+                  model)
+                 ((stringp (map-elt model :version))
+                  (map-elt model :version))
                  (t
                   (error "Don't know how to resolve model to version %s"
                          chatgpt-shell-model-version)))))
@@ -420,7 +420,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
     (user-error "Not in a shell"))
   (if-let* ((all-models (seq-remove
                          (lambda (item)
-                           (string-equal (map-elt item :name)
+                           (string-equal (map-elt item :version)
                                          (chatgpt-shell-model-version)))
                          chatgpt-shell-model-versions))
             (width (let ((width))
@@ -436,7 +436,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
             (models (seq-map (lambda (model)
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
-                                       (map-elt model :name)))
+                                       (map-elt model :version)))
                              all-models)))
       (setq-local chatgpt-shell-model-version
                   (nth 1 (string-split (completing-read "Model version: "
@@ -548,7 +548,7 @@ or
 (cl-defun chatgpt-shell--resolved-model (&key named)
   "Resolve model NAMED."
   (or (seq-find (lambda (model)
-                  (equal (map-elt model :name)
+                  (equal (map-elt model :version)
                          (or named (chatgpt-shell-model-version))))
                 chatgpt-shell-model-versions)
       (error "Service %s not found"
@@ -635,7 +635,7 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
 (defun chatgpt-shell--shell-info ()
   "Generate shell info for display."
   (let* ((model (chatgpt-shell--resolved-model))
-         (short-version (or (map-elt model :short-name)
+         (short-version (or (map-elt model :short-version)
                             (chatgpt-shell-model-version))))
     (concat
      short-version
@@ -1709,7 +1709,7 @@ ON-FAILURE: (lambda (output)) for completion event."
   (chatgpt-shell-post-chatgpt-messages
    :messages
    (chatgpt-shell-openai--make-chatgpt-messages
-    :model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")
+    :model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")
     :system-prompt system-prompt
     :prompt prompt
     :prompt-url prompt-url)
@@ -1788,7 +1788,7 @@ For example:
           (shell-maker-make-http-request
            :async t
            ;; TODO: Remove the need to resolve just to get :path.
-           :url (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")))
+           :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
                   (concat chatgpt-shell-api-url-base
                           (or (map-elt model :path)
                               (error "Model :path not found"))))
@@ -1811,7 +1811,7 @@ For example:
     ;; Sync exec
     (let ((result (shell-maker-make-http-request
                    ;; TODO: Remove the need to resolve just to get :path.
-                   :url (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")))
+                   :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
                           (concat chatgpt-shell-api-url-base
                                   (or (map-elt model :path)
                                       (error "Model :path not found"))))
@@ -1945,7 +1945,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
   (unless url
     (error "Missing mandatory \"url\" param"))
   (message "Requesting...")
-  (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest"))
+  (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest"))
         (description))
     (chatgpt-shell-post-chatgpt-messages
      :messages (chatgpt-shell-openai--make-chatgpt-messages
@@ -1953,7 +1953,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                 :system-prompt system-prompt
                 :prompt prompt
                 :prompt-url url)
-     :version (map-elt model :name)
+     :version (map-elt model :version)
      :on-output (lambda (output)
                   (setq description
                         (concat description
