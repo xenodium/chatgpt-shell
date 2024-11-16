@@ -42,6 +42,8 @@ If you use Gemini through a proxy service, change the URL base."
 
 (defcustom chatgpt-shell-google-models
   '(((:name . "gemini-1.5-pro-latest")
+     (:short-name . "1.5-pro-latest")
+     (:label . "Gemini")
      (:provider . "Google")
      (:handler . chatgpt-shell-google--handle-gemini-command)
      (:key . chatgpt-shell-google-key)

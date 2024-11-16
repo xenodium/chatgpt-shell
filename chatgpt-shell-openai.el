@@ -28,6 +28,8 @@
 
 (defcustom chatgpt-shell-openai-models
   '(((:name . "chatgpt-4o-latest")
+     (:short-name . "4o-latest")
+     (:label . "ChatGPT")
      (:provider . "OpenAI")
      (:handler . chatgpt-shell-openai--handle-chatgpt-command)
      (:key . chatgpt-shell-openai-key)

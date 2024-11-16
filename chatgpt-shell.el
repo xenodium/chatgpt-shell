@@ -623,13 +623,6 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
       #'chatgpt-shell-prompt-compose)
     shell-buffer))
 
-(defun chatgpt-shell--shrink-model-version (model-version)
-  "Shrink MODEL-VERSION.  gpt-3.5-turbo -> 3.5t."
-  (replace-regexp-in-string
-   "-turbo" "t"
-   (string-remove-prefix
-    "gpt-" (string-trim model-version))))
-
 (defun chatgpt-shell--shrink-system-prompt (prompt)
   "Shrink PROMPT."
   (if (consp prompt)
@@ -641,24 +634,31 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
 
 (defun chatgpt-shell--shell-info ()
   "Generate shell info for display."
-  (concat
-   (chatgpt-shell--shrink-model-version
-    (chatgpt-shell-model-version))
-   (cond ((and (integerp chatgpt-shell-system-prompt)
-               (nth chatgpt-shell-system-prompt
-                    chatgpt-shell-system-prompts))
-          (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                                                chatgpt-shell-system-prompts))))
-         ((stringp chatgpt-shell-system-prompt)
-          (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
-         (t
-          ""))))
+  (let* ((model (chatgpt-shell--resolved-model))
+         (short-version (or (map-elt model :short-name)
+                            (chatgpt-shell-model-version))))
+    (concat
+     short-version
+     (cond ((and (integerp chatgpt-shell-system-prompt)
+                 (nth chatgpt-shell-system-prompt
+                      chatgpt-shell-system-prompts))
+            (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                                                  chatgpt-shell-system-prompts))))
+           ((stringp chatgpt-shell-system-prompt)
+            (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
+           (t
+            "")))))
+
+(defun chatgpt-shell--model-label ()
+  "Return the model LABEL."
+  (or (map-elt (chatgpt-shell--resolved-model) :label) "Unknown"))
 
 (defun chatgpt-shell--prompt-pair ()
   "Return a pair with prompt and prompt-regexp."
-  (cons
-   (format "ChatGPT(%s)> " (chatgpt-shell--shell-info))
-   (rx (seq bol "ChatGPT" (one-or-more (not (any "\n"))) ">" (or space "\n")))))
+  (let* ((label (chatgpt-shell--model-label)))
+    (cons
+     (format "%s(%s)> " label (chatgpt-shell--shell-info))
+     (rx-to-string `(seq bol ,label (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
 
 (defun chatgpt-shell--shell-buffers ()
   "Return a list of all shell buffers."
@@ -714,7 +714,7 @@ This is used for sending a prompt to in the background."
   "Generate a buffer name using current shell config info."
   (format "%s %s"
           (shell-maker-buffer-default-name
-           (shell-maker-config-name chatgpt-shell--config))
+           (chatgpt-shell--model-label))
           (chatgpt-shell--shell-info)))
 
 (defun chatgpt-shell--add-menus ()
