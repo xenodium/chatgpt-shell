@@ -205,7 +205,16 @@ Can be used compile or run source block at point."
      (:path . "/v1/chat/completions")
      (:token-width . 3)
      ;; https://platform.openai.com/docs/models/gpt-4o
-     (:context-window . 128000)))
+     (:context-window . 128000))
+    ((:name . "gemini-1.5-pro-latest")
+     (:provider . "Google")
+     (:handler . chatgpt-shell--handle-gemini-command)
+     (:key . chatgpt-shell-google-key)
+     (:path . "/v1beta/models/gemini-1.5-pro-latest")
+     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
+     ;; A token is equivalent to _about_ 4 characters.
+     (:token-width . 4)
+     (:context-window . 2097152)))
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
@@ -2092,21 +2101,24 @@ returned list is of the form:
     (:value . \"text2\"))
    ((:key . nil)
     (:value . \"text3\")))"
-  (let ((lines (split-string response "\n"))
-        (result '()))
-    (dolist (line lines)
-      (if (string-match (rx (group (+ (not (any " " ":"))) ":")
-                            (group (* nonl)))
-                        line)
-          (let* ((key (match-string 1 line))
-                 (value (string-trim (match-string 2 line))))
-            (push (list (cons :key key)
-                        (cons :value value)) result))
-        (when-let* ((value (string-trim line))
-                    (non-empty (not (string-empty-p value))))
-          (push (list (cons :key nil)
-                      (cons :value value)) result))))
-    (reverse result)))
+  (if (string-prefix-p "{" response) ;; starts with { keep whole.
+      (list `((:key . nil)
+              (:value . ,response)))
+    (let ((lines (split-string response "\n"))
+          (result '()))
+      (dolist (line lines)
+        (if (string-match (rx (group (+ (not (any " " ":"))) ":")
+                              (group (* nonl)))
+                          line)
+            (let* ((key (match-string 1 line))
+                   (value (string-trim (match-string 2 line))))
+              (push (list (cons :key key)
+                          (cons :value value)) result))
+          (when-let* ((value (string-trim line))
+                      (non-empty (not (string-empty-p value))))
+            (push (list (cons :key nil)
+                        (cons :value value)) result))))
+      (reverse result))))
 
 ;; FIXME: Make shell agnostic or move to chatgpt-shell.
 (defun chatgpt-shell-restore-session-from-transcript ()
