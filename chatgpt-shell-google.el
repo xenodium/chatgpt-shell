@@ -33,11 +33,25 @@
 (defcustom chatgpt-shell-google-api-url-base "https://generativelanguage.googleapis.com"
   "Google API's base URL.
 
-url = `chatgpt-shell-google-api-url-base' + path
+API url = base + path.
 
 If you use Gemini through a proxy service, change the URL base."
   :type 'string
   :safe #'stringp
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-google-models
+  '(((:name . "gemini-1.5-pro-latest")
+     (:provider . "Google")
+     (:handler . chatgpt-shell-google--handle-gemini-command)
+     (:key . chatgpt-shell-google-key)
+     (:path . "/v1beta/models/gemini-1.5-pro-latest")
+     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
+     ;; A token is equivalent to _about_ 4 characters.
+     (:token-width . 4)
+     (:context-window . 2097152)))
+  "List of Google LLM models available."
+  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-google-key ()
@@ -52,7 +66,7 @@ If you use Gemini through a proxy service, change the URL base."
         (t
          nil)))
 
-(cl-defun chatgpt-shell--handle-gemini-command (&key model command context shell settings)
+(cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
    :async t
@@ -64,18 +78,18 @@ If you use Gemini through a proxy service, change the URL base."
                   ":generateContent")
                 "?key="
                 (or (chatgpt-shell-google-key)
-                    (error "chatgpt-shell-google-key is missing"))
+                    (error "Your chatgpt-shell-google-key is missing"))
                 "&alt=sse")
-   :data (chatgpt-shell--make-gemini-payload
+   :data (chatgpt-shell-google--make-gemini-payload
           :prompt command
           :context context
           :temperature (map-elt settings :temperature)
           :system-prompt (map-elt settings :system-prompt))
    :headers (list "Content-Type: application/json; charset=utf-8")
-   :filter #'chatgpt-shell--extract-gemini-response
+   :filter #'chatgpt-shell-google--extract-gemini-response
    :shell shell))
 
-(cl-defun chatgpt-shell--make-gemini-payload (&key prompt context system-prompt temperature)
+(cl-defun chatgpt-shell-google--make-gemini-payload (&key prompt context system-prompt temperature)
   "Create the request payload.
 
  Compose using PROMPT, CONTEXT, SYSTEM-PROMPT and TEMPERATURE."
@@ -83,14 +97,14 @@ If you use Gemini through a proxy service, change the URL base."
    (when system-prompt
      `((system_instruction . ((parts . ((text . ,system-prompt)))))))
    `((contents . ,(vconcat
-                   (chatgpt-shell--gemini-user-model-messages
+                   (chatgpt-shell-google--gemini-user-model-messages
                     (append context
                             (list (cons prompt nil))))))
      (generation_config . ((temperature . ,(or temperature 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
 
-(defun chatgpt-shell--gemini-user-model-messages (context)
+(defun chatgpt-shell-google--gemini-user-model-messages (context)
   "Convert CONTEXT to gemini messages.
 
 Sequence must be a vector for json serialization.
@@ -115,7 +129,7 @@ For example:
      context)
     (nreverse result)))
 
-(defun chatgpt-shell--extract-gemini-response (raw-response)
+(defun chatgpt-shell-google--extract-gemini-response (raw-response)
   "Extract Gemini response from RAW-RESPONSE."
   (if-let* ((whole (shell-maker--json-parse-string raw-response))
             (response (or (let-alist whole
@@ -127,7 +141,7 @@ For example:
                                                .message.content)))
                                        .choices)))))
       response
-    (if-let ((chunks (chatgpt-shell--split-response raw-response)))
+    (if-let ((chunks (shell-maker--split-text raw-response)))
       (let ((response)
             (pending)
             (result))

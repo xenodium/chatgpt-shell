@@ -26,22 +26,25 @@
 
 ;;; Code:
 
+(defcustom chatgpt-shell-openai-models
+  '(((:name . "chatgpt-4o-latest")
+     (:provider . "OpenAI")
+     (:handler . chatgpt-shell-openai--handle-chatgpt-command)
+     (:key . chatgpt-shell-openai-key)
+     (:path . "/v1/chat/completions")
+     (:token-width . 3)
+     ;; https://platform.openai.com/docs/models/gpt-4o
+     (:context-window . 128000)))
+  "List of OpenAI LLM models available."
+  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
 
-`chatgpt-shell--chatgpt-api-url' =
-   `chatgpt-shell--chatgpt-api-url-base' + `chatgpt-shell--chatgpt-api-url-path'
+API url = base + path.
 
 If you use ChatGPT through a proxy service, change the URL base."
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-api-url-path "/v1/chat/completions"
-  "OpenAI API's URL path.
-
-`chatgpt-shell--chatgpt-api-url' =
-   `chatgpt-shell--chatgpt-api-url-base' + `chatgpt-shell--chatgpt-api-url-path'"
   :type 'string
   :safe #'stringp
   :group 'chatgpt-shell)
@@ -52,15 +55,7 @@ If you use ChatGPT through a proxy service, change the URL base."
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
-;; TODO: Inline in chatgpt-shell--handle-chatgpt-command and remove?
-(defcustom chatgpt-shell-auth-header
-  (lambda ()
-    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-  "Function to generate the request's `Authorization' header string."
-  :type '(function :tag "Function")
-  :group 'chatgpt-shell)
-
-(cl-defun chatgpt-shell--make-chatgpt-payload (&key prompt context version temperature streaming system-prompt)
+(cl-defun chatgpt-shell-openai--make-chatgpt-payload (&key prompt context version temperature streaming system-prompt)
   "Create a ChatGPT request payload.
 
 PROMPT: The new prompt (should not be in CONTEXT).
@@ -69,12 +64,12 @@ CONTEXT: All previous interactions.
 TEMPERATURE: Model temperature.
 STREAMING: When non-nil, request streamed response.
 SYSTEM-PROMPT: Optional system prompt."
-  (chatgpt-shell-make-chatgpt-request-data
+  (chatgpt-shell-openai-make-chatgpt-request-data
    :messages (vconcat
               (when system-prompt
                 `(((role . "system")
                    (content . ,system-prompt))))
-              (chatgpt-shell--user-assistant-messages context)
+              (chatgpt-shell-openai--user-assistant-messages context)
               (when prompt
                 `(((role . "user")
                    (content . ,prompt)))))
@@ -82,7 +77,7 @@ SYSTEM-PROMPT: Optional system prompt."
    :temperature temperature
    :streaming streaming))
 
-(cl-defun chatgpt-shell--make-chatgpt-messages (&key model system-prompt prompt prompt-url context)
+(cl-defun chatgpt-shell-openai--make-chatgpt-messages (&key model system-prompt prompt prompt-url context)
   "Create ChatGPT messages using MODEL.
 
 SYSTEM-PROMPT: string.
@@ -99,7 +94,7 @@ CONTEXT: Excludes PROMPT."
      `(((role . "system")
         (content . ,system-prompt))))
    (when context
-     (chatgpt-shell--user-assistant-messages
+     (chatgpt-shell-openai--user-assistant-messages
       (chatgpt-shell-crop-context
        :model model
        :command prompt
@@ -126,7 +121,7 @@ CONTEXT: Excludes PROMPT."
         (t
          nil)))
 
-(cl-defun chatgpt-shell-make-chatgpt-request-data (&key messages version temperature streaming other-params)
+(cl-defun chatgpt-shell-openai-make-chatgpt-request-data (&key messages version temperature streaming other-params)
   "Make request data with MESSAGES.
 
 Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
@@ -141,7 +136,7 @@ Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
      `((stream . t)))
    other-params))
 
-(defun chatgpt-shell-filter-chatgpt-output (raw-response)
+(defun chatgpt-shell-openai-filter-chatgpt-output (raw-response)
   "Extract ChatGPT response from RAW-RESPONSE.
 
 When ChatGPT responses are streamed, they arrive in the form:
@@ -162,7 +157,7 @@ Otherwise:
                                                .message.content)))
                                        .choices)))))
       response
-    (when-let ((chunks (chatgpt-shell--split-response raw-response)))
+    (when-let ((chunks (shell-maker--split-text raw-response)))
       (let ((response)
             (pending)
             (result))
@@ -193,14 +188,14 @@ Otherwise:
                     (cons :pending pending)))
         result))))
 
-(cl-defun chatgpt-shell--handle-chatgpt-command (&key model command context shell settings)
+(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
    :async t
    :url (concat chatgpt-shell-api-url-base
                 (or (map-elt model :path)
                     (error "Model :path not found")))
-   :data (chatgpt-shell--make-chatgpt-payload
+   :data (chatgpt-shell-openai--make-chatgpt-payload
           :prompt command
           :version (map-elt model :name)
           :context context
@@ -208,11 +203,11 @@ Otherwise:
           :temperature (map-elt settings :temperature)
           :system-prompt (map-elt settings :system-prompt))
    :headers (list "Content-Type: application/json; charset=utf-8"
-                  (funcall chatgpt-shell-auth-header))
-   :filter #'chatgpt-shell-filter-chatgpt-output
+                  (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+   :filter #'chatgpt-shell-openai-filter-chatgpt-output
    :shell shell))
 
-(defun chatgpt-shell--user-assistant-messages (history)
+(defun chatgpt-shell-openai--user-assistant-messages (history)
   "Convert HISTORY to ChatGPT format.
 
 Sequence must be a vector for json serialization.

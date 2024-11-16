@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.25.1
-;; Package-Requires: ((emacs "28.1") (shell-maker "0.62.1"))
-(defconst chatgpt-shell--version "1.25.1")
+;; Version: 1.24.1
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.64.1"))
+(defconst chatgpt-shell--version "1.24.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@
 (require 'color)
 
 (require 'chatgpt-shell-openai)
+(require 'chatgpt-shell-google)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -198,23 +199,8 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-versions
-  '(((:name . "chatgpt-4o-latest")
-     (:provider . "OpenAI")
-     (:handler . chatgpt-shell--handle-chatgpt-command)
-     (:key . chatgpt-shell-openai-key)
-     (:path . "/v1/chat/completions")
-     (:token-width . 3)
-     ;; https://platform.openai.com/docs/models/gpt-4o
-     (:context-window . 128000))
-    ((:name . "gemini-1.5-pro-latest")
-     (:provider . "Google")
-     (:handler . chatgpt-shell--handle-gemini-command)
-     (:key . chatgpt-shell-google-key)
-     (:path . "/v1beta/models/gemini-1.5-pro-latest")
-     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
-     ;; A token is equivalent to _about_ 4 characters.
-     (:token-width . 4)
-     (:context-window . 2097152)))
+  (append chatgpt-shell-openai-models
+          chatgpt-shell-google-models)
   "The list of ChatGPT OpenAI models to swap from.
 
 The list of models supported by /v1/chat/completions endpoint is
@@ -1722,7 +1708,7 @@ ON-FAILURE: (lambda (output)) for completion event."
   (display-buffer buffer)
   (chatgpt-shell-post-chatgpt-messages
    :messages
-   (chatgpt-shell--make-chatgpt-messages
+   (chatgpt-shell-openai--make-chatgpt-messages
     :model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest")
     :system-prompt system-prompt
     :prompt prompt
@@ -1763,7 +1749,7 @@ Specify PROMPT to signal the user."
                                                     temperature streaming)
   "Make a single ChatGPT request with MESSAGES and FILTER.
 
-`chatgpt-shell-filter-chatgpt-output' typically used as extractor.
+`chatgpt-shell-openai-filter-chatgpt-output' typically used as extractor.
 
 Optionally pass model VERSION, TEMPERATURE and OTHER-PARAMS.
 
@@ -1806,7 +1792,7 @@ For example:
                   (concat chatgpt-shell-api-url-base
                           (or (map-elt model :path)
                               (error "Model :path not found"))))
-           :data (chatgpt-shell-make-chatgpt-request-data
+           :data (chatgpt-shell-openai-make-chatgpt-request-data
                   :messages messages
                   :version version
                   :temperature temperature
@@ -1814,7 +1800,7 @@ For example:
                   :other-params other-params)
            :headers (list "Content-Type: application/json; charset=utf-8"
                           (funcall chatgpt-shell-auth-header))
-           :filter #'chatgpt-shell-filter-chatgpt-output
+           :filter #'chatgpt-shell-openai-filter-chatgpt-output
            :on-output on-output
            :on-finished (lambda (result)
                           (if (equal 0 (map-elt result :exit-status))
@@ -1829,7 +1815,7 @@ For example:
                           (concat chatgpt-shell-api-url-base
                                   (or (map-elt model :path)
                                       (error "Model :path not found"))))
-                   :data (chatgpt-shell-make-chatgpt-request-data
+                   :data (chatgpt-shell-openai-make-chatgpt-request-data
                           :messages messages
                           :version version
                           :temperature temperature
@@ -1837,7 +1823,7 @@ For example:
                           :other-params other-params)
                    :headers (list "Content-Type: application/json; charset=utf-8"
                                   (funcall chatgpt-shell-auth-header))
-                   :filter #'chatgpt-shell-filter-chatgpt-output)))
+                   :filter #'chatgpt-shell-openai-filter-chatgpt-output)))
       (map-elt result :output))))
 
 ;;;###autoload
@@ -1962,7 +1948,7 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
   (let ((model (chatgpt-shell--resolved-model :named "chatgpt-4o-latest"))
         (description))
     (chatgpt-shell-post-chatgpt-messages
-     :messages (chatgpt-shell--make-chatgpt-messages
+     :messages (chatgpt-shell-openai--make-chatgpt-messages
                 :model model
                 :system-prompt system-prompt
                 :prompt prompt
@@ -2081,44 +2067,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
     ;; Every reply is primed with <|start|>assistant<|message|>
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
-
-(defun chatgpt-shell--split-response (response)
-  "Splits RESPONSE text into chunks.
-
-RESPONSE is of the form:
-
-\"
-data: text1
-data: text2
-text3
-\"
-
-returned list is of the form:
-
-  (((:key . \"data:\")
-    (:value . \"text1\"))
-   ((:key . \"data:\")
-    (:value . \"text2\"))
-   ((:key . nil)
-    (:value . \"text3\")))"
-  (if (string-prefix-p "{" response) ;; starts with { keep whole.
-      (list `((:key . nil)
-              (:value . ,response)))
-    (let ((lines (split-string response "\n"))
-          (result '()))
-      (dolist (line lines)
-        (if (string-match (rx (group (+ (not (any " " ":"))) ":")
-                              (group (* nonl)))
-                          line)
-            (let* ((key (match-string 1 line))
-                   (value (string-trim (match-string 2 line))))
-              (push (list (cons :key key)
-                          (cons :value value)) result))
-          (when-let* ((value (string-trim line))
-                      (non-empty (not (string-empty-p value))))
-            (push (list (cons :key nil)
-                        (cons :value value)) result))))
-      (reverse result))))
 
 ;; FIXME: Make shell agnostic or move to chatgpt-shell.
 (defun chatgpt-shell-restore-session-from-transcript ()
@@ -2554,7 +2502,7 @@ If no LENGTH set, use 2048."
         (goto-char prompt-pos)
         (forward-line -1)
         (end-of-line))
-      (let* ((items (chatgpt-shell--user-assistant-messages
+      (let* ((items (chatgpt-shell-openai--user-assistant-messages
                      (list (shell-maker--command-and-response-at-point))))
              (command (string-trim (or (map-elt (seq-first items) 'content) "")))
              (response (string-trim (or (map-elt (car (last items)) 'content) ""))))
@@ -2581,7 +2529,7 @@ If no LENGTH set, use 2048."
 
 (defun chatgpt-shell--extract-history (text prompt-regexp)
   "Extract all command and responses in TEXT with PROMPT-REGEXP."
-  (chatgpt-shell--user-assistant-messages
+  (chatgpt-shell-openai--user-assistant-messages
    (shell-maker--extract-history text prompt-regexp)))
 
 (defun chatgpt-shell-run-command (command callback)
