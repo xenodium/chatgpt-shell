@@ -206,7 +206,7 @@ Can be used compile or run source block at point."
 The list of models supported by /v1/chat/completions endpoint is
 documented at
 https://platform.openai.com/docs/models/model-endpoint-compatibility."
-  :type '(repeat string)
+  :type '(repeat (alist :key-type symbol :value-type sexp))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version 0
@@ -545,11 +545,11 @@ or
 
 (shell-maker-define-major-mode chatgpt-shell--config)
 
-(cl-defun chatgpt-shell--resolved-model (&key named)
-  "Resolve model NAMED."
+(cl-defun chatgpt-shell--resolved-model (&key versioned)
+  "Resolve model VERSIONED name."
   (or (seq-find (lambda (model)
                   (equal (map-elt model :version)
-                         (or named (chatgpt-shell-model-version))))
+                         (or versioned (chatgpt-shell-model-version))))
                 chatgpt-shell-model-versions)
       (error "Service %s not found"
              (chatgpt-shell-model-version))))
@@ -1458,8 +1458,8 @@ END (optional): End of region to replace (overrides active region)."
 
 ;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-send-contextless-request
-    (&key (model-version (chatgpt-shell-model-version))
-          (system-prompt "")
+    (&key model-version
+          system-prompt
           query
           streaming
           on-output
@@ -1475,19 +1475,13 @@ SYSTEM-PROMPT (optional): As string.
 STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
   (unless query
     (error "Missing mandatory \"query\" param"))
-  (chatgpt-shell-post-chatgpt-messages :messages
-                                       (vconcat ;; Convert to vector for json
-                                        `(((role . "system")
-                                           (content . ,system-prompt))
-                                          ((role . "user")
-                                           (content . ,(vconcat
-                                                        `(((type . "text")
-                                                           (text . ,query))))))))
-                                       :version model-version
-                                       :streaming streaming
-                                       :on-output on-output
-                                       :on-success on-success
-                                       :on-failure on-failure))
+  (chatgpt-shell-post :context (list (cons query nil))
+                      :system-prompt system-prompt
+                      :version model-version
+                      :streaming streaming
+                      :on-output on-output
+                      :on-success on-success
+                      :on-failure on-failure))
 
 (defun chatgpt-shell-send-to-buffer (input &optional review handler on-finished)
   "Send INPUT to *chatgpt* shell buffer.
@@ -1683,7 +1677,7 @@ Display result in org table of the form:
 
 ;; TODO: Make service agnostic.
 (cl-defun chatgpt-shell-lookup (&key buffer system-prompt prompt prompt-url streaming
-                                     on-success on-failure)
+                                     temperature on-success on-failure)
   "Look something up as a one-off (no shell history) and output to BUFFER.
 
 Inputs:
@@ -1694,6 +1688,8 @@ Optionally:
 
 STREAMING: Non-nil streams output to BUFFER.
 
+TEMPERATURE: Defaults to 1 otherwise.
+
 ON-SUCCESS: (lambda (output)) for completion event.
 
 ON-FAILURE: (lambda (output)) for completion event."
@@ -1701,36 +1697,55 @@ ON-FAILURE: (lambda (output)) for completion event."
   (with-current-buffer buffer
     (let ((inhibit-read-only t))
       (erase-buffer))
-    (read-only-mode +1)
     (use-local-map (let ((map (make-sparse-keymap)))
                      (define-key map (kbd "q") 'kill-buffer-and-window)
-                     map)))
-  (display-buffer buffer)
-  (chatgpt-shell-post-chatgpt-messages
-   :messages
-   (chatgpt-shell-openai--make-chatgpt-messages
-    :model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")
-    :system-prompt system-prompt
-    :prompt prompt
-    :prompt-url prompt-url)
-   :streaming streaming
-   :on-success (lambda (output)
-                 (when on-success
-                   (funcall on-success output))
-                 (display-buffer buffer))
-   :on-failure (lambda (output)
-                 (when on-failure
-                   (funcall on-failure output))
-                 (display-buffer buffer))
-   :on-output
-   (lambda (output)
-     (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-         (goto-char (point-max))
-         (insert output))))))
+                     map))
+    (setq buffer-read-only t))
+  (let* ((model (chatgpt-shell--resolved-model))
+         (settings (list (cons :streaming streaming)
+                         (cons :temperature temperature)
+                         (cons :system-prompt system-prompt)))
+         (url (funcall (map-elt model :url)
+                       :model model
+                       :settings settings))
+         (headers (funcall (map-elt model :headers)
+                           :model model
+                           :settings settings)))
+    (when streaming
+      (display-buffer buffer))
+    (unless (equal (map-elt model :provider) "OpenAI")
+      (error "%s's %s not yet supported (please sponsor development)"
+             (map-elt model :provider) (map-elt model :version)))
+    (shell-maker-make-http-request
+     :async t
+     :url url
+     :data (chatgpt-shell-openai-make-chatgpt-request-data
+            :prompt prompt
+            :prompt-url prompt-url
+            :system-prompt system-prompt
+            :version (map-elt model :version)
+            :temperature (or temperature 1)
+            :streaming streaming)
+     :headers headers
+     :filter #'chatgpt-shell-openai--filter-output
+     :on-output
+     (lambda (output)
+       (with-current-buffer buffer
+         (let ((inhibit-read-only t))
+           (goto-char (point-max))
+           (insert output))))
+     :on-finished
+     (lambda (result)
+       (unless streaming
+         (display-buffer buffer))
+       (if (equal 0 (map-elt result :exit-status))
+           (when on-success
+             (funcall on-success (map-elt result :output)))
+         (when on-failure
+           (funcall on-failure (map-elt result :output))))))))
 
-(cl-defun chatgpt-shell--read-string (&key prompt)
-  "Like `read-string' but disallowing empty input.
+(cl-defun chatgpt-shell--read-string (&key prompt default-value)
+  "Like `read-string' but disallowing empty input (unless DEFAULT-VALUE given).
 
 Specify PROMPT to signal the user."
   (let ((input ""))
@@ -1739,21 +1754,28 @@ Specify PROMPT to signal the user."
                                (when (use-region-p)
                                  (buffer-substring-no-properties
                                   (region-beginning)
-                                  (region-end))))))
+                                  (region-end)))
+                               nil nil default-value))
+      (when (string-empty-p (string-trim input))
+        (setq input default-value)))
     input))
 
 ;; TODO: Review. Can it become service agnostic?
-(cl-defun chatgpt-shell-post-chatgpt-messages (&key messages version
-                                                    other-params on-output
-                                                    on-success on-failure
-                                                    temperature streaming)
+(cl-defun chatgpt-shell-post (&key context
+                                   version
+                                   system-prompt
+                                   other-params on-output
+                                   on-success on-failure
+                                   temperature streaming)
   "Make a single ChatGPT request with MESSAGES and FILTER.
 
-`chatgpt-shell-openai-filter-chatgpt-output' typically used as extractor.
+`chatgpt-shell-openai--filter-output' typically used as extractor.
 
 Optionally pass model VERSION, TEMPERATURE and OTHER-PARAMS.
 
 OTHER-PARAMS are appended to the json object at the top level.
+
+CONTEXT: A list of cons of the form: (command . response).
 
 ON-OUTPUT: (lambda (output))
 
@@ -1761,70 +1783,67 @@ ON-SUCCESS: (lambda (output))
 
 ON-FAILURE: (lambda (output))
 
-If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously.
-
-For example:
-
-\(chatgpt-shell-post-chatgpt-messages
- `(((role . \"user\")
-    (content . \"hello\")))
- \"gpt-3.5-turbo\"
- (lambda (output)
-   (message \"%s\" response))
- (lambda (error)
-   (message \"%s\" error)))"
-  (unless messages
-    (error "Missing mandatory \"messages\" param"))
-  (if (or on-output on-success on-failure)
-      (progn
-        (unless (boundp 'shell-maker--current-request-id)
-          (setq-local shell-maker--current-request-id 0))
-        ;; TODO: Remove the need to create a temporary
-        ;; shell configuration when invoking `shell-maker-make-http-request'.
-        (with-temp-buffer
-          (setq-local shell-maker--config
-                      chatgpt-shell--config)
-          ;; Async exec
-          (shell-maker-make-http-request
-           :async t
-           ;; TODO: Remove the need to resolve just to get :path.
-           :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
-                  (concat chatgpt-shell-api-url-base
-                          (or (map-elt model :path)
-                              (error "Model :path not found"))))
-           :data (chatgpt-shell-openai-make-chatgpt-request-data
-                  :messages messages
-                  :version version
-                  :temperature temperature
-                  :streaming streaming
-                  :other-params other-params)
-           :headers (list "Content-Type: application/json; charset=utf-8"
-                          (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-           :filter #'chatgpt-shell-openai-filter-chatgpt-output
-           :on-output on-output
-           :on-finished (lambda (result)
-                          (if (equal 0 (map-elt result :exit-status))
-                              (when on-success
-                                (funcall on-success (map-elt result :output)))
-                            (when on-failure
-                              (funcall on-failure (map-elt result :output))))))))
-    ;; Sync exec
-    (let ((result (shell-maker-make-http-request
-                   ;; TODO: Remove the need to resolve just to get :path.
-                   :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
-                          (concat chatgpt-shell-api-url-base
-                                  (or (map-elt model :path)
-                                      (error "Model :path not found"))))
-                   :data (chatgpt-shell-openai-make-chatgpt-request-data
-                          :messages messages
-                          :version version
-                          :temperature temperature
-                          :streaming streaming
-                          :other-params other-params)
-                   :headers (list "Content-Type: application/json; charset=utf-8"
-                                  (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-                   :filter #'chatgpt-shell-openai-filter-chatgpt-output)))
-      (map-elt result :output))))
+If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
+  (unless context
+    (error "Missing mandatory \"context\" param"))
+  (let* ((model (chatgpt-shell--resolved-model :versioned version))
+         (settings (list (cons :streaming streaming)
+                         (cons :temperature temperature)
+                         (cons :system-prompt system-prompt)))
+         (url (funcall (map-elt model :url)
+                       :model model
+                       :settings settings))
+         (payload (or (map-elt model :payload)
+                      (error "Model :payload not found")))
+         (filter (or (map-elt model :filter)
+                     (error "Model :filter not found")))
+         (headers (map-elt model :headers)))
+    (if (or on-output on-success on-failure)
+        (progn
+          (unless (boundp 'shell-maker--current-request-id)
+            (setq-local shell-maker--current-request-id 0))
+          ;; TODO: Remove the need to create a temporary
+          ;; shell configuration when invoking `shell-maker-make-http-request'.
+          (with-temp-buffer
+            (setq-local shell-maker--config
+                        chatgpt-shell--config)
+            ;; Async exec
+            (shell-maker-make-http-request
+             :async t
+             :url url
+             :data (funcall payload
+                            :model model
+                            :context context
+                            :settings settings)
+             :headers (funcall headers
+                               :model model
+                               :settings settings)
+             :filter filter
+             :on-output on-output
+             :on-finished (lambda (result)
+                            (if (equal 0 (map-elt result :exit-status))
+                                (when on-success
+                                  (funcall on-success (map-elt result :output)))
+                              (when on-failure
+                                (funcall on-failure (map-elt result :output))))))))
+      ;; Sync exec
+      (let ((result (shell-maker-make-http-request
+                     ;; TODO: Remove the need to resolve just to get :path.
+                     :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
+                            (concat chatgpt-shell-api-url-base
+                                    (or (map-elt model :path)
+                                        (error "Model :path not found"))))
+                     :data (chatgpt-shell-openai-make-chatgpt-request-data
+                            :system-prompt system-prompt
+                            :context context
+                            :version version
+                            :temperature temperature
+                            :streaming streaming
+                            :other-params other-params)
+                     :headers (list "Content-Type: application/json; charset=utf-8"
+                                    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+                     :filter #'chatgpt-shell-openai--filter-output)))
+        (map-elt result :output)))))
 
 ;;;###autoload
 (defun chatgpt-shell-describe-image (&optional capture)
@@ -1836,25 +1855,29 @@ If command invoked with prefix, CAPTURE a screenshot.
 
 If in a `dired' buffer, use selection (single image only for now)."
   (interactive "P")
-  (let ((file (chatgpt-shell--current-image-file capture)))
+  (let ((file (chatgpt-shell--current-image-file capture))
+        (description-buffer (get-buffer-create "*chatgpt image description*"))
+        (prompt (chatgpt-shell--read-string
+                 :prompt "Send vision prompt (default \"What’s in this image?\"): "
+                 :default-value "What’s in this image?")))
     (unless file
       (error "No image found"))
-    (chatgpt-shell-vision-make-request
-     :prompt (read-string "Send vision prompt (default \"What’s in this image?\"): " nil nil "What’s in this image?")
-     :url file
-     :on-success
-     (lambda (output)
-       (let ((description-buffer (get-buffer-create "*chatgpt image description*")))
-         (with-current-buffer description-buffer
-           (let ((inhibit-read-only t))
-             (erase-buffer)
-             (insert output)
-             (use-local-map (let ((map (make-sparse-keymap)))
-                              (define-key map (kbd "q") 'kill-buffer-and-window)
-                              map)))
-           (message "Image description ready")
-           (read-only-mode +1))
-         (display-buffer description-buffer))))))
+    (message "Requesting...")
+    (chatgpt-shell-lookup :buffer description-buffer
+                          :prompt prompt
+                          :on-success (lambda (output)
+                                        (with-current-buffer description-buffer
+                                          (let ((inhibit-read-only t))
+                                            (erase-buffer)
+                                            (insert output)
+                                            (use-local-map (let ((map (make-sparse-keymap)))
+                                                             (define-key map (kbd "q") 'kill-buffer-and-window)
+                                                             map)))
+                                          (message "Image description ready")
+                                          (read-only-mode +1))
+                                        (display-buffer description-buffer))
+                          :prompt-url file
+                          :streaming nil)))
 
 (defun chatgpt-shell--current-image-file (&optional capture)
   "Return buffer image file, Dired selected file, or image at point.
@@ -1928,46 +1951,6 @@ If optional CAPTURE is non-nil, cature a screenshot."
                           (buffer-string)))))
     url))
 
-(cl-defun chatgpt-shell-vision-make-request (&key system-prompt prompt url on-success on-failure)
-  "Make a vision request using PROMPT and URL.
-
-SYSTEM-PROMPT can be something like: \"You are a useful assistant for...\".
-PROMPT can be something like: \"Describe the image in detail\".
-URL-PATH can be either a local file path or an http:// URL.
-
-Optionally pass ON-SUCCESS and ON-FAILURE, like:
-
-\(lambda (output)
-  (message output))
-
-\(lambda (error)
-  (message error))"
-  (unless url
-    (error "Missing mandatory \"url\" param"))
-  (message "Requesting...")
-  (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest"))
-        (description))
-    (chatgpt-shell-post-chatgpt-messages
-     :messages (chatgpt-shell-openai--make-chatgpt-messages
-                :model model
-                :system-prompt system-prompt
-                :prompt prompt
-                :prompt-url url)
-     :version (map-elt model :version)
-     :on-output (lambda (output)
-                  (setq description
-                        (concat description
-                                output)))
-     :on-success (lambda (output)
-                   (if on-success
-                       (funcall on-success output)
-                     (message output)))
-     :on-failure (lambda (output)
-                   (if on-failure
-                       (funcall on-failure output)
-                     (message output)))
-     :other-params '((max_tokens . 300)))))
-
 (defun chatgpt-shell--temp-dir ()
   "Get chatgpt-shell's temp directory."
   (let ((temp-dir (file-name-concat temporary-file-directory "chatgpt-shell")))
@@ -2007,30 +1990,6 @@ Optionally pass ON-SUCCESS and ON-FAILURE, like:
                          model complete-context)
               chatgpt-shell-transmitted-context-length)))
      1)))
-
-;; (defun chatgpt-shell--approximate-context-length (model context)
-;;   "Approximate the CONTEXT length using MODEL."
-;;   (let* ((approx-chars-per-token)
-;;          (context-window)
-;;          (original-length (length context))
-;;          (context-length original-length))
-;;     (if (map-elt model :token-width)
-;;         (setq approx-chars-per-token
-;;               (map-elt model :token-width))
-;;       (error "Don't know %s's approximate token width" model))
-;;     (if (map-elt model :context-window)
-;;         (setq context-window
-;;               (map-elt model :context-window))
-;;       (error "Don't know %s's max tokens context limit" model))
-;;     (while (> (chatgpt-shell--num-tokens-from-context
-;;                approx-chars-per-token context)
-;;               context-window)
-;;       ;; Keep dropping history until under context-window.
-;;       (setq context (cdr context)))
-;;     (setq context-length (length context))
-;;     (unless (eq original-length context-length)
-;;       (message "Warning: chatgpt-shell context clipped"))
-;;     context-length))
 
 (defun chatgpt-shell--approximate-context-length (model context)
   "Approximate the CONTEXT length using MODEL."

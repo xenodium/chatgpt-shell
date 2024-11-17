@@ -46,10 +46,15 @@ If you use Gemini through a proxy service, change the URL base."
      (:label . "Gemini")
      (:provider . "Google")
      (:handler . chatgpt-shell-google--handle-gemini-command)
+     (:filter . chatgpt-shell-google--extract-gemini-response)
+     (:payload . chatgpt-shell-google--make-payload)
+     (:url . chatgpt-shell-google--make-url)
+     (:headers . chatgpt-shell-google--make-headers)
      (:key . chatgpt-shell-google-key)
      (:path . "/v1beta/models/gemini-1.5-pro-latest")
      ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
      ;; A token is equivalent to _about_ 4 characters.
+     (:url-base . chatgpt-shell-google-api-url-base)
      (:token-width . 4)
      (:context-window . 2097152)))
   "List of Google LLM models available."
@@ -68,20 +73,40 @@ If you use Gemini through a proxy service, change the URL base."
         (t
          nil)))
 
+(cl-defun chatgpt-shell-google--make-url (&key model settings)
+  "Create the API URL using MODEL and SETTINGS."
+  (unless model
+    (error "Missing mandatory :model param"))
+  (unless settings
+    (error "Missing mandatory :settings param"))
+  (concat chatgpt-shell-google-api-url-base
+          (or (map-elt model :path)
+              (error "Provider :path not found"))
+          (if (map-elt settings :streaming)
+              ":streamGenerateContent"
+            ":generateContent")
+          "?key="
+          (or (chatgpt-shell-google-key)
+              (error "Your chatgpt-shell-google-key is missing"))
+          "&alt=sse")) ;; TODO: Do we need sse?
+
+(cl-defun chatgpt-shell-google--make-headers (&key _model _settings)
+  "Create the API headers."
+  (list "Content-Type: application/json; charset=utf-8"))
+
+(cl-defun chatgpt-shell-google--make-payload (&key _model context settings)
+  "Create the API payload using MODEL CONTEXT and SETTINGS."
+  (chatgpt-shell-google--make-gemini-payload
+   :context context
+   :temperature (map-elt settings :temperature)
+   :system-prompt (map-elt settings :system-prompt)))
+
 (cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
    :async t
-   :url (concat chatgpt-shell-google-api-url-base
-                (or (map-elt model :path)
-                    (error "Provider :path not found"))
-                (if (map-elt settings :streaming)
-                    ":streamGenerateContent"
-                  ":generateContent")
-                "?key="
-                (or (chatgpt-shell-google-key)
-                    (error "Your chatgpt-shell-google-key is missing"))
-                "&alt=sse")
+   :url (chatgpt-shell-google--make-url :model model
+                                        :settings settings)
    :data (chatgpt-shell-google--make-gemini-payload
           :prompt command
           :context context
@@ -101,7 +126,8 @@ If you use Gemini through a proxy service, change the URL base."
    `((contents . ,(vconcat
                    (chatgpt-shell-google--gemini-user-model-messages
                     (append context
-                            (list (cons prompt nil))))))
+                            (when prompt
+                              (list (cons prompt nil)))))))
      (generation_config . ((temperature . ,(or temperature 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))

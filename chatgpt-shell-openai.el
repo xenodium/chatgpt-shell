@@ -32,8 +32,13 @@
      (:label . "ChatGPT")
      (:provider . "OpenAI")
      (:handler . chatgpt-shell-openai--handle-chatgpt-command)
+     (:filter . chatgpt-shell-openai--filter-output)
+     (:payload . chatgpt-shell-openai--make-payload)
+     (:headers . chatgpt-shell-openai--make-headers)
+     (:url . chatgpt-shell-openai--make-url)
      (:key . chatgpt-shell-openai-key)
      (:path . "/v1/chat/completions")
+     (:url-base . chatgpt-shell-api-url-base)
      (:token-width . 3)
      ;; https://platform.openai.com/docs/models/gpt-4o
      (:context-window . 128000)))
@@ -57,28 +62,6 @@ If you use ChatGPT through a proxy service, change the URL base."
                  (string :tag "String"))
   :group 'chatgpt-shell)
 
-(cl-defun chatgpt-shell-openai--make-chatgpt-payload (&key prompt context version temperature streaming system-prompt)
-  "Create a ChatGPT request payload.
-
-PROMPT: The new prompt (should not be in CONTEXT).
-VERSION: The model version.
-CONTEXT: All previous interactions.
-TEMPERATURE: Model temperature.
-STREAMING: When non-nil, request streamed response.
-SYSTEM-PROMPT: Optional system prompt."
-  (chatgpt-shell-openai-make-chatgpt-request-data
-   :messages (vconcat
-              (when system-prompt
-                `(((role . "system")
-                   (content . ,system-prompt))))
-              (chatgpt-shell-openai--user-assistant-messages context)
-              (when prompt
-                `(((role . "user")
-                   (content . ,prompt)))))
-   :version version
-   :temperature temperature
-   :streaming streaming))
-
 (cl-defun chatgpt-shell-openai--make-chatgpt-messages (&key model system-prompt prompt prompt-url context)
   "Create ChatGPT messages using MODEL.
 
@@ -97,10 +80,12 @@ CONTEXT: Excludes PROMPT."
         (content . ,system-prompt))))
    (when context
      (chatgpt-shell-openai--user-assistant-messages
-      (chatgpt-shell-crop-context
-       :model model
-       :command prompt
-       :context context)))
+      (if model
+          (chatgpt-shell-crop-context
+           :model model
+           :command prompt
+           :context context)
+        context)))
    `(((role . "user")
       (content . ,(vconcat
                    (append
@@ -123,22 +108,27 @@ CONTEXT: Excludes PROMPT."
         (t
          nil)))
 
-(cl-defun chatgpt-shell-openai-make-chatgpt-request-data (&key messages version temperature streaming other-params)
+(cl-defun chatgpt-shell-openai-make-chatgpt-request-data (&key system-prompt prompt prompt-url context version temperature streaming other-params)
   "Make request data with MESSAGES.
 
-Optionally set VERSION, TEMPERATURE, STREAMING, and OTHER-PARAMS (list)."
-  (unless messages
-    (error "Missing mandatory :messages param"))
+Optionally set PROMPT, VERSION, TEMPERATURE, STREAMING, SYSTEM-PROMPT,
+and OTHER-PARAMS (list)."
+  (unless version
+    (error "Missing mandatory :version param"))
   (append
    `((model . ,version)
-     (messages . ,(vconcat messages)))
+     (messages . ,(vconcat (chatgpt-shell-openai--make-chatgpt-messages
+                            :system-prompt system-prompt
+                            :prompt prompt
+                            :prompt-url prompt-url
+                            :context context))))
    (when temperature
      `((temperature . ,temperature)))
    (when streaming
      `((stream . t)))
    other-params))
 
-(defun chatgpt-shell-openai-filter-chatgpt-output (raw-response)
+(defun chatgpt-shell-openai--filter-output (raw-response)
   "Extract ChatGPT response from RAW-RESPONSE.
 
 When ChatGPT responses are streamed, they arrive in the form:
@@ -190,6 +180,27 @@ Otherwise:
                     (cons :pending pending)))
         result))))
 
+(cl-defun chatgpt-shell-openai--make-url (&key model _settings)
+  "Create the API URL using MODEL."
+  (concat (symbol-value (or (map-elt model :url-base)
+                            (error "Model :url-base not found")))
+          (or (map-elt model :path)
+              (error "Model :path not found"))))
+
+(cl-defun chatgpt-shell-openai--make-headers (&key _model _settings)
+  "Create the API headers."
+  (list "Content-Type: application/json; charset=utf-8"
+        (format "Authorization: Bearer %s" (chatgpt-shell-openai-key))))
+
+(cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
+  "Create the API payload using MODEL CONTEXT and SETTINGS."
+  (chatgpt-shell-openai-make-chatgpt-request-data
+   :system-prompt (map-elt settings :system-prompt)
+   :context context
+   :version (map-elt model :version)
+   :temperature (map-elt settings :temperature)
+   :streaming (map-elt settings :streaming)))
+
 (cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
@@ -197,16 +208,16 @@ Otherwise:
    :url (concat chatgpt-shell-api-url-base
                 (or (map-elt model :path)
                     (error "Model :path not found")))
-   :data (chatgpt-shell-openai--make-chatgpt-payload
+   :data (chatgpt-shell-openai-make-chatgpt-request-data
           :prompt command
-          :version (map-elt model :version)
+          :system-prompt (map-elt settings :system-prompt)
           :context context
-          :streaming (map-elt settings :streaming)
+          :version (map-elt model :version)
           :temperature (map-elt settings :temperature)
-          :system-prompt (map-elt settings :system-prompt))
+          :streaming (map-elt settings :streaming))
    :headers (list "Content-Type: application/json; charset=utf-8"
                   (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-   :filter #'chatgpt-shell-openai-filter-chatgpt-output
+   :filter #'chatgpt-shell-openai--filter-output
    :shell shell))
 
 (defun chatgpt-shell-openai--user-assistant-messages (history)
