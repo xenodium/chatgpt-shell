@@ -2943,7 +2943,7 @@ t if invoked from a transient frame (quitting closes the frame).")
 Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Write solutions in their entirety.")
-        (query (read-string "ChatGPT request insert: ")))
+        (query (read-string (format "%s request insert: " (chatgpt-shell--model-label)))))
     (when (derived-mode-p 'prog-mode)
       (setq system-prompt (format "%s\nUse `%s` programming language."
                                   system-prompt
