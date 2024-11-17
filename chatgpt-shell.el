@@ -1866,7 +1866,7 @@ If in a `dired' buffer, use selection (single image only for now)."
   (let ((file (chatgpt-shell--current-image-file capture))
         (description-buffer (get-buffer-create "*chatgpt image description*"))
         (prompt (chatgpt-shell--read-string
-                 :prompt "Send vision prompt (default \"What’s in this image?\"): "
+                 :prompt "Describe image (default \"What’s in this image?\"): "
                  :default-value "What’s in this image?")))
     (unless file
       (error "No image found"))
