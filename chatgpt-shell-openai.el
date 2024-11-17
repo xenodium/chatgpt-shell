@@ -86,15 +86,17 @@ CONTEXT: Excludes PROMPT."
            :command prompt
            :context context)
         context)))
-   `(((role . "user")
-      (content . ,(vconcat
-                   (append
-                    (when prompt
-                      `(((type . "text")
-                         (text . ,prompt))))
-                    (when prompt-url
-                      `(((type . "image_url")
-                         (image_url . ,prompt-url)))))))))))
+   (when (or prompt
+             prompt-url)
+     `(((role . "user")
+        (content . ,(vconcat
+                     (append
+                      (when prompt
+                        `(((type . "text")
+                           (text . ,prompt))))
+                      (when prompt-url
+                        `(((type . "image_url")
+                           (image_url . ,prompt-url))))))))))))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
