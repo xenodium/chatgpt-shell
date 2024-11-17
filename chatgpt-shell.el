@@ -554,6 +554,19 @@ or
       (error "Service %s not found"
              (chatgpt-shell-model-version))))
 
+(cl-defun chatgpt-shell--make-payload (&key version context streaming temperature system-prompt)
+  "Resolve model VERSIONED name."
+  (let* ((model (chatgpt-shell--resolved-model :versioned version))
+         (settings (list (cons :streaming streaming)
+                         (cons :temperature temperature)
+                         (cons :system-prompt system-prompt)))
+         (payload (or (map-elt model :payload)
+                      (error "Model :payload not found"))))
+    (funcall payload
+             :model model
+             :context context
+             :settings settings)))
+
 ;;;###autoload
 (defun chatgpt-shell (&optional new-session)
   "Start a ChatGPT shell interactive command.
