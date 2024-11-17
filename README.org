@@ -141,7 +141,9 @@ Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-
 
 * Saving and restoring (experimental)
 
-Save with =M-x shell-maker-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
+Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
+
+Some related values stored in =shell-maker= like =shell-maker-transcript-default-path= and =shell-maker-forget-file-after-clear=.
 
 * Streaming
 
