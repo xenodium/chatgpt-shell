@@ -1773,11 +1773,10 @@ Specify PROMPT to signal the user."
         (setq input default-value)))
     input))
 
-;; TODO: Review. Can it become service agnostic?
 (cl-defun chatgpt-shell-post (&key context
                                    version
                                    system-prompt
-                                   other-params on-output
+                                   on-output
                                    on-success on-failure
                                    temperature streaming)
   "Make a single ChatGPT request with MESSAGES and FILTER.
@@ -1840,22 +1839,18 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
                               (when on-failure
                                 (funcall on-failure (map-elt result :output))))))))
       ;; Sync exec
-      (let ((result (shell-maker-make-http-request
-                     ;; TODO: Remove the need to resolve just to get :path.
-                     :url (let ((model (chatgpt-shell--resolved-model :versioned "chatgpt-4o-latest")))
-                            (concat chatgpt-shell-api-url-base
-                                    (or (map-elt model :path)
-                                        (error "Model :path not found"))))
-                     :data (chatgpt-shell-openai-make-chatgpt-request-data
-                            :system-prompt system-prompt
-                            :context context
-                            :version version
-                            :temperature temperature
-                            :streaming streaming
-                            :other-params other-params)
-                     :headers (list "Content-Type: application/json; charset=utf-8"
-                                    (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-                     :filter #'chatgpt-shell-openai--filter-output)))
+      (let ((result
+             (shell-maker-make-http-request
+              :async nil ;; Block to return result
+              :url url
+              :data (funcall payload
+                             :model model
+                             :context context
+                             :settings settings)
+              :headers (funcall headers
+                                :model model
+                                :settings settings)
+              :filter filter)))
         (map-elt result :output)))))
 
 ;;;###autoload
