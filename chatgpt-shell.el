@@ -610,7 +610,8 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
                              (if (and (chatgpt-shell--primary-buffer)
                                       (not ignore-as-primary))
                                  (buffer-name (chatgpt-shell--primary-buffer))
-                               (chatgpt-shell--make-buffer-name)))))
+                               (chatgpt-shell--make-buffer-name))
+                             "LLM")))
     (when (and (not ignore-as-primary)
                (not (chatgpt-shell--primary-buffer)))
       (chatgpt-shell--set-primary-buffer shell-buffer))
@@ -728,15 +729,15 @@ This is used for sending a prompt to in the background."
                                    t
                                    chatgpt-shell-welcome-function
                                    t
-                                   (chatgpt-shell--make-buffer-name))))
+                                   (chatgpt-shell--make-buffer-name)
+                                   "LLM")))
       (chatgpt-shell--set-primary-buffer primary-shell-buffer))
     primary-shell-buffer))
 
 (defun chatgpt-shell--make-buffer-name ()
   "Generate a buffer name using current shell config info."
-  (format "%s %s"
-          (shell-maker-buffer-default-name
-           (chatgpt-shell--model-label))
+  (format "*%s llm* %s"
+          (downcase (chatgpt-shell--model-label))
           (chatgpt-shell--shell-info)))
 
 (defun chatgpt-shell--add-menus ()
