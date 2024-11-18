@@ -31,17 +31,17 @@
      (:short-version . "4o-latest")
      (:label . "ChatGPT")
      (:provider . "OpenAI")
+     (:path . "/v1/chat/completions")
+     (:token-width . 3)
+     ;; https://platform.openai.com/docs/models/gpt-4o
+     (:context-window . 128000)
      (:handler . chatgpt-shell-openai--handle-chatgpt-command)
      (:filter . chatgpt-shell-openai--filter-output)
      (:payload . chatgpt-shell-openai--make-payload)
      (:headers . chatgpt-shell-openai--make-headers)
      (:url . chatgpt-shell-openai--make-url)
      (:key . chatgpt-shell-openai-key)
-     (:path . "/v1/chat/completions")
-     (:url-base . chatgpt-shell-api-url-base)
-     (:token-width . 3)
-     ;; https://platform.openai.com/docs/models/gpt-4o
-     (:context-window . 128000)))
+     (:url-base . chatgpt-shell-api-url-base)))
   "List of OpenAI LLM models available."
   :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
   :group 'chatgpt-shell)

@@ -45,18 +45,18 @@ If you use Gemini through a proxy service, change the URL base."
      (:short-version . "1.5-pro-latest")
      (:label . "Gemini")
      (:provider . "Google")
+     (:path . "/v1beta/models/gemini-1.5-pro-latest")
+     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
+     ;; A token is equivalent to _about_ 4 characters.
+     (:token-width . 4)
+     (:context-window . 2097152)
+     (:url-base . chatgpt-shell-google-api-url-base)
      (:handler . chatgpt-shell-google--handle-gemini-command)
      (:filter . chatgpt-shell-google--extract-gemini-response)
      (:payload . chatgpt-shell-google--make-payload)
      (:url . chatgpt-shell-google--make-url)
      (:headers . chatgpt-shell-google--make-headers)
-     (:key . chatgpt-shell-google-key)
-     (:path . "/v1beta/models/gemini-1.5-pro-latest")
-     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
-     ;; A token is equivalent to _about_ 4 characters.
-     (:url-base . chatgpt-shell-google-api-url-base)
-     (:token-width . 4)
-     (:context-window . 2097152)))
+     (:key . chatgpt-shell-google-key)))
   "List of Google LLM models available."
   :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
   :group 'chatgpt-shell)
