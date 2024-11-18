@@ -558,7 +558,9 @@ or
              (chatgpt-shell-model-version))))
 
 (cl-defun chatgpt-shell--make-payload (&key version context streaming temperature system-prompt)
-  "Resolve model VERSIONED name."
+  "Create a payload for model with VERSION.
+
+Set CONTEXT, STREAMING, TEMPERATURE, and SYSTEM-PROMPT as usual."
   (let* ((model (chatgpt-shell--resolved-model :versioned version))
          (settings (list (cons :streaming streaming)
                          (cons :temperature temperature)
