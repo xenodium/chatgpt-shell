@@ -418,7 +418,8 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
   (interactive)
-  (if-let* ((all-models (seq-remove
+  (if-let* ((last-label (chatgpt-shell--model-label))
+            (all-models (seq-remove
                          (lambda (item)
                            (string-equal (map-elt item :version)
                                          (chatgpt-shell-model-version)))
@@ -444,7 +445,9 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
         (when (derived-mode-p 'chatgpt-shell-mode)
           (setq-local chatgpt-shell-model-version selection)
           (chatgpt-shell--update-prompt t)
-          (chatgpt-shell-interrupt nil))
+          (chatgpt-shell-interrupt nil)
+          (unless (equal last-label (chatgpt-shell--model-label))
+            (chatgpt-shell-clear-buffer)))
         (setq-default chatgpt-shell-model-version selection))
     (error "No other providers found")))
 
