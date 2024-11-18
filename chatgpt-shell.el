@@ -1437,7 +1437,8 @@ END (optional): End of region to replace (overrides active region)."
                      (copy-marker (max delete-from delete-to))
                    (copy-marker (point))))
          (progress-reporter (unless streaming
-                              (make-progress-reporter "ChatGPT "))))
+                              (make-progress-reporter
+                               (format "%s " (chatgpt-shell--model-label))))))
     (chatgpt-shell-send-contextless-request
      :model-version model-version
      :system-prompt system-prompt
@@ -2796,7 +2797,8 @@ compiling source blocks."
   "Fixes flymake error at point."
   (interactive)
   (if-let ((flymake-context (chatgpt-shell--flymake-context))
-           (progress-reporter (make-progress-reporter "ChatGPT "))
+           (progress-reporter (make-progress-reporter
+                               (format "%s " (chatgpt-shell--model-label))))
            (buffer (current-buffer))
            (prog-mode-p (derived-mode-p 'prog-mode)))
       (progn
@@ -2862,7 +2864,8 @@ SYSTEM-PROMPT (optional): As string."
                  (goto-char (region-beginning))
                  (line-beginning-position)))
         (end (region-end))
-        (progress-reporter (make-progress-reporter "ChatGPT ")))
+        (progress-reporter (make-progress-reporter
+                            (format "%s " (chatgpt-shell--model-label)))))
     ;; Barf trailing space from selection.
     (when (string-match "[ \n\t]+$"
                         (buffer-substring-no-properties
