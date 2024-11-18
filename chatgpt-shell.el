@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.24.1
+;; Version: 1.25.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.62.1"))
-(defconst chatgpt-shell--version "1.24.1")
+(defconst chatgpt-shell--version "1.25.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1255,12 +1255,14 @@ With prefix REVIEW prompt before sending to ChatGPT."
   (let ((chatgpt-shell-prompt-query-response-style 'shell)
         (worker-done nil)
         (buffered ""))
-    (chatgpt-shell-send-to-buffer
-     prompt nil
-     (lambda (_command output _error finished)
-       (setq buffered (concat buffered output))
-       (when finished
-         (setq worker-done t))))
+    (chatgpt-shell-post :context (list (cons prompt nil))
+                        :streaming t
+                        :on-output (lambda (output)
+                                     (setq buffered (concat buffered output)))
+                        :on-success (lambda (_output)
+                                      (setq worker-done t))
+                        :on-failure (lambda (_output)
+                                      (setq worker-done t)))
     (while buffered
       (unless (string-empty-p buffered)
         (princ buffered #'external-debugging-output))
@@ -1337,8 +1339,8 @@ With prefix REVIEW prompt before sending to ChatGPT."
          `(progn
             (interactive)
             (load ,(find-library-name "shell-maker") nil t)
+            (load ,(find-library-name "chatgpt-shell-openai") nil t)
             (load ,(find-library-name "chatgpt-shell") nil t)
-            (require (intern "chatgpt-shell") nil t)
             (setq chatgpt-shell-model-temperature 0)
             (setq chatgpt-shell-openai-key ,(chatgpt-shell-openai-key))
             (chatgpt-shell-command-line-from-prompt-file ,prompt-file)))
