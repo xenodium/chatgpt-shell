@@ -665,8 +665,14 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
             "")))))
 
 (defun chatgpt-shell--model-label ()
-  "Return the model LABEL."
-  (or (map-elt (chatgpt-shell--resolved-model) :label) "Unknown"))
+  "Return the current model label."
+  (or (map-elt (chatgpt-shell--resolved-model) :label)
+      "Unknown"))
+
+(defun chatgpt-shell--model-short-version ()
+  "Return the current model short version."
+  (or (map-elt (chatgpt-shell--resolved-model) :short-version)
+      "unknown"))
 
 (defun chatgpt-shell--prompt-pair ()
   "Return a pair with prompt and prompt-regexp."
@@ -2953,7 +2959,9 @@ t if invoked from a transient frame (quitting closes the frame).")
 Do not explain nor wrap in a markdown block.
 Do not balance unbalanced brackets or parenthesis at beginning or end of text.
 Write solutions in their entirety.")
-        (query (read-string (format "%s request insert: " (chatgpt-shell--model-label)))))
+        (query (read-string (format "%s (%s) insert: "
+                                    (chatgpt-shell--model-label)
+                                    (chatgpt-shell--model-short-version)))))
     (when (derived-mode-p 'prog-mode)
       (setq system-prompt (format "%s\nUse `%s` programming language."
                                   system-prompt
