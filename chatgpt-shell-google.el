@@ -88,7 +88,7 @@ If you use Gemini through a proxy service, change the URL base."
           "?key="
           (or (chatgpt-shell-google-key)
               (error "Your chatgpt-shell-google-key is missing"))
-          "&alt=sse")) ;; TODO: Do we need sse?
+          "&alt=sse")) ;; Needed or streaming doesn't work.
 
 (cl-defun chatgpt-shell-google--make-headers (&key _model _settings)
   "Create the API headers."
