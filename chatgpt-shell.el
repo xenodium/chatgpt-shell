@@ -418,8 +418,6 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
 (defun chatgpt-shell-swap-model-version ()
   "Swap model version from `chatgpt-shell-model-versions'."
   (interactive)
-  (unless (derived-mode-p 'chatgpt-shell-mode)
-    (user-error "Not in a shell"))
   (if-let* ((all-models (seq-remove
                          (lambda (item)
                            (string-equal (map-elt item :version)
@@ -439,13 +437,16 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             all-models)))
-      (setq-local chatgpt-shell-model-version
-                  (nth 1 (string-split (completing-read "Model version: "
-                                                        models nil t))))
-    (error "No other providers found"))
-  (chatgpt-shell--update-prompt t)
-  (chatgpt-shell-interrupt nil))
+                             all-models))
+            (selection (nth 1 (string-split (completing-read "Model version: "
+                                                             models nil t)))))
+      (progn
+        (when (derived-mode-p 'chatgpt-shell-mode)
+          (setq-local chatgpt-shell-model-version selection)
+          (chatgpt-shell--update-prompt t)
+          (chatgpt-shell-interrupt nil))
+        (setq-default chatgpt-shell-model-version selection))
+    (error "No other providers found")))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
