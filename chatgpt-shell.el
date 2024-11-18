@@ -51,6 +51,7 @@
 
 (require 'chatgpt-shell-openai)
 (require 'chatgpt-shell-google)
+(require 'chatgpt-shell-anthropic)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -200,6 +201,7 @@ Can be used compile or run source block at point."
 
 (defcustom chatgpt-shell-model-versions
   (append chatgpt-shell-openai-models
+          chatgpt-shell-anthropic-models
           chatgpt-shell-google-models)
   "The list of ChatGPT OpenAI models to swap from.
 
