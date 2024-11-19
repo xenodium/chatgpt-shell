@@ -6,7 +6,7 @@
 
 A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell, by [[https://lmno.lol/alvaro][me]].
 
-For related packages, see:
+* Related packages
 
 - [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate chatgpt-shell blocks as Emacs org babel blocks.
 - [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks as Emacs org babel blocks.
