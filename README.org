@@ -154,7 +154,7 @@ Type =clear= as a prompt.
 
 Alternatively, use either =M-x chatgpt-shell-clear-buffer= or =M-x comint-clear-buffer=.
 
-* Saving and restoring (experimental)
+* Saving and restoring
 
 Save with =M-x chatgpt-shell-save-session-transcript= and restore with =M-x chatgpt-shell-restore-session-from-transcript=.
 
@@ -289,7 +289,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 #+RESULTS:
 | Binding         | Command                                             | Description                                                                   |
 |-----------------+-----------------------------------------------------+-------------------------------------------------------------------------------|
-|                 | chatgpt-shell-japanese-lookup                       | Look up Japanese TERM.                                                        |
+|                 | chatgpt-shell-japanese-lookup                       | Look Japanese term up.                                                        |
 |                 | chatgpt-shell-next-source-block                     | Move point to previous source block.                                          |
 |                 | chatgpt-shell-prompt-compose-request-entire-snippet | If the response code is incomplete, request the entire snippet.               |
 |                 | chatgpt-shell-prompt-compose-request-more           | Request more data.  This is useful if you already requested examples.         |
@@ -358,7 +358,6 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-version                               | Show `chatgpt-shell' mode version.                                            |
 |                 | chatgpt-shell-prompt-compose-previous-interaction   | Show previous interaction (request / response).                               |
 |                 | chatgpt-shell-interrupt                             | Interrupt `chatgpt-shell' from any buffer.                                    |
-|                 | chatgpt-shell-quick-modify-region                   | Request from minibuffer to modify selection.                                  |
 |                 | chatgpt-shell-view-at-point                         | View prompt and output at point in a separate buffer.                         |
 
 Browse all available via =M-x=.
