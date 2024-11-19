@@ -4,7 +4,7 @@
 
 * chatgpt-shell
 
-A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell.
+A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell, by [[https://lmno.lol/alvaro][me]].
 
 For related packages, see:
 
@@ -30,7 +30,7 @@ My favourite model is missing.
 
 ** A familiar shell
 
-chatgpt-shell is a [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell, so your favourite Emacs shell flows also apply to this buffer.
+chatgpt-shell is a [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell. Bring your favourite Emacs shell flows along.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/cyberpunk.gif" width="80%" />
 
@@ -44,7 +44,7 @@ One shell to query all. Swap LLM provider and continue with your familiar flow.
 
 =chatgpt-shell= includes a compose buffer experience. This is my favourite and most frequently used mechanism to interact with LLMs.
 
-For example, select a region and invoke =M-x chatgpt-shell-prompt-compose= (=C-c C-e= is my preferred binding), and an editable buffer automatically copies the region and enables you to craft a more thorough query. When ready, submit with the familiar =C-c C-c= binding. The buffer automatically becomes read-only and enables single-character bindings.
+For example, select a region and invoke =M-x chatgpt-shell-prompt-compose= (=C-c C-e= is my preferred binding), and an editable buffer automatically copies the region and enables crafting a more thorough query. When ready, submit with the familiar =C-c C-c= binding. The buffer automatically becomes read-only and enables single-character bindings.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/compose.gif" width="80%" />
 
@@ -66,7 +66,7 @@ I'm a big fan of quickly disposing of Emacs buffers with the =q= binding. chatgp
 
 *** Request entire snippets: e
 
-LLM being lazy, and returning partial code? Press =e= to request entire snippet.
+LLM being lazy and returning partial code? Press =e= to request entire snippet.
 
 ** Confirm inline mods (via diffs)
 
@@ -74,9 +74,9 @@ Request inline modifications, with explicit confirmation before accepting.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/quick-insert.gif" width="80%" />
 
-** Execute snippets (a la babel)
+** Execute snippets (a la [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]])
 
-Both the shell and the compose buffers enable users to execute source blocks via =C-c C-c=.
+Both the shell and the compose buffers enable users to execute source blocks via =C-c C-c=, leveraging [[https://orgmode.org/worg/org-contrib/babel/intro.html][org babel]].
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swiftui.gif" width="80%" />
 
@@ -84,7 +84,7 @@ Both the shell and the compose buffers enable users to execute source blocks via
 
 I've been experimenting with image queries (currently ChatGPT only, please [[https://github.com/sponsors/xenodium][sponsor]] to help bring support for others).
 
-Below is a handy integration to extract Japanese vocabulary. There's also a generic image descriptor available via =M-x chatgpt-shell-describe-image= that works on Emacs buffer (dired, image buffer, point on image, or selecting a desktop region).
+Below is a handy integration to extract Japanese vocabulary. There's also a generic image descriptor available via =M-x chatgpt-shell-describe-image= that works on any Emacs image (via dired, image buffer, point on image, or selecting a desktop region).
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/japanese-weekdays.gif" width="80%" />
 
@@ -98,7 +98,7 @@ If you're finding =chatgpt-shell= useful, help make the project sustainable and 
 
 Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://bsky.app/profile/xenodium.bsky.social][Bluesky]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
 
-* Install
+* Installation
 
 - Load =(require 'chatgpt-shell)=
 
@@ -415,6 +415,10 @@ Browse all available via =M-x=.
 * Feature requests
 - Please go through this README to see if the feature is already supported.
 - Need custom behaviour? Check out existing [[https://github.com/xenodium/chatgpt-shell/issues?q=is%3Aissue+][issues/feature requests]]. You may find solutions in discussions.
+
+* Pull requests
+Pull requests are super welcome. Please [[https://github.com/xenodium/chatgpt-shell/issues/new][reach out]] before getting started to make sure we're not duplicating effort. Also [[https://github.com/xenodium/chatgpt-shell/][search existing discussions]].
+
 * Reporting bugs
 ** Setup isn't working?
 Please share the entire snippet you've used to set =chatgpt-shell= up (but redact your key). Share any errors you encountered. Read on for sharing additional details.
