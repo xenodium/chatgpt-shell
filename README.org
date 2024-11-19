@@ -18,7 +18,7 @@ A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Sh
 
 chatgpt-shell goes multi model 🎉
 
-It's been quite a bit of work, and I still have plenty of pending items. Please sponsor the project to make development + support sustainable.
+It's been quite a bit of work, and I still have plenty of pending work. Please sponsor the project to make development + support sustainable.
 
 | Provider  | Model   | Supported |
 |-----------+---------+-----------|
