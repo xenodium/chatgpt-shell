@@ -538,9 +538,9 @@ or
                          command output success))
    :redact-log-output
    (lambda (output)
-     (if (chatgpt-shell-openai-key)
-         (replace-regexp-in-string (regexp-quote (chatgpt-shell-openai-key))
-                                   "SK-REDACTED-OPENAI-KEY"
+     (if-let ((key (map-elt (chatgpt-shell--resolved-model) :key)))
+         (replace-regexp-in-string (regexp-quote (funcall key))
+                                   "SK-REDACTED-PROVIDER-KEY"
                                    output)
        output))))
 
