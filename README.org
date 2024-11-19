@@ -6,15 +6,15 @@
 
 A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell.
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/multi-model-shell.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/cyberpunk.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/cyberpunk.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/quick-insert.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/quick-insert.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/swiftui.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swiftui.gif" width="80%" />
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/japanese-weekdays.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/japanese-weekdays.gif" width="80%" />
 
 * News
 
