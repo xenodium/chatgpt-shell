@@ -6,7 +6,7 @@
 
 A multi-llm Emacs shell.
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/multi-model-shell.gif" width="80%" />
 
 * News
 
