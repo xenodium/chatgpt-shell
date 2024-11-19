@@ -6,15 +6,12 @@
 
 A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell.
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
+For related packages, see:
 
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/cyberpunk.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/quick-insert.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swiftui.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/japanese-weekdays.gif" width="80%" />
+- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate chatgpt-shell blocks as Emacs org babel blocks.
+- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks as Emacs org babel blocks.
+- [[https://github.com/xenodium/dall-e-shell][dall-e-shell]]: An Emacs shell for OpenAI's DALL-E.
+- [[https://github.com/xenodium/shell-maker][shell-maker]]: Create Emacs shells backed by either local or cloud services.
 
 * News
 
@@ -31,12 +28,65 @@ It's been quite a bit of work, and I still have plenty of pending work. Please s
 My favourite model is missing.
 | [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
 
-For related packages, see:
+** A familiar shell
 
-- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate chatgpt-shell blocks as Emacs org babel blocks.
-- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks as Emacs org babel blocks.
-- [[https://github.com/xenodium/dall-e-shell][dall-e-shell]]: An Emacs shell for OpenAI's DALL-E.
-- [[https://github.com/xenodium/shell-maker][shell-maker]]: Create Emacs shells backed by either local or cloud services.
+chatgpt-shell is a [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell, so your favourite Emacs shell flows also apply to this buffer.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/cyberpunk.gif" width="80%" />
+
+** Swap models
+
+One shell to query all. Swap LLM provider and continue with your familiar flow.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
+
+** A shell hybrid
+
+=chatgpt-shell= includes a compose buffer experience. This is my favourite and most frequently used mechanism to interact with LLMs.
+
+For example, select a region and invoke =M-x chatgpt-shell-prompt-compose= (=C-c C-e= is my preferred binding), and an editable buffer automatically copies the region and enables you to craft a more thorough query. When ready, submit with the familiar =C-c C-c= binding. The buffer automatically becomes read-only and enables single-character bindings.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/compose.gif" width="80%" />
+
+*** Navigation: n/p (or TAB/shift-TAB)
+
+Navigate through source blocks (including previous submissions in history). Source blocks are automatically selected.
+
+*** Reply: r
+
+Reply with with follow-up requests using the =r= binding.
+
+*** Give me more: m
+
+Want to ask for more of the same data? Press =m= to request more of it. This is handy to follow up on any kind of list (suggestion, candidates, results, etc).
+
+*** Quick quick: q
+
+I'm a big fan of quickly disposing of Emacs buffers with the =q= binding. chatgpt-shell compose buffers are no exception.
+
+*** Request entire snippets: e
+
+LLM being lazy, and returning partial code? Press =e= to request entire snippet.
+
+** Confirm inline mods (via diffs)
+
+Request inline modifications, with explicit confirmation before accepting.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/quick-insert.gif" width="80%" />
+
+** Execute snippets (a la babel)
+
+Both the shell and the compose buffers enable users to execute source blocks via =C-c C-c=.
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swiftui.gif" width="80%" />
+
+** Vision experiments
+
+I've been experimenting with image queries (currently ChatGPT only, please [[https://github.com/sponsors/xenodium][sponsor]] to help bring support for others).
+
+Below is a handy integration to extract Japanese vocabulary. There's also a generic image descriptor available via =M-x chatgpt-shell-describe-image= that works on Emacs buffer (dired, image buffer, point on image, or selecting a desktop region).
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/japanese-weekdays.gif" width="80%" />
 
 * Support this effort
 
