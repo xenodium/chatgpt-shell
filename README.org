@@ -1,10 +1,8 @@
 👉 [[https://github.com/sponsors/xenodium][Support this work via GitHub Sponsors]]
 
-[[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
+[[https://stable.melpa.org/#/chatgpt-shell][file:https://stable.melpa.org/packages/chatgpt-shell-badge.svg]] [[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
 
 * chatgpt-shell
-
-[[https://stable.melpa.org/#/chatgpt-shell][file:https://stable.melpa.org/packages/chatgpt-shell-badge.svg]] [[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
 
 A ChatGPT Emacs shell.
 
