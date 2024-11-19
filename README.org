@@ -4,12 +4,27 @@
 
 * chatgpt-shell
 
-A ChatGPT Emacs shell.
+A multi-llm Emacs shell.
+
+* News
+
+chatgpt-shell goes multi model 🎉
+
+It's been quite a bit of work, and I still have plenty of pending items. Please sponsor the project to make development + support sustainable.
+
+| Provider  | Model   | Supported |
+|-----------+---------+-----------|
+| OpenAI    | ChatGPT | Supported |
+| Google    | Gemini  | New 💫   |
+| Anthropic | Claude  | New 💫   |
+
+My favourite model is missing.
+| [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
 
 For related packages, see:
 
-- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate ChatGPT shell blocks in Emacs org babel blocks.
-- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks in Emacs org babel blocks.
+- [[https://github.com/xenodium/ob-chatgpt-shell][ob-chatgpt-shell]]: Evaluate chatgpt-shell blocks as Emacs org babel blocks.
+- [[https://github.com/xenodium/ob-dall-e-shell][ob-dall-e-shell]]: Evaluate DALL-E shell blocks as Emacs org babel blocks.
 - [[https://github.com/xenodium/dall-e-shell][dall-e-shell]]: An Emacs shell for OpenAI's DALL-E.
 - [[https://github.com/xenodium/shell-maker][shell-maker]]: Create Emacs shells backed by either local or cloud services.
 
