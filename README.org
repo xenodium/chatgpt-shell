@@ -4,6 +4,8 @@
 
 * chatgpt-shell
 
+[[https://stable.melpa.org/#/chatgpt-shell][file:https://stable.melpa.org/packages/chatgpt-shell-badge.svg]] [[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
+
 A ChatGPT Emacs shell.
 
 For related packages, see:
