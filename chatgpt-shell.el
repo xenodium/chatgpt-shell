@@ -686,19 +686,15 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   (let* ((label (chatgpt-shell--model-label)))
     (cons
      (format "%s(%s)> " label (chatgpt-shell--shell-info))
-     (chatgpt-shell--prompt-regexp label))))
+     (chatgpt-shell--prompt-regexp))))
 
-(defun chatgpt-shell--prompt-regexp (&optional label)
-  "Return a prompt regexp using model LABEL.
-
-If LABEL is omitted, match any of the model labels."
-  (if label
-      (rx-to-string `(seq bol ,label (one-or-more (not (any "\n"))) ">" (or space "\n")))
-    (let ((labels (delete-dups
-                   (mapcar (lambda (model)
-                             (map-elt model :label))
-                           chatgpt-shell-model-versions))))
-      (rx-to-string `(seq bol (or ,@labels) (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
+(defun chatgpt-shell--prompt-regexp ()
+  "Return a regexp to match any model prompt."
+  (rx bol
+      (one-or-more alphanumeric)
+      "("
+      (minimal-match (one-or-more not-newline))
+      ")> "))
 
 (defun chatgpt-shell--shell-buffers ()
   "Return a list of all shell buffers."
@@ -2064,68 +2060,6 @@ If optional CAPTURE is non-nil, cature a screenshot."
     ;; Every reply is primed with <|start|>assistant<|message|>
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
-
-;; FIXME: Make shell agnostic or move to chatgpt-shell.
-(defun chatgpt-shell-restore-session-from-transcript ()
-  "Restore session from transcript.
-
-Very much EXPERIMENTAL."
-  (interactive)
-  (unless (derived-mode-p 'chatgpt-shell-mode)
-    (user-error "Not in a shell"))
-  (let* ((dir (when shell-maker-transcript-default-path
-                (file-name-as-directory shell-maker-transcript-default-path)))
-         (path (read-file-name "Restore from: " dir nil t))
-         (history (with-temp-buffer
-                    (insert-file-contents path)
-                    (shell-maker--extract-history
-                     (buffer-string) (chatgpt-shell--prompt-regexp))))
-         (execute-command (shell-maker-config-execute-command
-                           shell-maker--config))
-         (validate-command (shell-maker-config-validate-command
-                            shell-maker--config))
-         (entry)
-         (failed))
-    ;; Momentarily overrides request handling to replay all commands
-    ;; read from file so comint treats all commands/outputs like
-    ;; any other command.
-    (unwind-protect
-        (progn
-          (setf (shell-maker-config-validate-command shell-maker--config) nil)
-          (setf (shell-maker-config-execute-command shell-maker--config)
-                (lambda (_command shell)
-                  (when entry
-                    (unless (consp entry)
-                      (setq failed t)
-                      (user-error "Invalid transcript"))
-                    (funcall (map-elt shell :write-output) (cdr entry))
-                    (funcall (map-elt shell :finish-output) t)
-                    (setq entry (car history))
-                    (setq history (cdr history))
-                    (when entry
-                      (goto-char (point-max))
-                      (insert (car entry))
-                      (shell-maker-submit)))))
-          (goto-char (point-max))
-          (comint-clear-buffer)
-          (setq entry (car history))
-          (setq history (cdr history))
-          (when entry
-            (unless (consp entry)
-              (setq failed t)
-              (user-error "Invalid transcript"))
-            (goto-char (point-max))
-            (insert (car entry))
-            (shell-maker-submit)))
-      (if failed
-          (setq shell-maker--file nil)
-        (setq shell-maker--file path))
-      (setq shell-maker--busy nil)
-      (setf (shell-maker-config-validate-command shell-maker--config)
-            validate-command)
-      (setf (shell-maker-config-execute-command shell-maker--config)
-            execute-command)))
-  (goto-char (point-max)))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
