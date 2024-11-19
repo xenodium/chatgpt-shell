@@ -6,6 +6,8 @@
 
 A multi-llm Emacs shell.
 
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
+
 * News
 
 chatgpt-shell goes multi model 🎉
@@ -14,7 +16,7 @@ It's been quite a bit of work, and I still have plenty of pending items. Please 
 
 | Provider  | Model   | Supported |
 |-----------+---------+-----------|
-| OpenAI    | ChatGPT | Supported |
+| OpenAI    | ChatGPT | Yes       |
 | Google    | Gemini  | New 💫   |
 | Anthropic | Claude  | New 💫   |
 
