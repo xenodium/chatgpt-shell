@@ -36,25 +36,15 @@ For related packages, see:
 - [[https://github.com/xenodium/dall-e-shell][dall-e-shell]]: An Emacs shell for OpenAI's DALL-E.
 - [[https://github.com/xenodium/shell-maker][shell-maker]]: Create Emacs shells backed by either local or cloud services.
 
-** Support this effort
+* Support this effort
 
 If you're finding =chatgpt-shell= useful, help make the project sustainable and consider ✨[[https://github.com/sponsors/xenodium][sponsoring]]✨.
 
 =chatgpt-shell= is in development. Please report issues or send [[https://github.com/xenodium/chatgpt-shell/pulls][pull requests]] for improvements.
 
-** Like this package? Tell me about it 💙
+* Like this package? Tell me about it 💙
 
 Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://bsky.app/profile/xenodium.bsky.social][Bluesky]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
-
-** Shell usage
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/chatgpt-shell-demo.gif" width="80%" />
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/blocks.gif" width="80%" />
-
-** Insert to current buffer
-
-#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/org-table.gif" width="100%" />
 
 * Install
 
