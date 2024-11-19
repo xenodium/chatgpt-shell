@@ -3575,7 +3575,6 @@ NEW-LABEL (optional): To display for new text."
 
 (defun chatgpt-shell--fader-start ()
   "Start animating the currently active region."
-  (interactive)
   (if (use-region-p)
       (progn
         (deactivate-mark)
@@ -3584,7 +3583,6 @@ NEW-LABEL (optional): To display for new text."
 
 (defun chatgpt-shell--fader-stop-fading ()
   "Stop animating and remove all overlays."
-  (interactive)
   (when chatgpt-shell--fader-timer
     (cancel-timer chatgpt-shell--fader-timer)
     (setq chatgpt-shell--fader-timer nil))
