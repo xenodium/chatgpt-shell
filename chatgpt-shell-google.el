@@ -103,6 +103,9 @@ If you use Gemini through a proxy service, change the URL base."
 
 (cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
+  (unless (chatgpt-shell-google-key)
+    (funcall (map-elt shell :write-output) "Your chatgpt-shell-google-key is missing")
+    (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
    :url (chatgpt-shell-google--make-url :model model

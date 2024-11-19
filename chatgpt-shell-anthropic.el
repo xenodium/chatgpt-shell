@@ -83,6 +83,8 @@ If you use Claude through a proxy service, change the URL base."
 
 (cl-defun chatgpt-shell-anthropic--make-headers (&key _model _settings)
   "Create the API headers."
+  (unless (chatgpt-shell-anthropic-key)
+    (error "Your chatgpt-shell-anthropic-key is missing"))
   (list "Content-Type: application/json; charset=utf-8"
         (concat "x-api-key: " (chatgpt-shell-anthropic-key))
         "anthropic-version: 2023-06-01"))
@@ -112,6 +114,9 @@ If you use Claude through a proxy service, change the URL base."
 
 (cl-defun chatgpt-shell-anthropic--handle-claude-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
+  (unless (chatgpt-shell-anthropic-key)
+    (funcall (map-elt shell :write-output) "Your chatgpt-shell-anthropic-key is missing")
+    (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
    :url (chatgpt-shell-anthropic--make-url :model model

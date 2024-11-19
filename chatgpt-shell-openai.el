@@ -205,6 +205,9 @@ Otherwise:
 
 (cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
+  (unless (chatgpt-shell-openai-key)
+    (funcall (map-elt shell :write-output) "Your chatgpt-shell-openai-key is missing")
+    (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
    :url (concat chatgpt-shell-api-url-base
