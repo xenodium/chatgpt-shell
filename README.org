@@ -21,7 +21,7 @@ If you're finding =chatgpt-shell= useful, help make the project sustainable and 
 
 ** Like this package? Tell me about it 💙
 
-Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
+Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://bsky.app/profile/xenodium.bsky.social][Bluesky]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
 
 ** Shell usage
 
