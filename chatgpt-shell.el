@@ -686,7 +686,19 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   (let* ((label (chatgpt-shell--model-label)))
     (cons
      (format "%s(%s)> " label (chatgpt-shell--shell-info))
-     (rx-to-string `(seq bol ,label (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
+     (chatgpt-shell--prompt-regexp label))))
+
+(defun chatgpt-shell--prompt-regexp (&optional label)
+  "Return a prompt regexp using model LABEL.
+
+If LABEL is omitted, match any of the model labels."
+  (if label
+      (rx-to-string `(seq bol ,label (one-or-more (not (any "\n"))) ">" (or space "\n")))
+    (let ((labels (delete-dups
+                   (mapcar (lambda (model)
+                             (map-elt model :label))
+                           chatgpt-shell-model-versions))))
+      (rx-to-string `(seq bol (or ,@labels) (one-or-more (not (any "\n"))) ">" (or space "\n"))))))
 
 (defun chatgpt-shell--shell-buffers ()
   "Return a list of all shell buffers."
@@ -2064,19 +2076,15 @@ Very much EXPERIMENTAL."
   (let* ((dir (when shell-maker-transcript-default-path
                 (file-name-as-directory shell-maker-transcript-default-path)))
          (path (read-file-name "Restore from: " dir nil t))
-         (prompt-regexp (shell-maker-prompt-regexp shell-maker--config))
          (history (with-temp-buffer
                     (insert-file-contents path)
-                    (chatgpt-shell--extract-history
-                     (buffer-substring-no-properties
-                      (point-min) (point-max))
-                     prompt-regexp)))
+                    (shell-maker--extract-history
+                     (buffer-string) (chatgpt-shell--prompt-regexp))))
          (execute-command (shell-maker-config-execute-command
                            shell-maker--config))
          (validate-command (shell-maker-config-validate-command
                             shell-maker--config))
-         (command)
-         (response)
+         (entry)
          (failed))
     ;; Momentarily overrides request handling to replay all commands
     ;; read from file so comint treats all commands/outputs like
@@ -2085,32 +2093,29 @@ Very much EXPERIMENTAL."
         (progn
           (setf (shell-maker-config-validate-command shell-maker--config) nil)
           (setf (shell-maker-config-execute-command shell-maker--config)
-                (lambda (_command _history callback _error-callback)
-                  (setq response (car history))
-                  (setq history (cdr history))
-                  (when response
-                    (unless (string-equal (map-elt response 'role)
-                                          "assistant")
+                (lambda (_command shell)
+                  (when entry
+                    (unless (consp entry)
                       (setq failed t)
                       (user-error "Invalid transcript"))
-                    (funcall callback (map-elt response 'content) nil)
-                    (setq command (car history))
+                    (funcall (map-elt shell :write-output) (cdr entry))
+                    (funcall (map-elt shell :finish-output) t)
+                    (setq entry (car history))
                     (setq history (cdr history))
-                    (when command
+                    (when entry
                       (goto-char (point-max))
-                      (insert (map-elt command 'content))
+                      (insert (car entry))
                       (shell-maker-submit)))))
           (goto-char (point-max))
           (comint-clear-buffer)
-          (setq command (car history))
+          (setq entry (car history))
           (setq history (cdr history))
-          (when command
-            (unless (string-equal (map-elt command 'role)
-                                  "user")
+          (when entry
+            (unless (consp entry)
               (setq failed t)
               (user-error "Invalid transcript"))
             (goto-char (point-max))
-            (insert (map-elt command 'content))
+            (insert (car entry))
             (shell-maker-submit)))
       (if failed
           (setq shell-maker--file nil)
