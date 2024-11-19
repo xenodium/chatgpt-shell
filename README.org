@@ -10,6 +10,10 @@ A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Sh
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/quick-insert.gif" width="80%" />
 
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/swiftui.gif" width="80%" />
+
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/multi-model/demos/japanese-weekdays.gif" width="80%" />
+
 * News
 
 chatgpt-shell goes multi model 🎉
