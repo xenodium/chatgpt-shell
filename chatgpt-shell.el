@@ -1,4 +1,4 @@
-;;; chatgpt-shell.el --- ChatGPT shell + buffer insert commands  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- A multi-llm comint Emacs shell (plus other goodies)  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
