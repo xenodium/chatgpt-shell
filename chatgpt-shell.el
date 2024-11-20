@@ -1,10 +1,10 @@
-;;; chatgpt-shell.el --- A multi-llm comint Emacs shell (plus other goodies)  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- A multi-llm Emacs shell (ChatGPT, Claude, Gemini) + editing integrations  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.0.2
+;; Version: 2.0.3
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.68.1"))
 (defconst chatgpt-shell--version "2.0.2")
 
