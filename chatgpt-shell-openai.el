@@ -26,14 +26,6 @@
 
 ;;; Code:
 
-(defcustom chatgpt-shell-openai-models
-  (list (chatgpt-shell-openai-make-model
-         :version "chatgpt-4o-latest"
-         :token-width 3))
-  "List of OpenAI LLM models available."
-  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
-  :group 'chatgpt-shell)
-
 (cl-defun chatgpt-shell-openai-make-model (&key version token-width)
   "Create an OpenAI model with VERSION and TOKEN-WIDTH."
   (unless version
@@ -55,6 +47,14 @@
     (:url . chatgpt-shell-openai--make-url)
     (:key . chatgpt-shell-openai-key)
     (:url-base . chatgpt-shell-api-url-base)))
+
+(defcustom chatgpt-shell-openai-models
+  (list (chatgpt-shell-openai-make-model
+         :version "chatgpt-4o-latest"
+         :token-width 3))
+  "List of OpenAI LLM models available."
+  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
+  :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
