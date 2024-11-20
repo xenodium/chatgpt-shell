@@ -199,28 +199,22 @@ Can be used compile or run source block at point."
                                   (cons (const primary-action) (function :tag "Action:"))))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-model-versions
+(defcustom chatgpt-shell-models
   (append chatgpt-shell-openai-models
           chatgpt-shell-anthropic-models
           chatgpt-shell-google-models)
-  "The list of ChatGPT OpenAI models to swap from.
+  "The list of models to swap from.
 
-The list of models supported by /v1/chat/completions endpoint is
-documented at
-https://platform.openai.com/docs/models/model-endpoint-compatibility."
+The list of models supported by chatgpt-shell.el."
   :type '(repeat (alist :key-type symbol :value-type sexp))
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version 0
   "The active ChatGPT OpenAI model index.
 
-See `chatgpt-shell-model-versions' for available model versions.
+See `chatgpt-shell-models' for available model versions.
 
-Swap using `chatgpt-shell-swap-model-version'.
-
-The list of models supported by /v1/chat/completions endpoint is
-documented at
-https://platform.openai.com/docs/models/model-endpoint-compatibility."
+Swap using `chatgpt-shell-swap-model'."
   :type '(choice (string :tag "String")
                  (integer :tag "Integer")
                  (const :tag "Nil" nil))
@@ -317,7 +311,7 @@ Or nil if none."
          chatgpt-shell-model-version)
         ((integerp chatgpt-shell-model-version)
          (let ((model (nth chatgpt-shell-model-version
-                          chatgpt-shell-model-versions)))
+                          chatgpt-shell-models)))
            (cond ((stringp model)
                   model)
                  ((stringp (map-elt model :version))
@@ -415,15 +409,15 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
   (message "chatgpt-shell v%s" chatgpt-shell--version))
 
-(defun chatgpt-shell-swap-model-version ()
-  "Swap model version from `chatgpt-shell-model-versions'."
+(defun chatgpt-shell-swap-model ()
+  "Swap model version from `chatgpt-shell-models'."
   (interactive)
   (if-let* ((last-label (chatgpt-shell--model-label))
             (all-models (seq-remove
                          (lambda (item)
                            (string-equal (map-elt item :version)
                                          (chatgpt-shell-model-version)))
-                         chatgpt-shell-model-versions))
+                         chatgpt-shell-models))
             (width (let ((width))
                      (mapc (lambda (model)
                              (unless width
@@ -556,7 +550,7 @@ or
   (or (seq-find (lambda (model)
                   (equal (map-elt model :version)
                          (or versioned (chatgpt-shell-model-version))))
-                chatgpt-shell-model-versions)
+                chatgpt-shell-models)
       (error "Service %s not found"
              (chatgpt-shell-model-version))))
 
@@ -634,7 +628,7 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
     (define-key chatgpt-shell-mode-map (kbd "C-c C-c")
       #'chatgpt-shell-ctrl-c-ctrl-c)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-v")
-      #'chatgpt-shell-swap-model-version)
+      #'chatgpt-shell-swap-model)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-s")
       #'chatgpt-shell-swap-system-prompt)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-p")
@@ -767,10 +761,10 @@ This is used for sending a prompt to in the background."
                      (lambda ()
                        (interactive)
                        (setq-local chatgpt-shell-model-version
-                                   (seq-position chatgpt-shell-model-versions ,version))
+                                   (seq-position chatgpt-shell-models ,version))
                        (chatgpt-shell--update-prompt t)
                        (chatgpt-shell-interrupt nil))])
-                 chatgpt-shell-model-versions))
+                 chatgpt-shell-models))
       ("Prompts"
        ,@(mapcar (lambda (prompt)
                    `[,(car prompt)
@@ -785,7 +779,7 @@ This is used for sending a prompt to in the background."
   (easy-menu-add chatgpt-shell-system-prompts-menu))
 
 (defun chatgpt-shell--update-prompt (rename-buffer)
-  "Update prompt and prompt regexp from `chatgpt-shell-model-versions'.
+  "Update prompt and prompt regexp from `chatgpt-shell-models'.
 
 Set RENAME-BUFFER to also rename the buffer accordingly."
   (unless (derived-mode-p 'chatgpt-shell-mode)
@@ -1433,7 +1427,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
 
 QUERY: Request query text.
 BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
-MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+MODEL-VERSION (optional): Index from `chatgpt-shell-models' or string.
 SYSTEM-PROMPT (optional): As string.
 STREAMING (optional): Non-nil to stream insertion.
 START (optional): Beginning of region to replace (overrides active region).
@@ -1509,7 +1503,7 @@ END (optional): End of region to replace (overrides active region)."
 QUERY: Request query text.
 ON-OUTPUT: Of the form (lambda (output))
 ON-FINISHED: Of the form (lambda (success))
-MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+MODEL-VERSION (optional): Index from `chatgpt-shell-models' or string.
 SYSTEM-PROMPT (optional): As string.
 STREAMING (optional): non-nil to received streamed ON-OUTPUT events."
   (unless query
@@ -2797,7 +2791,7 @@ Do not wrap snippets in markdown blocks.\n\n"
 
 QUERY: Request query text.
 BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
-MODEL-VERSION (optional): Index from `chatgpt-shell-model-versions' or string.
+MODEL-VERSION (optional): Index from `chatgpt-shell-models' or string.
 SYSTEM-PROMPT (optional): As string."
   (unless query
     (error "Missing mandatory \"query\" param"))
@@ -3279,7 +3273,7 @@ If BACKWARDS is non-nil, go to previous interaction."
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (with-current-buffer (chatgpt-shell--primary-buffer)
-    (chatgpt-shell-swap-model-version))
+    (chatgpt-shell-swap-model))
   (rename-buffer (chatgpt-shell-prompt-compose-buffer-name)))
 
 (defun chatgpt-shell-prompt-compose-buffer ()

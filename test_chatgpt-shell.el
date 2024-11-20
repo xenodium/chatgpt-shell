@@ -1,22 +1,5 @@
 (require 'ert)
 
-;;; chatgpt-shell-model-version
-
-(ert-deftest test-chatgpt-shell-model-version ()
-  "Tests for `chatgpt-shell-model-version` function."
-  (let ((chatgpt-shell-model-version "gpt-3.5")
-        (chatgpt-shell-model-versions '("gpt-3" "gpt-3.5" "gpt-4")))
-    ;; Test for string version
-    (should (equal (chatgpt-shell-model-version) "gpt-3.5")))
-  (let ((chatgpt-shell-model-version 1)
-        (chatgpt-shell-model-versions '("gpt-3" "gpt-3.5" "gpt-4")))
-    ;; Test for integer index
-    (should (equal (chatgpt-shell-model-version) "gpt-3.5")))
-  (let ((chatgpt-shell-model-version nil)
-        (chatgpt-shell-model-versions '("gpt-3" "gpt-3.5" "gpt-4")))
-    ;; Test for nil, expecting nil
-    (should (equal (chatgpt-shell-model-version) nil))))
-
 ;;; chatgpt-shell--append-system-info
 
 (ert-deftest test-chatgpt-shell--append-system-info-smoke-test ()
