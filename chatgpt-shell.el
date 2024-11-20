@@ -203,9 +203,10 @@ Can be used compile or run source block at point."
   (append chatgpt-shell-openai-models
           chatgpt-shell-anthropic-models
           chatgpt-shell-google-models)
-  "The list of models to swap from.
+  "The list of supported models to swap from.
 
-The list of models supported by chatgpt-shell.el."
+See `chatgpt-shell-openai-models', `chatgpt-shell-anthropic-models'
+and `chatgpt-shell-google-models' for details."
   :type '(repeat (alist :key-type symbol :value-type sexp))
   :group 'chatgpt-shell)
 
@@ -307,6 +308,9 @@ Or nil if none."
 
 (defun chatgpt-shell-model-version ()
   "Return active model version."
+  (when (boundp 'chatgpt-shell-model-versions)
+    (error (concat "\"chatgpt-shell-model-versions\" no longer supported. "
+                   "Please unset or migrate to \"chatgpt-shell-models\".")))
   (cond ((stringp chatgpt-shell-model-version)
          chatgpt-shell-model-version)
         ((integerp chatgpt-shell-model-version)
