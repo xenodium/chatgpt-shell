@@ -141,6 +141,8 @@ For example:
   :type 'hook
   :group 'shell-maker)
 
+(defvaralias 'chatgpt-shell-swap-model-version 'chatgpt-shell-swap-model)
+
 (defvaralias 'chatgpt-shell-display-function 'shell-maker-display-function)
 
 (defvaralias 'chatgpt-shell-read-string-function 'shell-maker-read-string-function)
