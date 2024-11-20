@@ -27,24 +27,34 @@
 ;;; Code:
 
 (defcustom chatgpt-shell-openai-models
-  '(((:version . "chatgpt-4o-latest")
-     (:short-version . "4o-latest")
-     (:label . "ChatGPT")
-     (:provider . "OpenAI")
-     (:path . "/v1/chat/completions")
-     (:token-width . 3)
-     ;; https://platform.openai.com/docs/models/gpt-4o
-     (:context-window . 128000)
-     (:handler . chatgpt-shell-openai--handle-chatgpt-command)
-     (:filter . chatgpt-shell-openai--filter-output)
-     (:payload . chatgpt-shell-openai--make-payload)
-     (:headers . chatgpt-shell-openai--make-headers)
-     (:url . chatgpt-shell-openai--make-url)
-     (:key . chatgpt-shell-openai-key)
-     (:url-base . chatgpt-shell-api-url-base)))
+  (list (chatgpt-shell-openai-make-model
+         :version "chatgpt-4o-latest"
+         :token-width 3))
   "List of OpenAI LLM models available."
   :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
   :group 'chatgpt-shell)
+
+(cl-defun chatgpt-shell-openai-make-model (&key version token-width)
+  "Create an OpenAI model with VERSION and TOKEN-WIDTH."
+  (unless version
+    (error "Missing mandatory :version param"))
+  (unless token-width
+    (error "Missing mandatory :token-width param"))
+  `((:version . ,version)
+    (:short-version . "4o-latest")
+    (:label . "ChatGPT")
+    (:provider . "OpenAI")
+    (:path . "/v1/chat/completions")
+    (:token-width . ,token-width)
+    ;; https://platform.openai.com/docs/models/gpt-4o
+    (:context-window . 128000)
+    (:handler . chatgpt-shell-openai--handle-chatgpt-command)
+    (:filter . chatgpt-shell-openai--filter-output)
+    (:payload . chatgpt-shell-openai--make-payload)
+    (:headers . chatgpt-shell-openai--make-headers)
+    (:url . chatgpt-shell-openai--make-url)
+    (:key . chatgpt-shell-openai-key)
+    (:url-base . chatgpt-shell-api-url-base)))
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
