@@ -202,9 +202,9 @@ Can be used compile or run source block at point."
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-models
-  (append chatgpt-shell-openai-models
-          chatgpt-shell-anthropic-models
-          chatgpt-shell-google-models)
+  (append (chatgpt-shell-openai-models)
+          (chatgpt-shell-anthropic-models)
+          (chatgpt-shell-google-models))
   "The list of supported models to swap from.
 
 See `chatgpt-shell-openai-models', `chatgpt-shell-anthropic-models'
@@ -428,6 +428,15 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
   (message "chatgpt-shell v%s" chatgpt-shell--version))
 
+(defun chatgpt-shell-reload-models ()
+  "Reload all available models."
+  (interactive)
+  (setq chatgpt-shell-models
+        (append (chatgpt-shell-openai-models)
+                (chatgpt-shell-anthropic-models)
+                (chatgpt-shell-google-models)))
+  (message "Reloaded %d models" (length chatgpt-shell-models)))
+
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
@@ -519,15 +528,10 @@ See `shell-maker-welcome-message' as an example."
   (make-shell-maker-config
    :name "ChatGPT"
    :validate-command
-   (lambda (_command)
-     (unless chatgpt-shell-openai-key
-       "Variable `chatgpt-shell-openai-key' needs to be set to your key.
-
-Try M-x set-variable chatgpt-shell-openai-key
-
-or
-
-(setq chatgpt-shell-openai-key \"my-key\")"))
+   (lambda (command)
+     (when-let* ((model (chatgpt-shell--resolved-model))
+                 (validate-command (map-elt model :validate-command)))
+       (funcall validate-command command)))
    :execute-command
    (lambda (command shell)
      (if-let* ((model (chatgpt-shell--resolved-model))

@@ -46,15 +46,14 @@
     (:headers . chatgpt-shell-openai--make-headers)
     (:url . chatgpt-shell-openai--make-url)
     (:key . chatgpt-shell-openai-key)
-    (:url-base . chatgpt-shell-api-url-base)))
+    (:url-base . chatgpt-shell-api-url-base)
+    (:validate-command . chatgpt-shell-openai--validate-command)))
 
-(defcustom chatgpt-shell-openai-models
+(defun chatgpt-shell-openai-models ()
+  "Build a list of all OpenAI LLM models available."
   (list (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
-         :token-width 3))
-  "List of OpenAI LLM models available."
-  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
-  :group 'chatgpt-shell)
+         :token-width 3)))
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
@@ -203,6 +202,17 @@ Otherwise:
   "Create the API headers."
   (list "Content-Type: application/json; charset=utf-8"
         (format "Authorization: Bearer %s" (chatgpt-shell-openai-key))))
+
+(defun chatgpt-shell-openai--validate-command (_command)
+  "Return error string if command/setup isn't valid."
+  (unless chatgpt-shell-openai-key
+    "Variable `chatgpt-shell-openai-key' needs to be set to your key.
+
+Try M-x set-variable chatgpt-shell-openai-key
+
+or
+
+(setq chatgpt-shell-openai-key \"my-key\")"))
 
 (cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."

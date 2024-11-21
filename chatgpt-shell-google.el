@@ -40,7 +40,8 @@ If you use Gemini through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-google-models
+(defun chatgpt-shell-google-models ()
+  "Build a list of Google LLM models available."
   '(((:version . "gemini-1.5-pro-latest")
      (:short-version . "1.5-pro-latest")
      (:label . "Gemini")
@@ -56,10 +57,19 @@ If you use Gemini through a proxy service, change the URL base."
      (:payload . chatgpt-shell-google--make-payload)
      (:url . chatgpt-shell-google--make-url)
      (:headers . chatgpt-shell-google--make-headers)
-     (:key . chatgpt-shell-google-key)))
-  "List of Google LLM models available."
-  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
-  :group 'chatgpt-shell)
+     (:key . chatgpt-shell-google-key)
+     (:validate-command . chatgpt-shell-google--validate-command))))
+
+(defun chatgpt-shell-google--validate-command (_command)
+  "Return error string if command/setup isn't valid."
+  (unless chatgpt-shell-google-key
+    "Variable `chatgpt-shell-google-key' needs to be set to your key.
+
+Try M-x set-variable chatgpt-shell-google-key
+
+or
+
+(setq chatgpt-shell-google-key \"my-key\")"))
 
 (defun chatgpt-shell-google-key ()
   "Get the Google API key."
@@ -102,10 +112,7 @@ If you use Gemini through a proxy service, change the URL base."
    :system-prompt (map-elt settings :system-prompt)))
 
 (cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
-  "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
-  (unless (chatgpt-shell-google-key)
-    (funcall (map-elt shell :write-output) "Your chatgpt-shell-google-key is missing")
-    (funcall (map-elt shell :finish-output) nil))
+  "Handle Gemini COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
    :async t
    :url (chatgpt-shell-google--make-url :model model
