@@ -40,7 +40,8 @@ If you use Claude through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-anthropic-models
+(defun chatgpt-shell-anthropic-models ()
+  "Build a list of Anthropic LLM models available."
   '(((:provider . "Anthropic")
      (:label . "Claude")
      (:version . "claude-3-5-sonnet-20240620")
@@ -56,11 +57,20 @@ If you use Claude through a proxy service, change the URL base."
      (:payload . chatgpt-shell-anthropic--make-payload)
      (:url . chatgpt-shell-anthropic--make-url)
      (:headers . chatgpt-shell-anthropic--make-headers)
+     (:url-base . chatgpt-shell-anthropic-api-url-base)
      (:key . chatgpt-shell-anthropic-key)
-     (:url-base . chatgpt-shell-anthropic-api-url-base)))
-  "List of Anthropic LLM models available."
-  :type '(alist :key-type (symbol :tag "Attribute") :value-type (sexp))
-  :group 'chatgpt-shell)
+     (:validate-command . chatgpt-shell-anthropic--validate-command))))
+
+(defun chatgpt-shell-anthropic--validate-command (_command)
+  "Return error string if command/setup isn't valid."
+  (unless chatgpt-shell-anthropic-key
+    "Variable `chatgpt-shell-anthropic-key' needs to be set to your key.
+
+Try M-x set-variable chatgpt-shell-anthropic-key
+
+or
+
+(setq chatgpt-shell-anthropic-key \"my-key\")"))
 
 (defun chatgpt-shell-anthropic-key ()
   "Get the Anthropic API key."
@@ -113,10 +123,7 @@ If you use Claude through a proxy service, change the URL base."
                       command)))))))
 
 (cl-defun chatgpt-shell-anthropic--handle-claude-command (&key model command context shell settings)
-  "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
-  (unless (chatgpt-shell-anthropic-key)
-    (funcall (map-elt shell :write-output) "Your chatgpt-shell-anthropic-key is missing")
-    (funcall (map-elt shell :finish-output) nil))
+  "Handle Claude shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
    :async t
    :url (chatgpt-shell-anthropic--make-url :model model
