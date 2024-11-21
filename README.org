@@ -98,7 +98,7 @@ If you're finding =chatgpt-shell= useful, help make the project sustainable and 
 
 Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[https://indieweb.social/@xenodium][Mastodon]] / [[https://twitter.com/xenodium][Twitter]] / [[https://bsky.app/profile/xenodium.bsky.social][Bluesky]] / [[https://www.reddit.com/user/xenodium][Reddit]] / [[mailto:me__AT__xenodium.com][Email]]).
 
-* Installation
+* Install
 
 - Load =(require 'chatgpt-shell)=
 
