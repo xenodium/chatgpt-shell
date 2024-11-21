@@ -212,7 +212,7 @@ and `chatgpt-shell-google-models' for details."
   :type '(repeat (alist :key-type symbol :value-type sexp))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-model-version 0
+(defcustom chatgpt-shell-model-version nil
   "The active ChatGPT OpenAI model index.
 
 See `chatgpt-shell-models' for available model versions.
@@ -326,11 +326,27 @@ Or nil if none."
   (when (boundp 'chatgpt-shell-model-versions)
     (error (concat "\"chatgpt-shell-model-versions\" no longer supported. "
                    "Please unset or migrate to \"chatgpt-shell-models\".")))
-  (cond ((stringp chatgpt-shell-model-version)
+  (cond ((not chatgpt-shell-model-version)
+         ;; No default model set, find one that's cleared for sending commands.
+         (if-let* ((cleared-model (seq-find (lambda (model)
+                                              (cond ((not (map-elt model :validate-command))
+                                                     t)
+                                                    ((and (map-elt model :validate-command)
+                                                          (not (funcall (map-elt model :validate-command) "hello")))
+                                                     t)
+                                                    (t
+                                                     nil)))
+                                            chatgpt-shell-models))
+                   (model-version (map-elt cleared-model :version)))
+             model-version
+           (if (map-elt (seq-first chatgpt-shell-models) :version)
+               (map-elt (seq-first chatgpt-shell-models) :version)
+             (error "Could not find a model.  Missing model setup?"))))
+        ((stringp chatgpt-shell-model-version)
          chatgpt-shell-model-version)
         ((integerp chatgpt-shell-model-version)
          (let ((model (nth chatgpt-shell-model-version
-                          chatgpt-shell-models)))
+                           chatgpt-shell-models)))
            (cond ((stringp model)
                   model)
                  ((stringp (map-elt model :version))
@@ -339,7 +355,7 @@ Or nil if none."
                   (error "Don't know how to resolve model to version %s"
                          chatgpt-shell-model-version)))))
         (t
-         nil)))
+         (error "Could not find a model.  Missing model setup?"))))
 
 (defun chatgpt-shell-system-prompt ()
   "Return active system prompt."
@@ -570,12 +586,10 @@ See `shell-maker-welcome-message' as an example."
 
 (cl-defun chatgpt-shell--resolved-model (&key versioned)
   "Resolve model VERSIONED name."
-  (or (seq-find (lambda (model)
-                  (equal (map-elt model :version)
-                         (or versioned (chatgpt-shell-model-version))))
-                chatgpt-shell-models)
-      (error "Service %s not found"
-             (chatgpt-shell-model-version))))
+  (seq-find (lambda (model)
+              (equal (map-elt model :version)
+                     (or versioned (chatgpt-shell-model-version))))
+            chatgpt-shell-models))
 
 (cl-defun chatgpt-shell--make-payload (&key version context streaming temperature system-prompt)
   "Create a payload for model with VERSION.
