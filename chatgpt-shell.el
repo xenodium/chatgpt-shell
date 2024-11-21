@@ -49,9 +49,10 @@
 (require 'ob-core)
 (require 'color)
 
-(require 'chatgpt-shell-openai)
-(require 'chatgpt-shell-google)
 (require 'chatgpt-shell-anthropic)
+(require 'chatgpt-shell-google)
+(require 'chatgpt-shell-ollama)
+(require 'chatgpt-shell-openai)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -201,10 +202,18 @@ Can be used compile or run source block at point."
                                   (cons (const primary-action) (function :tag "Action:"))))
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-models
+(defun chatgpt-shell--make-default-models ()
+  "Create a list of default models by combining models from different providers.
+
+This function aggregates models from OpenAI, Anthropic, Google, and Ollama.
+It returns a list containing all available models from these providers."
   (append (chatgpt-shell-openai-models)
           (chatgpt-shell-anthropic-models)
-          (chatgpt-shell-google-models))
+          (chatgpt-shell-google-models)
+          (chatgpt-shell-ollama-models)))
+
+(defcustom chatgpt-shell-models
+  (chatgpt-shell--make-default-models)
   "The list of supported models to swap from.
 
 See `chatgpt-shell-openai-models', `chatgpt-shell-anthropic-models'
@@ -444,13 +453,10 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
   (message "chatgpt-shell v%s" chatgpt-shell--version))
 
-(defun chatgpt-shell-reload-models ()
+(defun chatgpt-shell-reload-default-models ()
   "Reload all available models."
   (interactive)
-  (setq chatgpt-shell-models
-        (append (chatgpt-shell-openai-models)
-                (chatgpt-shell-anthropic-models)
-                (chatgpt-shell-google-models)))
+  (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
 (defun chatgpt-shell-swap-model ()
@@ -1884,9 +1890,10 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
                             :model model
                             :context context
                             :settings settings)
-             :headers (funcall headers
-                               :model model
-                               :settings settings)
+             :headers (when headers
+                        (funcall headers
+                                 :model model
+                                 :settings settings))
              :filter filter
              :on-output on-output
              :on-finished (lambda (result)
@@ -1904,9 +1911,10 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
                              :model model
                              :context context
                              :settings settings)
-              :headers (funcall headers
-                                :model model
-                                :settings settings)
+              :headers (when headers
+                         (funcall headers
+                                  :model model
+                                  :settings settings))
               :filter filter)))
         (map-elt result :output)))))
 
