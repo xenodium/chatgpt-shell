@@ -20,7 +20,7 @@
 
 ;;; Commentary:
 
-;; Adds OpenAI specifics for `chatgpt-shell'.
+;; Adds Anthropic specifics for `chatgpt-shell'.
 
 ;;; Code:
 

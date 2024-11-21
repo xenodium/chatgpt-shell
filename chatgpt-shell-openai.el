@@ -1,4 +1,4 @@
-;;; chatgpt-shell.el --- ChatGPT shell + buffer insert commands  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- OpenAI-specific logic  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
