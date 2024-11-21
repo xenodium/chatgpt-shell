@@ -70,10 +70,7 @@
                     (unless (string-empty-p .message.content)
                       (setq response (concat response .message.content)))))
                 chunks)
-          (if (and response
-                   (not (string-empty-p response)))
-              response
-            raw-response))
+          (or response raw-response))
       raw-response)))
 
 (cl-defun chatgpt-shell-ollama-make-payload (&key model context settings)
