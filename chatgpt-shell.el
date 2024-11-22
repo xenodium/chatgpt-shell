@@ -1440,6 +1440,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
             (load ,(find-library-name "chatgpt-shell-openai") nil t)
             (load ,(find-library-name "chatgpt-shell-google") nil t)
             (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
+            (load ,(find-library-name "chatgpt-shell-ollama") nil t)
             (load ,(find-library-name "chatgpt-shell") nil t)
             (setq chatgpt-shell-model-temperature 0)
             (setq chatgpt-shell-openai-key ,(chatgpt-shell-openai-key))
