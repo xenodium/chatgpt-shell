@@ -242,9 +242,6 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | Custom variable                                                  | Description                                                                  |
 |------------------------------------------------------------------+------------------------------------------------------------------------------|
 | chatgpt-shell-google-api-url-base                                | Google API’s base URL.                                                       |
-| chatgpt-shell-anthropic-models                                   | List of Anthropic LLM models available.                                      |
-| chatgpt-shell-google-models                                      | List of Google LLM models available.                                         |
-| chatgpt-shell-openai-models                                      | List of OpenAI LLM models available.                                         |
 | chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of ‘git-commit‘.                                               |
 | chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                   |
 | chatgpt-shell-display-function                                   | Function to display the shell.  Set to ‘display-buffer’ or custom function.  |
@@ -257,6 +254,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                             |
 | chatgpt-shell-api-url-base                                       | OpenAI API’s base URL.                                                       |
 | chatgpt-shell-google-key                                         | Google API key as a string or a function that loads and returns it.          |
+| chatgpt-shell-ollama-api-url-base                                | Ollam serve local url.                                                       |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                                |
 | chatgpt-shell--pretty-smerge-mode-hook                           | Hook run after entering or leaving ‘chatgpt-shell--pretty-smerge-mode’.      |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                           |
@@ -273,7 +271,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-openai-key                                         | OpenAI key as a string or a function that loads and returns it.              |
 | chatgpt-shell-prompt-header-describe-code                        | Prompt header of ‘describe-code‘.                                            |
 | chatgpt-shell-insert-dividers                                    | Whether or not to display a divider between requests and responses.          |
-| chatgpt-shell-models                                             | The list of models to swap from.                                             |
+| chatgpt-shell-models                                             | The list of supported models to swap from.                                   |
 | chatgpt-shell-language-mapping                                   | Maps external language names to Emacs names.                                 |
 | chatgpt-shell-prompt-compose-view-mode-hook                      | Hook run after entering or leaving ‘chatgpt-shell-prompt-compose-view-mode’. |
 | chatgpt-shell-streaming                                          | Whether or not to stream ChatGPT responses (show chunks as they arrive).     |
@@ -396,6 +394,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-set-as-primary-shell                  | Set as primary shell when there are multiple sessions.                        |
 |                 | chatgpt-shell-rename-block-at-point                 | Rename block at point (perhaps a different language).                         |
 |                 | chatgpt-shell-quick-insert                          | Request from minibuffer and insert response into current buffer.              |
+|                 | chatgpt-shell-reload-default-models                 | Reload all available models.                                                  |
 | S-<return>      | chatgpt-shell-newline                               | Insert a newline, and move to left margin of the new line.                    |
 |                 | chatgpt-shell-generate-unit-test                    | Generate unit-test for the code from region using ChatGPT.                    |
 |                 | chatgpt-shell-prompt-compose-next-history           | Insert next prompt from history into compose buffer.                          |
