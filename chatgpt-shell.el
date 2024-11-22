@@ -1788,9 +1788,10 @@ ON-FAILURE: (lambda (output)) for completion event."
          (url (funcall (map-elt model :url)
                        :model model
                        :settings settings))
-         (headers (funcall (map-elt model :headers)
-                           :model model
-                           :settings settings)))
+         (headers (when (map-elt model :headers)
+                    (funcall (map-elt model :headers)
+                             :model model
+                             :settings settings))))
     (when streaming
       (display-buffer buffer))
     (unless (equal (map-elt model :provider) "OpenAI")
