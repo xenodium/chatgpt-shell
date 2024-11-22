@@ -216,8 +216,10 @@ It returns a list containing all available models from these providers."
   (chatgpt-shell--make-default-models)
   "The list of supported models to swap from.
 
-See `chatgpt-shell-openai-models', `chatgpt-shell-anthropic-models'
-and `chatgpt-shell-google-models' for details."
+See `chatgpt-shell-openai-models',
+    `chatgpt-shell-anthropic-models'
+    `chatgpt-shell-ollama-models'
+    `chatgpt-shell-google-models' for details."
   :type '(repeat (alist :key-type symbol :value-type sexp))
   :group 'chatgpt-shell)
 
