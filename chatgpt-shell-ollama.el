@@ -53,9 +53,11 @@
    :shell shell))
 
 (defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
-  "Ollam serve local url.
+"Ollama API's base URL.
 
-API url = base + path."
+API url = base + path.
+
+If you use Ollama through a proxy service, change the URL base."
   :type 'string
   :safe #'stringp
   :group 'chatgpt-shell)
