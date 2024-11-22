@@ -24,6 +24,7 @@ It's been quite a bit of work, and I still have plenty of pending work. Please s
 | OpenAI    | ChatGPT | Yes       |
 | Google    | Gemini  | New 💫   |
 | Anthropic | Claude  | New 💫   |
+| Ollama    | Llama   | New 💫   |
 
 My favourite model is missing.
 | [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
