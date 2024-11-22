@@ -254,7 +254,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                             |
 | chatgpt-shell-api-url-base                                       | OpenAI API’s base URL.                                                       |
 | chatgpt-shell-google-key                                         | Google API key as a string or a function that loads and returns it.          |
-| chatgpt-shell-ollama-api-url-base                                | Ollam serve local url.                                                       |
+| chatgpt-shell-ollama-api-url-base                                | Ollama API’s base URL.                                                       |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                                |
 | chatgpt-shell--pretty-smerge-mode-hook                           | Hook run after entering or leaving ‘chatgpt-shell--pretty-smerge-mode’.      |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                           |
