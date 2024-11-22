@@ -43,7 +43,7 @@
                                                 short-version
                                                 token-width
                                                 context-window)
-  "Create a model configuration for the ChatGPT Shell Ollama provider.
+  "Create an Ollama model configuration.
 
 VERSION: Mandatory. The version of the model as a string.
 SHORT-VERSION: Optional. A shortened version identifier as a string.
