@@ -42,24 +42,55 @@ If you use Claude through a proxy service, change the URL base."
 
 (defun chatgpt-shell-anthropic-models ()
   "Build a list of Anthropic LLM models available."
-  '(((:provider . "Anthropic")
-     (:label . "Claude")
-     (:version . "claude-3-5-sonnet-20240620")
-     (:short-version . "3-5-sonnet-20240620")
-     (:path . "/v1/messages")
-     ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
-     ;; A token is equivalent to _about_ 4 characters.
-     (:token-width . 4)
-     (:max-tokens . 8192) ;; Per response (required by Claude).
-     (:context-window . 200000)
-     (:handler . chatgpt-shell-anthropic--handle-claude-command)
-     (:filter . chatgpt-shell-anthropic--extract-claude-response)
-     (:payload . chatgpt-shell-anthropic--make-payload)
-     (:url . chatgpt-shell-anthropic--make-url)
-     (:headers . chatgpt-shell-anthropic--make-headers)
-     (:url-base . chatgpt-shell-anthropic-api-url-base)
-     (:key . chatgpt-shell-anthropic-key)
-     (:validate-command . chatgpt-shell-anthropic--validate-command))))
+  (list
+   ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
+   ;; A token is equivalent to _about_ 4 characters.
+   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-20240620"
+                                        :short-version "3-5-sonnet-20240620"
+                                        :token-width  4
+                                        :max-tokens 8192
+                                        :context-window 200000)))
+
+(cl-defun chatgpt-shell-anthropic--make-model (&key version
+                                                    short-version
+                                                    token-width
+                                                    max-tokens
+                                                    context-window)
+  "Create an Anthropic model configuration.
+
+VERSION: Mandatory. The version of the model as a string.
+SHORT-VERSION: Optional. A shortened version identifier as a string.
+TOKEN-WIDTH: Mandatory. Approximate token width (in chars) limit as integer.
+MAX-TOKENS: Mandatory. The maximum number of tokens to generate before stopping.
+CONTEXT-WINDOW: Mandatory. The context window size as an integer."
+  (unless version
+    (error "Missing mandatory :version param"))
+  (unless token-width
+    (error "Missing mandatory :token-width param"))
+  (unless max-tokens
+    (error "Missing mandatory :max-tokens param"))
+  (unless context-window
+    (error "Missing mandatory :context-window param"))
+  (unless (integerp token-width)
+    (error ":token-width must be an integer"))
+  (unless (integerp context-window)
+    (error ":context-window must be an integer"))
+  `((:provider . "Anthropic")
+    (:label . "Claude")
+    (:path . "/v1/messages")
+    (:version . ,version)
+    (:max-tokens . ,max-tokens)
+    (:short-version . ,short-version)
+    (:token-width . ,token-width)
+    (:context-window . ,context-window)
+    (:handler . chatgpt-shell-anthropic--handle-claude-command)
+    (:filter . chatgpt-shell-anthropic--extract-claude-response)
+    (:payload . chatgpt-shell-anthropic--make-payload)
+    (:url . chatgpt-shell-anthropic--make-url)
+    (:headers . chatgpt-shell-anthropic--make-headers)
+    (:url-base . chatgpt-shell-anthropic-api-url-base)
+    (:key . chatgpt-shell-anthropic-key)
+    (:validate-command . chatgpt-shell-anthropic--validate-command)))
 
 (defun chatgpt-shell-anthropic--validate-command (_command)
   "Return error string if command/setup isn't valid."
