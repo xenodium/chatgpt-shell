@@ -52,10 +52,18 @@
    :filter #'chatgpt-shell-ollama--extract-ollama-response
    :shell shell))
 
+(defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
+  "Ollam serve local url.
+
+API url = base + path."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
 (cl-defun chatgpt-shell-ollama--make-url (&key _model _settings)
   "Create the API URL using MODEL and SETTINGS."
-  ;; TODO: Make configurable.
-  "http://localhost:11434/api/chat")
+  (concat chatgpt-shell-ollama-api-url-base
+          "/api/chat"))
 
 (defun chatgpt-shell-ollama--extract-ollama-response (raw-response)
   "Extract Claude response from RAW-RESPONSE."
