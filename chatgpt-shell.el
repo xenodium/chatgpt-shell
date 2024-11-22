@@ -888,7 +888,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
              (language-start)
              (language-end)
              (start (save-excursion
-                      (when (re-search-backward "^```" nil t)
+                      (when (re-search-backward "^[ \t]*```" nil t)
                         (setq language (chatgpt-shell-markdown-block-language (thing-at-point 'line)))
                         (save-excursion
                           (forward-char 3) ; ```
@@ -897,7 +897,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                           (setq language-end (point)))
                         language-end)))
              (end (save-excursion
-                    (when (re-search-forward "^```" nil t)
+                    (when (re-search-forward "^[ \t]*```" nil t)
                       (forward-line 0)
                       (point)))))
         (when (and start end
@@ -1081,6 +1081,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
        (one-or-more "\n")
        (group (*? anychar)) ;; body
        (one-or-more "\n")
+       (zero-or-more whitespace)
        (group "```") (or "\n" eol)))
 
 (defun chatgpt-shell-next-source-block ()
