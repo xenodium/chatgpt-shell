@@ -63,10 +63,10 @@ If you use Gemini through a proxy service, change the URL base."
     (error "Missing mandatory :short-version param"))
   (unless path
     (error "Missing mandatory :path param"))
-  (unless token-width
-    (error "Missing mandatory :token-width param"))
-  (unless context-window
-    (error "Missing mandatory :context-window param"))
+  (unless (integerp token-width)
+    (error ":token-width must be an integer"))
+  (unless (integerp context-window)
+    (error ":context-window must be an integer"))
   `((:version . ,version)
     (:short-version . ,short-version)
     (:label . "Gemini")
