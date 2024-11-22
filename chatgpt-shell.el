@@ -695,20 +695,17 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
 
 (defun chatgpt-shell--shell-info ()
   "Generate shell info for display."
-  (let* ((model (chatgpt-shell--resolved-model))
-         (short-version (or (map-elt model :short-version)
-                            (chatgpt-shell-model-version))))
-    (concat
-     short-version
-     (cond ((and (integerp chatgpt-shell-system-prompt)
-                 (nth chatgpt-shell-system-prompt
-                      chatgpt-shell-system-prompts))
-            (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                                                  chatgpt-shell-system-prompts))))
-           ((stringp chatgpt-shell-system-prompt)
-            (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
-           (t
-            "")))))
+  (concat
+   (chatgpt-shell--model-short-version)
+   (cond ((and (integerp chatgpt-shell-system-prompt)
+               (nth chatgpt-shell-system-prompt
+                    chatgpt-shell-system-prompts))
+          (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                                                chatgpt-shell-system-prompts))))
+         ((stringp chatgpt-shell-system-prompt)
+          (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
+         (t
+          ""))))
 
 (defun chatgpt-shell--model-label ()
   "Return the current model label."
@@ -718,6 +715,7 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
 (defun chatgpt-shell--model-short-version ()
   "Return the current model short version."
   (or (map-elt (chatgpt-shell--resolved-model) :short-version)
+      (map-elt (chatgpt-shell--resolved-model) :version)
       "unknown"))
 
 (defun chatgpt-shell--prompt-pair ()
