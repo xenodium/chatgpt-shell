@@ -26,16 +26,49 @@
 
 (defun chatgpt-shell-ollama-models ()
   "Build a list of Ollama LLM models available."
-  '(((:provider . "Ollama")
-     (:label . "Ollama")
-     (:version . "llama3.2")
-     (:short-version . "llama3.2")
-     (:token-width . 3)
-     (:context-window . 131072)
-     (:handler . chatgpt-shell-ollama--handle-ollama-command)
-     (:filter . chatgpt-shell-ollama--extract-ollama-response)
-     (:payload . chatgpt-shell-ollama-make-payload)
-     (:url . chatgpt-shell-ollama--make-url))))
+  (list (chatgpt-shell-ollama-make-model
+         :version "llama3.2"
+         :token-width 4
+         :context-window 8192)
+        (chatgpt-shell-ollama-make-model
+         :version "llama3.2:1b"
+         :token-width 4
+         :context-window 8192)
+        (chatgpt-shell-ollama-make-model
+         :version "gemma2:2b"
+         :token-width 4
+         :context-window 8192)))
+
+(cl-defun chatgpt-shell-ollama-make-model (&key version
+                                                short-version
+                                                token-width
+                                                context-window)
+  "Create a model configuration for the ChatGPT Shell Ollama provider.
+
+VERSION: Mandatory. The version of the model as a string.
+SHORT-VERSION: Optional. A shortened version identifier as a string.
+TOKEN-WIDTH: Mandatory. Approximate token width (in chars) limit as integer.
+CONTEXT-WINDOW: Mandatory. The context window size as an integer."
+  (unless version
+    (error "Missing mandatory :version param"))
+  (unless token-width
+    (error "Missing mandatory :token-width param"))
+  (unless context-window
+    (error "Missing mandatory :context-window param"))
+  (unless (integerp token-width)
+    (error ":token-width must be an integer"))
+  (unless (integerp context-window)
+    (error ":context-window must be an integer"))
+  `((:provider . "Ollama")
+    (:label . "Ollama")
+    (:version . ,version)
+    (:short-version . ,short-version)
+    (:token-width . ,token-width)
+    (:context-window . ,context-window)
+    (:handler . chatgpt-shell-ollama--handle-ollama-command)
+    (:filter . chatgpt-shell-ollama--extract-ollama-response)
+    (:payload . chatgpt-shell-ollama-make-payload)
+    (:url . chatgpt-shell-ollama--make-url)))
 
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
