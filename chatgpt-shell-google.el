@@ -42,23 +42,46 @@ If you use Gemini through a proxy service, change the URL base."
 
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
-  '(((:version . "gemini-1.5-pro-latest")
-     (:short-version . "1.5-pro-latest")
-     (:label . "Gemini")
-     (:provider . "Google")
-     (:path . "/v1beta/models/gemini-1.5-pro-latest")
-     ;; https://ai.google.dev/gemini-api/docs/tokens?lang=python
-     ;; A token is equivalent to _about_ 4 characters.
-     (:token-width . 4)
-     (:context-window . 2097152)
-     (:url-base . chatgpt-shell-google-api-url-base)
-     (:handler . chatgpt-shell-google--handle-gemini-command)
-     (:filter . chatgpt-shell-google--extract-gemini-response)
-     (:payload . chatgpt-shell-google--make-payload)
-     (:url . chatgpt-shell-google--make-url)
-     (:headers . chatgpt-shell-google--make-headers)
-     (:key . chatgpt-shell-google-key)
-     (:validate-command . chatgpt-shell-google--validate-command))))
+  (list (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
+                                         :short-version "1.5-pro-latest"
+                                         :path "/v1beta/models/gemini-1.5-pro-latest"
+                                         :token-width 4
+                                         :context-window 2097152)
+        (chatgpt-shell-google-make-model :version "gemini-1.5-flash"
+                                         :short-version "1.5-flash"
+                                         :path "/v1beta/models/gemini-1.5-flash"
+                                         :token-width 4
+                                         :context-window 2097152)))
+
+;; https://ai.google.dev/gemini-api/docs/tokens
+;; A token is equivalent to _about_ 4 characters.
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window)
+  "Create an Google model with VERSION and TOKEN-WIDTH."
+  (unless version
+    (error "Missing mandatory :version param"))
+  (unless short-version
+    (error "Missing mandatory :short-version param"))
+  (unless path
+    (error "Missing mandatory :path param"))
+  (unless token-width
+    (error "Missing mandatory :token-width param"))
+  (unless context-window
+    (error "Missing mandatory :context-window param"))
+  `((:version . ,version)
+    (:short-version . ,short-version)
+    (:label . "Gemini")
+    (:provider . "Google")
+    (:path . ,path)
+    (:token-width . ,token-width)
+    (:context-window . ,context-window)
+    (:url-base . chatgpt-shell-google-api-url-base)
+    (:handler . chatgpt-shell-google--handle-gemini-command)
+    (:filter . chatgpt-shell-google--extract-gemini-response)
+    (:payload . chatgpt-shell-google--make-payload)
+    (:url . chatgpt-shell-google--make-url)
+    (:headers . chatgpt-shell-google--make-headers)
+    (:key . chatgpt-shell-google-key)
+    (:validate-command . chatgpt-shell-google--validate-command)))
 
 (defun chatgpt-shell-google--validate-command (_command)
   "Return error string if command/setup isn't valid."
