@@ -26,20 +26,25 @@
 
 ;;; Code:
 
-(cl-defun chatgpt-shell-openai-make-model (&key version token-width)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window)
   "Create an OpenAI model with VERSION and TOKEN-WIDTH."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
     (error "Missing mandatory :token-width param"))
+  (unless context-window
+    (error "Missing mandatory :context-window param"))
+  (unless (integerp token-width)
+    (error ":token-width must be an integer"))
+  (unless (integerp context-window)
+    (error ":context-window must be an integer"))
   `((:version . ,version)
-    (:short-version . "4o-latest")
+    (:short-version . ,short-version)
     (:label . "ChatGPT")
     (:provider . "OpenAI")
     (:path . "/v1/chat/completions")
     (:token-width . ,token-width)
-    ;; https://platform.openai.com/docs/models/gpt-4o
-    (:context-window . 128000)
+    (:context-window . ,context-window)
     (:handler . chatgpt-shell-openai--handle-chatgpt-command)
     (:filter . chatgpt-shell-openai--filter-output)
     (:payload . chatgpt-shell-openai--make-payload)
@@ -53,7 +58,19 @@
   "Build a list of all OpenAI LLM models available."
   (list (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
-         :token-width 3)))
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4o
+         :context-window 12800)
+        (chatgpt-shell-openai-make-model
+         :version "o1-preview"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-01
+         :context-window 12800)
+        (chatgpt-shell-openai-make-model
+         :version "o1-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-01-mini
+         :context-window 12800)))
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
