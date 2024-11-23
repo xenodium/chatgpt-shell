@@ -40,17 +40,6 @@ If you use Claude through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
-(defun chatgpt-shell-anthropic-models ()
-  "Build a list of Anthropic LLM models available."
-  (list
-   ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
-   ;; A token is equivalent to _about_ 4 characters.
-   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-20240620"
-                                        :short-version "3-5-sonnet-20240620"
-                                        :token-width  4
-                                        :max-tokens 8192
-                                        :context-window 200000)))
-
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
                                                     token-width
@@ -92,6 +81,24 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
     (:key . chatgpt-shell-anthropic-key)
     (:validate-command . chatgpt-shell-anthropic--validate-command)))
 
+(defun chatgpt-shell-anthropic-models ()
+  "Build a list of Anthropic LLM models available."
+  (list
+   ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
+   ;; A token is equivalent to _about_ 4 characters.
+   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-20240620"
+                                        :short-version "3-5-sonnet-20240620"
+                                        :token-width  4
+                                        :max-tokens 8192
+                                        :context-window 200000)))
+
+(cl-defun chatgpt-shell-anthropic--make-url (&key model _settings)
+  "Create the API URL using MODEL and SETTINGS."
+  (concat (symbol-value (or (map-elt model :url-base)
+                            (error "Model :url-base not found")))
+          (or (map-elt model :path)
+              (error "Model :path not found"))))
+
 (defun chatgpt-shell-anthropic--validate-command (_command)
   "Return error string if command/setup isn't valid."
   (unless chatgpt-shell-anthropic-key
@@ -114,13 +121,6 @@ or
             "KEY-NOT-FOUND")))
         (t
          nil)))
-
-(cl-defun chatgpt-shell-anthropic--make-url (&key model _settings)
-  "Create the API URL using MODEL and SETTINGS."
-  (concat (symbol-value (or (map-elt model :url-base)
-                            (error "Model :url-base not found")))
-          (or (map-elt model :path)
-              (error "Model :path not found"))))
 
 (cl-defun chatgpt-shell-anthropic--make-headers (&key _model _settings)
   "Create the API headers."

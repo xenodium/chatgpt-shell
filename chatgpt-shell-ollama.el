@@ -24,21 +24,6 @@
 
 ;;; Code:
 
-(defun chatgpt-shell-ollama-models ()
-  "Build a list of Ollama LLM models available."
-  (list (chatgpt-shell-ollama-make-model
-         :version "llama3.2"
-         :token-width 4
-         :context-window 8192)
-        (chatgpt-shell-ollama-make-model
-         :version "llama3.2:1b"
-         :token-width 4
-         :context-window 8192)
-        (chatgpt-shell-ollama-make-model
-         :version "gemma2:2b"
-         :token-width 4
-         :context-window 8192)))
-
 (cl-defun chatgpt-shell-ollama-make-model (&key version
                                                 short-version
                                                 token-width
@@ -69,6 +54,21 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
     (:filter . chatgpt-shell-ollama--extract-ollama-response)
     (:payload . chatgpt-shell-ollama-make-payload)
     (:url . chatgpt-shell-ollama--make-url)))
+
+(defun chatgpt-shell-ollama-models ()
+  "Build a list of Ollama LLM models available."
+  (list (chatgpt-shell-ollama-make-model
+         :version "llama3.2"
+         :token-width 4
+         :context-window 8192)
+        (chatgpt-shell-ollama-make-model
+         :version "llama3.2:1b"
+         :token-width 4
+         :context-window 8192)
+        (chatgpt-shell-ollama-make-model
+         :version "gemma2:2b"
+         :token-width 4
+         :context-window 8192)))
 
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
