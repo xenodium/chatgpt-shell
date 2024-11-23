@@ -883,6 +883,8 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
     (save-restriction
       (when (derived-mode-p 'chatgpt-shell-mode)
         (shell-maker-narrow-to-prompt))
+      ;; Ensure point is within block if at bol in header.
+      (move-end-of-line 1)
       (let* ((language)
              (language-start)
              (language-end)
