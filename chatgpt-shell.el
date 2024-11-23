@@ -466,11 +466,6 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
   (if-let* ((last-label (chatgpt-shell--model-label))
-            (all-models (seq-remove
-                         (lambda (item)
-                           (string-equal (map-elt item :version)
-                                         (chatgpt-shell-model-version)))
-                         chatgpt-shell-models))
             (width (let ((width))
                      (mapc (lambda (model)
                              (unless width
@@ -479,13 +474,13 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                         (provider-width (length (map-elt model :provider)))
                                         (longer (> provider-width width)))
                                (setq width provider-width)))
-                           all-models)
+                           chatgpt-shell-models)
                      width))
             (models (seq-map (lambda (model)
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             all-models))
+                             chatgpt-shell-models))
             (selection (nth 1 (string-split (completing-read "Model version: "
                                                              models nil t)))))
       (progn
