@@ -1,4 +1,4 @@
-;;; chatgpt-shell-prompt-compose.el --- A shell prompt compose buffer -*- lexical-binding: t -*-
+;;; chatgpt-shell-prompt-compose.el --- A shell prompt compose buffer  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024 Alvaro Ramirez
 
@@ -26,6 +26,24 @@
 ;; Support the work https://github.com/sponsors/xenodium
 
 ;;; Code:
+
+(require 'ring)
+(require 'flymake)
+(require 'shell-maker)
+
+(declare-function chatgpt-shell-previous-source-block "chatgpt-shell")
+(declare-function chatgpt-shell-next-source-block "chatgpt-shell")
+(declare-function chatgpt-shell-swap-model "chatgpt-shell")
+(declare-function chatgpt-shell-swap-system-prompt "chatgpt-shell")
+(declare-function chatgpt-shell--minibuffer-prompt "chatgpt-shell")
+(declare-function chatgpt-shell--put-source-block-overlays "chatgpt-shell")
+(declare-function chatgpt-shell-send-to-buffer "chatgpt-shell")
+(declare-function chatgpt-shell-execute-block-action-at-point "chatgpt-shell")
+(declare-function chatgpt-shell-block-action-at-point "chatgpt-shell")
+(declare-function chatgpt-shell-clear-buffer "chatgpt-shell")
+(declare-function chatgpt-shell--primary-buffer "chatgpt-shell")
+(declare-function chatgpt-shell--eshell-last-last-command "chatgpt-shell")
+(declare-function chatgpt-shell-mark-block "chatgpt-shell")
 
 (defvar-local chatgpt-shell-prompt-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
@@ -209,8 +227,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
           (insert "\n\n")
           (insert region)))
       (when clear-history
-        (let ((chatgpt-shell-prompt-query-response-style 'inline))
-          (chatgpt-shell-send-to-buffer "clear")))
+        (with-current-buffer (chatgpt-shell--primary-buffer)
+          (chatgpt-shell-clear-buffer)))
       ;; TODO: Find a better alternative to prevent clash.
       ;; Disable "n"/"p" for region-bindings-mode-map, so it doesn't
       ;; clash with "n"/"p" selection binding.
@@ -351,15 +369,14 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
           (view-mode -1)
           (erase-buffer))
         (if chatgpt-shell-prompt-compose--exit-on-submit
-            (let ((view-exit-action nil)
-                  (chatgpt-shell-prompt-query-response-style 'shell))
+            (let ((view-exit-action nil))
               (quit-window t (get-buffer-window (chatgpt-shell-prompt-compose-buffer)))
-              (chatgpt-shell-send-to-buffer prompt))
-          (let ((chatgpt-shell-prompt-query-response-style 'inline))
-            (chatgpt-shell-send-to-buffer prompt nil nil
-                                          (lambda (_input _output _success)
-                                            (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                              (chatgpt-shell--put-source-block-overlays))))))))))
+              (chatgpt-shell-send-to-buffer prompt nil nil nil 'shell))
+          (chatgpt-shell-send-to-buffer prompt nil nil
+                                        (lambda (_input _output _success)
+                                          (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+                                            (chatgpt-shell--put-source-block-overlays)))
+                                        'inline))))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
@@ -445,14 +462,14 @@ Useful if sending a request failed, perhaps from failed connectivity."
                                     (lambda (item)
                                       (not (string-empty-p item)))
                                     (ring-elements comint-input-ring))))))
-             (inhibit-read-only t)
-             (chatgpt-shell-prompt-query-response-style 'inline))
+             (inhibit-read-only t))
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
     (chatgpt-shell-send-to-buffer prompt nil nil
                                   (lambda (_input _output _success)
                                     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                      (chatgpt-shell--put-source-block-overlays))))))
+                                      (chatgpt-shell--put-source-block-overlays)))
+                                  'inline)))
 
 (defun chatgpt-shell-prompt-compose-next-block ()
   "Jump to and select next code block."
@@ -496,11 +513,10 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (when shell-maker--busy
       (user-error "Busy, please wait")))
   (let ((prompt "show entire snippet")
-        (inhibit-read-only t)
-        (chatgpt-shell-prompt-query-response-style 'inline))
+        (inhibit-read-only t))
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
-    (chatgpt-shell-send-to-buffer prompt)))
+    (chatgpt-shell-send-to-buffer prompt nil nil nil 'inline)))
 
 (defun chatgpt-shell-prompt-compose-request-more ()
   "Request more data.  This is useful if you already requested examples."
@@ -511,11 +527,10 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (when shell-maker--busy
       (user-error "Busy, please wait")))
   (let ((prompt "give me more")
-        (inhibit-read-only t)
-        (chatgpt-shell-prompt-query-response-style 'inline))
+        (inhibit-read-only t))
     (erase-buffer)
     (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
-    (chatgpt-shell-send-to-buffer prompt)))
+    (chatgpt-shell-send-to-buffer prompt nil nil nil 'inline)))
 
 (defun chatgpt-shell-prompt-compose-other-buffer ()
   "Jump to the shell buffer (compose's other buffer)."
