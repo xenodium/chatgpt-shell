@@ -244,7 +244,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
         (save-excursion
           (goto-char (point-max))
           (insert "\n\n")
-          (insert input-text)))
+          (insert input-text)
+          (chatgpt-shell--put-source-block-overlays)))
       (when clear-history
         (with-current-buffer (chatgpt-shell--primary-buffer)
           (chatgpt-shell-clear-buffer)))
