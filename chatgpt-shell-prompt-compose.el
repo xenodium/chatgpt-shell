@@ -51,6 +51,16 @@
 This is typically used to craft prompts and immediately jump over to
 the shell to follow the response.")
 
+(defvar-local chatgpt-shell-prompt-compose--last-known-region nil
+  "Last known region details.
+
+Of the form
+
+\((:buffer . buffer)
+ (:start . start)
+ (:end . end)
+ (:text . text))")
+
 (defvar-local chatgpt-shell-prompt-compose--transient-frame-p nil
   "Identifies whether or not buffer is running on a dedicated frame.
 
@@ -83,6 +93,7 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "r") #'chatgpt-shell-prompt-compose-reply)
     (define-key map (kbd "q") #'chatgpt-shell-prompt-compose-quit-and-close-frame)
     (define-key map (kbd "e") #'chatgpt-shell-prompt-compose-request-entire-snippet)
+    (define-key map (kbd "i") #'chatgpt-shell-prompt-compose-insert-block-at-point)
     (define-key map (kbd "m") #'chatgpt-shell-prompt-compose-request-more)
     (define-key map (kbd "o") #'chatgpt-shell-prompt-compose-other-buffer)
     (set-keymap-parent map view-mode-map)
@@ -135,6 +146,7 @@ to retry on disconnects.
  `\\[chatgpt-shell-prompt-compose-previous-block]` Jump to next previous block.
  `\\[chatgpt-shell-prompt-compose-reply]` Reply to follow-up with additional questions.
  `\\[chatgpt-shell-prompt-compose-request-entire-snippet]` Send \"Show entire snippet\" query.
+ `\\[chatgpt-shell-prompt-compose-insert-block-at-point]` Insert block at point at last known location.
  `\\[chatgpt-shell-prompt-compose-request-more]` Send \"Show me more\" query.
  `\\[chatgpt-shell-prompt-compose-other-buffer]` Jump to other buffer (ie. the shell itself).
  `\\[chatgpt-shell-mark-block]` Mark block at point."
@@ -152,10 +164,16 @@ Set CLEAR-HISTORY to wipe any existing shell history.
 
 Set TRANSIENT-FRAME-P to also close frame on exit."
   (let* ((exit-on-submit (derived-mode-p 'chatgpt-shell-mode))
-         (region (or content
+         (region-details)
+         (input-text (or content
                      (when-let ((region-active (region-active-p))
                                 (region (buffer-substring (region-beginning)
                                                           (region-end))))
+                       (setq region-details
+                             (list (cons :buffer (current-buffer))
+                                   (cons :start (region-beginning))
+                                   (cons :end (region-end))
+                                   (cons :text region)))
                        (deactivate-mark)
                        (concat (if-let ((buffer-file-name (buffer-file-name))
                                         (name (file-name-nondirectory buffer-file-name))
@@ -209,7 +227,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                                (propertize "C-c C-k" 'face 'help-key-binding)
                                " to cancel and exit. "))
          (erase-buffer (or clear-history
-                           (not region)
+                           (not input-text)
                            ;; view-mode = old query, erase for new one.
                            (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                              chatgpt-shell-prompt-compose-view-mode))))
@@ -217,15 +235,16 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (chatgpt-shell-prompt-compose-mode)
       (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
       (setq-local chatgpt-shell-prompt-compose--transient-frame-p transient-frame-p)
+      (setq-local chatgpt-shell-prompt-compose--last-known-region region-details)
       (visual-line-mode +1)
       (when erase-buffer
         (chatgpt-shell-prompt-compose-view-mode -1)
         (erase-buffer))
-      (when region
+      (when input-text
         (save-excursion
           (goto-char (point-max))
           (insert "\n\n")
-          (insert region)))
+          (insert input-text)))
       (when clear-history
         (with-current-buffer (chatgpt-shell--primary-buffer)
           (chatgpt-shell-clear-buffer)))
@@ -470,6 +489,28 @@ Useful if sending a request failed, perhaps from failed connectivity."
                                     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                       (chatgpt-shell--put-source-block-overlays)))
                                   'inline)))
+
+(defun chatgpt-shell-prompt-compose-insert-block-at-point ()
+  "Insert block at point at last known location."
+  (interactive)
+  (save-excursion
+    (let* ((block (or (chatgpt-shell-markdown-block-at-point)
+                      (error "No block at point")))
+           (body (buffer-substring-no-properties (or (map-elt block 'start)
+                                                     (error "No block body found"))
+                                                 (or (map-elt block 'end)
+                                                     (error "No block body found"))))
+           (origin (or chatgpt-shell-prompt-compose--last-known-region
+                       (user-error "Nowhere to insert to")))
+           (window-config (current-window-configuration)))
+      (delete-other-windows)
+      (switch-to-buffer (map-elt origin :buffer))
+      (unless (chatgpt-shell--pretty-smerge-insert
+               :text body
+               :start (map-elt origin :start)
+               :end (map-elt origin :end)
+               :buffer (map-elt origin :buffer))
+        (set-window-configuration window-config)))))
 
 (defun chatgpt-shell-prompt-compose-next-block ()
   "Jump to and select next code block."

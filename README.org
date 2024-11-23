@@ -368,6 +368,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-prompt-compose-previous-history       | Insert previous prompt from history into compose buffer.                      |
 |                 | chatgpt-shell-delete-interaction-at-point           | Delete interaction (request and response) at point.                           |
 |                 | chatgpt-shell-refresh-rendering                     | Refresh markdown rendering by re-applying to entire buffer.                   |
+|                 | chatgpt-shell-prompt-compose-insert-block-at-point  | Insert block at point at last known location.                                 |
 |                 | chatgpt-shell-explain-code                          | Describe code from region using ChatGPT.                                      |
 |                 | chatgpt-shell-execute-block-action-at-point         | Execute block at point.                                                       |
 |                 | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.             |
