@@ -2937,7 +2937,9 @@ Write solutions in their entirety.")
 ;; pretty smerge start
 
 (cl-defun chatgpt-shell--pretty-smerge-insert (&key text start end buffer)
-  "Insert TEXT, replacing content of START and END at BUFFER."
+  "Insert TEXT, replacing content of START and END at BUFFER.
+
+Return non-nil if either inserted or cancelled (for manual merge)."
   (unless (and text (stringp text))
     (error ":text is missing or not a string"))
   (unless (and buffer (bufferp buffer))
@@ -2954,7 +2956,8 @@ Write solutions in their entirety.")
                                                       orig-end))
            (diff (chatgpt-shell--pretty-smerge--make-merge-patch
                   :old-label "Before" :old orig-text
-                  :new-label "After" :new text)))
+                  :new-label "After" :new text))
+           (applied))
       (delete-region orig-start orig-end)
       (when (looking-at-p "\n")
         (delete-char 1))
@@ -2970,16 +2973,21 @@ Write solutions in their entirety.")
           (unwind-protect
               (progn
                 (if (y-or-n-p "Keep change?")
-                    (smerge-keep-lower)
+                    (progn
+                      (smerge-keep-lower)
+                      (setq applied t))
                   (smerge-keep-upper))
-                (smerge-mode -1))
+                (smerge-mode -1)
+                applied)
             (chatgpt-shell--pretty-smerge-mode -1)
             (when needs-wrapping
-              (visual-line-mode -1)))
+              (visual-line-mode -1))
+            nil)
         (quit
          (chatgpt-shell--pretty-smerge-mode -1)
          (when needs-wrapping
-           (visual-line-mode -1)))
+           (visual-line-mode -1))
+         t)
         (error nil)))))
 
 (cl-defun chatgpt-shell--pretty-smerge--make-merge-patch (&key old new old-label new-label)
