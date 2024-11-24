@@ -24,6 +24,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
+
 (cl-defun chatgpt-shell-ollama-make-model (&key version
                                                 short-version
                                                 token-width

@@ -26,6 +26,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
+
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window)
   "Create an OpenAI model with VERSION and TOKEN-WIDTH."
   (unless version

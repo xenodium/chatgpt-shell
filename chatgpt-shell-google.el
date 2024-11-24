@@ -24,6 +24,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
+
 (defcustom chatgpt-shell-google-key nil
   "Google API key as a string or a function that loads and returns it."
   :type '(choice (function :tag "Function")

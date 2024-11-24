@@ -27,6 +27,8 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
 (require 'ring)
 (require 'flymake)
 (require 'shell-maker)

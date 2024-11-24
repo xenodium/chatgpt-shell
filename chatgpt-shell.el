@@ -36,7 +36,8 @@
 
 ;;; Code:
 
-(require 'cl-lib)
+(eval-when-compile
+  (require 'cl-lib))
 (require 'dired)
 (require 'esh-mode)
 (require 'em-prompt)
