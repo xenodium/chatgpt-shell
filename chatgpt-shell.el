@@ -2837,62 +2837,86 @@ Do not wrap snippets in markdown blocks.\n\n"
                            (message (or output "failed")))))))
     (error "Nothing to fix")))
 
+(defun chatgpt-shell--region ()
+  "Return region info (ensuring start is always at bol).
+
+Of the form
+
+\((:buffer . buffer)
+ (:start . start)
+ (:end . end)
+ (:text . text))"
+  (when (region-active-p)
+    (let ((start (save-excursion
+                   ;; Always select from beginning of line.
+                   (goto-char (region-beginning))
+                   (line-beginning-position)))
+          (end (region-end)))
+      ;; Barf trailing space from selection.
+      (when (string-match "[ \n\t]+$"
+                          (buffer-substring-no-properties
+                           start
+                           end))
+        (setq end (- end (length (match-string 0)))))
+      (list (cons :start start)
+            (cons :end end)
+            (cons :buffer (current-buffer))
+            (cons :text (buffer-substring start end))))))
+
 (cl-defun chatgpt-shell-request-and-insert-merged-response (&key query
+                                                                 context
                                                                  (buffer (current-buffer))
+                                                                 region
                                                                  model-version
                                                                  system-prompt
-                                                                 remove-block-markers)
+                                                                 remove-block-markers
+                                                                 on-iterate)
   "Send a contextless request (no history) and merge into BUFFER:
 
 QUERY: Request query text.
+CONTEXT: Any history context to include.
 BUFFER (optional): Buffer to insert to or omit to insert to current buffer.
 MODEL-VERSION (optional): Index from `chatgpt-shell-models' or string.
 SYSTEM-PROMPT (optional): As string."
   (unless query
     (error "Missing mandatory \"query\" param"))
-  (unless (region-active-p)
+  (unless region
     (error "No region selected"))
-  (let ((start (save-excursion
-                 ;; Always select from beginning of line.
-                 (goto-char (region-beginning))
-                 (line-beginning-position)))
-        (end (region-end))
-        (progress-reporter (make-progress-reporter
+  (let ((progress-reporter (make-progress-reporter
                             (format "%s " (chatgpt-shell--model-label)))))
-    ;; Barf trailing space from selection.
-    (when (string-match "[ \n\t]+$"
-                        (buffer-substring-no-properties
-                         start
-                         end))
-      (setq end (- end (length (match-string 0)))))
-    (setq query (concat query "\n\n" (buffer-substring start end)))
-    (chatgpt-shell--fader-start-fading-region start end)
+    (chatgpt-shell--fader-start-fading-region (map-elt region :start)
+                                              (map-elt region :end))
     (progress-reporter-update progress-reporter)
-    (chatgpt-shell-send-contextless-request
-     :query query
-     :model-version model-version
-     :system-prompt system-prompt
-     :streaming t
-     :on-output (lambda (_chunk)
-                    (progress-reporter-update progress-reporter))
-     :on-success (lambda (output)
-                   (with-current-buffer buffer
-                     (when remove-block-markers
-                       (setq output (chatgpt-shell--remove-source-block-markers output)))
-                     (chatgpt-shell--fader-stop-fading)
-                     (progress-reporter-done progress-reporter)
-                     (chatgpt-shell--pretty-smerge-insert
-                      :text output
-                      :start start
-                      :end end
-                      :buffer buffer)))
-     :on-failure (lambda (output)
-                   (with-current-buffer buffer
-                     (chatgpt-shell--fader-stop-fading)
-                     (progress-reporter-done progress-reporter)
-                     (when (not (string-empty-p (string-trim
-                                                 (or output ""))))
-                       (message (or output "failed"))))))))
+    (chatgpt-shell-post :context (append
+                                  context
+                                  (list (cons query nil)))
+                        :system-prompt system-prompt
+                        :version model-version
+                        :streaming t
+                        :on-output (lambda (_chunk)
+                                     (progress-reporter-update progress-reporter))
+                        :on-success (lambda (output)
+                                      (with-current-buffer buffer
+                                        (when remove-block-markers
+                                          (setq output (chatgpt-shell--remove-source-block-markers output)))
+                                        (chatgpt-shell--fader-stop-fading)
+                                        (progress-reporter-done progress-reporter)
+                                        (let ((choice (chatgpt-shell--pretty-smerge-insert
+                                                       :text output
+                                                       :start (map-elt region :start)
+                                                       :end (map-elt region :end)
+                                                       :buffer buffer
+                                                       :iterate on-iterate)))
+                                          (when (and on-iterate
+                                                     (eq choice ?i))
+                                            (funcall on-iterate output)))))
+                        :on-failure (lambda (output)
+                                      (with-current-buffer buffer
+                                        (chatgpt-shell--fader-stop-fading)
+                                        (progress-reporter-done progress-reporter)
+                                        (when (not (string-empty-p (string-trim
+                                                                    (or output ""))))
+                                          (message (or output "failed"))))))))
 
 (defun chatgpt-shell--remove-source-block-markers (text)
   "Remove markdown code block markers TEXT."
@@ -2902,8 +2926,10 @@ SYSTEM-PROMPT (optional): As string."
    "" text t))
 
 ;;;###autoload
-(defun chatgpt-shell-quick-insert()
-  "Request from minibuffer and insert response into current buffer."
+(defun chatgpt-shell-quick-insert(&optional context)
+  "Request from minibuffer and insert response into current buffer.
+
+Optionally include any CONTEXT to consider."
   (interactive)
   (let ((system-prompt "Follow my instruction and only my instruction.
 Do not explain nor wrap in a markdown block.
@@ -2916,13 +2942,24 @@ Write solutions in their entirety.")
       (setq system-prompt (format "%s\nUse `%s` programming language."
                                   system-prompt
                                   (string-trim-right (symbol-name major-mode) "-mode"))))
-    (if (region-active-p)
-        (chatgpt-shell-request-and-insert-merged-response
-         :system-prompt system-prompt
-         :query (concat query
-                        "\n\n"
-                        "Apply my instruction to:")
-         :remove-block-markers t)
+    (if-let ((region (chatgpt-shell--region)))
+        (progn
+          (setq query (concat query
+                              "\n\n"
+                              "Apply my instruction to:"
+                              "\n\n"
+                              (map-elt region :text)))
+          (chatgpt-shell-request-and-insert-merged-response
+           :system-prompt system-prompt
+           :query query
+           :context context
+           :remove-block-markers t
+           :region region
+           :on-iterate (lambda (output)
+                         (set-mark (map-elt region :end))
+                         (goto-char (map-elt region :start))
+                         (chatgpt-shell-quick-insert (append context
+                                                             (list (cons query output)))))))
       (chatgpt-shell-request-and-insert-response
        :streaming t
        :system-prompt system-prompt
@@ -2937,8 +2974,10 @@ Write solutions in their entirety.")
 
 ;; pretty smerge start
 
-(cl-defun chatgpt-shell--pretty-smerge-insert (&key text start end buffer)
+(cl-defun chatgpt-shell--pretty-smerge-insert (&key text start end buffer iterate)
   "Insert TEXT, replacing content of START and END at BUFFER.
+
+With non-nil ITERATE, ask user if they'd like to iterate further on change.
 
 Return non-nil if either inserted or cancelled (for manual merge)."
   (unless (and text (stringp text))
@@ -2958,7 +2997,7 @@ Return non-nil if either inserted or cancelled (for manual merge)."
            (diff (chatgpt-shell--pretty-smerge--make-merge-patch
                   :old-label "Before" :old orig-text
                   :new-label "After" :new text))
-           (applied))
+           (outcome))
       (delete-region orig-start orig-end)
       (when (looking-at-p "\n")
         (delete-char 1))
@@ -2973,17 +3012,29 @@ Return non-nil if either inserted or cancelled (for manual merge)."
       (condition-case nil
           (unwind-protect
               (progn
-                (if (y-or-n-p "Keep change?")
-                    (progn
-                      (smerge-keep-lower)
-                      (setq applied t))
+                (setq outcome
+                      (if iterate
+                          (read-char-choice (substitute-command-keys
+                                             "Keep change? (\\`y' or \\`n') / Iterate? (\\`i'): ")
+                                            '(?y ?n ?i))
+                        (read-char-choice (substitute-command-keys
+                                           "Keep change? (\\`y' or \\`n'): ")
+                                          '(?y ?n))))
+                (cond
+                 ((eq outcome ?y)
+                  (smerge-keep-lower))
+                 ((eq outcome ?n)
                   (smerge-keep-upper))
+                 ((eq outcome ?i)
+                  (smerge-keep-upper))
+                 (t
+                  (smerge-keep-upper)))
                 (smerge-mode -1)
-                applied)
+                outcome)
             (chatgpt-shell--pretty-smerge-mode -1)
             (when needs-wrapping
               (visual-line-mode -1))
-            nil)
+            outcome)
         (quit
          (chatgpt-shell--pretty-smerge-mode -1)
          (when needs-wrapping

@@ -508,11 +508,11 @@ Useful if sending a request failed, perhaps from failed connectivity."
            (window-config (current-window-configuration)))
       (delete-other-windows)
       (switch-to-buffer (map-elt origin :buffer))
-      (unless (chatgpt-shell--pretty-smerge-insert
-               :text body
-               :start (map-elt origin :start)
-               :end (map-elt origin :end)
-               :buffer (map-elt origin :buffer))
+      (unless (eq ?y (chatgpt-shell--pretty-smerge-insert
+                      :text body
+                      :start (map-elt origin :start)
+                      :end (map-elt origin :end)
+                      :buffer (map-elt origin :buffer)))
         (set-window-configuration window-config)))))
 
 (defun chatgpt-shell-prompt-compose-next-block ()
