@@ -1293,10 +1293,19 @@ If region is active, append to prompt."
 See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
   (interactive)
   (let* ((region (chatgpt-shell--region))
-         (query (map-elt region :text)))
+         (query (map-elt region :text))
+         (context))
     (chatgpt-shell-request-and-insert-merged-response
      :system-prompt chatgpt-shell-prompt-header-proofread-region
-     :query query)))
+     :query query
+     :context context
+     :remove-block-markers t
+     :region region
+     :on-iterate (lambda (output)
+                   (set-mark (map-elt region :end))
+                   (goto-char (map-elt region :start))
+                   (chatgpt-shell-quick-insert (append context
+                                                       (list (cons query output))))))))
 
 ;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
