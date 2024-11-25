@@ -385,6 +385,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                       (point-min) (point-max)))))
         (erase-buffer)
         (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+        (chatgpt-shell--put-source-block-overlays)
         (chatgpt-shell-prompt-compose-view-mode +1)
         (setq view-exit-action 'kill-buffer)
         (when (string-equal prompt "clear")
