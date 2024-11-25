@@ -116,6 +116,15 @@ If using [[https://github.com/jwiegley/use-package][use-package]], you can insta
         (auth-source-pass-get 'secret "openai-key")))))
 #+end_src
 
+* Swap models
+** M-x chatgpt-shell-model-version
+#+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swap-models.png" width="80%" />
+
+* Set default model
+#+begin_src emacs-lisp :lexical no
+  (setq chatgpt-shell-model-version "llama3.2")
+#+end_src
+
 * Set OpenAI key
 
 You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
