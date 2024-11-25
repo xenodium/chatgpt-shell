@@ -1292,9 +1292,11 @@ If region is active, append to prompt."
 
 See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
   (interactive)
-  (chatgpt-shell-request-and-insert-merged-response
-   :system-prompt chatgpt-shell-prompt-header-proofread-region
-   :query ""))
+  (let* ((region (chatgpt-shell--region))
+         (query (map-elt region :text)))
+    (chatgpt-shell-request-and-insert-merged-response
+     :system-prompt chatgpt-shell-prompt-header-proofread-region
+     :query query)))
 
 ;;;###autoload
 (defun chatgpt-shell-eshell-whats-wrong-with-last-command ()
@@ -2866,7 +2868,7 @@ Of the form
 (cl-defun chatgpt-shell-request-and-insert-merged-response (&key query
                                                                  context
                                                                  (buffer (current-buffer))
-                                                                 region
+                                                                 (region (chatgpt-shell--region))
                                                                  model-version
                                                                  system-prompt
                                                                  remove-block-markers
@@ -2901,15 +2903,18 @@ SYSTEM-PROMPT (optional): As string."
                                           (setq output (chatgpt-shell--remove-source-block-markers output)))
                                         (chatgpt-shell--fader-stop-fading)
                                         (progress-reporter-done progress-reporter)
-                                        (let ((choice (chatgpt-shell--pretty-smerge-insert
-                                                       :text output
-                                                       :start (map-elt region :start)
-                                                       :end (map-elt region :end)
-                                                       :buffer buffer
-                                                       :iterate on-iterate)))
-                                          (when (and on-iterate
-                                                     (eq choice ?i))
-                                            (funcall on-iterate output)))))
+                                        (if (equal (string-trim output)
+                                                   (string-trim (map-elt region :text)))
+                                            (message "No change suggested")
+                                          (let ((choice (chatgpt-shell--pretty-smerge-insert
+                                                         :text output
+                                                         :start (map-elt region :start)
+                                                         :end (map-elt region :end)
+                                                         :buffer buffer
+                                                         :iterate on-iterate)))
+                                            (when (and on-iterate
+                                                       (eq choice ?i))
+                                              (funcall on-iterate output))))))
                         :on-failure (lambda (output)
                                       (with-current-buffer buffer
                                         (chatgpt-shell--fader-stop-fading)
