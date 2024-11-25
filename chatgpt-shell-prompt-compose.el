@@ -509,11 +509,16 @@ Useful if sending a request failed, perhaps from failed connectivity."
            (window-config (current-window-configuration)))
       (switch-to-buffer-other-window (map-elt origin :buffer))
       (with-current-buffer (map-elt origin :buffer)
-        (unless (eq ?y (chatgpt-shell--pretty-smerge-insert
-                        :text body
-                        :start (map-elt origin :start)
-                        :end (map-elt origin :end)
-                        :buffer (map-elt origin :buffer)))
+        (if (eq ?y (chatgpt-shell--pretty-smerge-insert
+                    :text body
+                    :start (map-elt origin :start)
+                    :end (map-elt origin :end)
+                    :buffer (map-elt origin :buffer)))
+            (progn
+              (map-put! origin :end (+ (map-elt origin :start)
+                                       (length body)))
+              (map-put! origin :text body)
+              (setq chatgpt-shell-prompt-compose--last-known-region origin))
           (set-window-configuration window-config))))))
 
 (defun chatgpt-shell-prompt-compose-next-block ()
