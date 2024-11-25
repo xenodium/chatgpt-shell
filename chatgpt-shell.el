@@ -2921,9 +2921,12 @@ SYSTEM-PROMPT (optional): As string."
                                                          :end (map-elt region :end)
                                                          :buffer buffer
                                                          :iterate on-iterate)))
-                                            (when (and on-iterate
-                                                       (eq choice ?i))
-                                              (funcall on-iterate output))))))
+                                            (cond ((and on-iterate
+                                                        (eq choice ?i))
+                                                   (funcall on-iterate output))
+                                                  ((eq choice ?n)
+                                                   (set-mark (map-elt region :end))
+                                                   (goto-char (map-elt region :start))))))))
                         :on-failure (lambda (output)
                                       (with-current-buffer buffer
                                         (chatgpt-shell--fader-stop-fading)
