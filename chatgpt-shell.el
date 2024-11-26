@@ -1139,7 +1139,7 @@ Could be a prompt or a source block."
            (goto-char prompt-pos)))))
 
 (defun chatgpt-shell-previous-source-block ()
-  "Move point to the next source block's body."
+  "Move point to the previous source block's body."
   (interactive)
   (let ((blocks (chatgpt-shell--source-blocks))
         (pos (point)))
