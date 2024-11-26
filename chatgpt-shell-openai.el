@@ -59,6 +59,7 @@
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
+  ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
          :token-width 3

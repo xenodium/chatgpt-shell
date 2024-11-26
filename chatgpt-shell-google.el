@@ -75,6 +75,8 @@ If you use Gemini through a proxy service, change the URL base."
 
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
+  ;; Context windows have been verified as of 11/26/2024. See
+  ;; https://ai.google.dev/gemini-api/docs/models/gemini.
   (list (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
                                          :short-version "1.5-pro-latest"
                                          :path "/v1beta/models/gemini-1.5-pro-latest"
@@ -84,7 +86,7 @@ If you use Gemini through a proxy service, change the URL base."
                                          :short-version "1.5-flash"
                                          :path "/v1beta/models/gemini-1.5-flash"
                                          :token-width 4
-                                         :context-window 2097152)))
+                                         :context-window 1048576)))
 
 (defun chatgpt-shell-google--validate-command (_command)
   "Return error string if command/setup isn't valid."

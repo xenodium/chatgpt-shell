@@ -60,6 +60,8 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
 
 (defun chatgpt-shell-ollama-models ()
   "Build a list of Ollama LLM models available."
+  ;; Context windows have been verified via ollama show <model> as of
+  ;; 11/26/2024.
   (list (chatgpt-shell-ollama-make-model
          :version "gemma2:2b"
          :token-width 4
@@ -67,15 +69,15 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
         (chatgpt-shell-ollama-make-model
          :version "llama3.2"
          :token-width 4
-         :context-window 8192)
+         :context-window 131072)
         (chatgpt-shell-ollama-make-model
          :version "llama3.2:1b"
          :token-width 4
-         :context-window 8192)
+         :context-window 131072)
         (chatgpt-shell-ollama-make-model
          :version "qwen2.5-coder"
          :token-width 4
-         :context-window 8192)))
+         :context-window 32768)))
 
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
