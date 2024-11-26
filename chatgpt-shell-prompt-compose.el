@@ -46,6 +46,7 @@
 (declare-function chatgpt-shell--primary-buffer "chatgpt-shell")
 (declare-function chatgpt-shell--eshell-last-last-command "chatgpt-shell")
 (declare-function chatgpt-shell-mark-block "chatgpt-shell")
+(declare-function chatgpt-shell--region "chatgpt-shell")
 
 (defvar-local chatgpt-shell-prompt-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
@@ -171,11 +172,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                      (when-let ((region-active (region-active-p))
                                 (region (buffer-substring (region-beginning)
                                                           (region-end))))
-                       (setq region-details
-                             (list (cons :buffer (current-buffer))
-                                   (cons :start (region-beginning))
-                                   (cons :end (region-end))
-                                   (cons :text region)))
+                       (setq region-details (chatgpt-shell--region))
                        (deactivate-mark)
                        (concat (if-let ((buffer-file-name (buffer-file-name))
                                         (name (file-name-nondirectory buffer-file-name))
