@@ -3026,10 +3026,10 @@ Return non-nil if either inserted or cancelled (for manual merge)."
                 (setq outcome
                       (if iterate
                           (read-char-choice (substitute-command-keys
-                                             "Keep change? (\\`y' or \\`n') / Iterate? (\\`i'): ")
+                                             "Apply change? (\\`y' or \\`n') / Iterate? (\\`i'): ")
                                             '(?y ?n ?i))
                         (read-char-choice (substitute-command-keys
-                                           "Keep change? (\\`y' or \\`n'): ")
+                                           "Apply change? (\\`y' or \\`n'): ")
                                           '(?y ?n))))
                 (cond
                  ((eq outcome ?y)
