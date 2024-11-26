@@ -1288,7 +1288,7 @@ See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language.
   (interactive)
   (let* ((region (chatgpt-shell--region))
          (query (map-elt region :text))
-         (context))
+         (context nil))
     (chatgpt-shell-request-and-insert-merged-response
      :system-prompt chatgpt-shell-prompt-header-proofread-region
      :query query
@@ -1766,13 +1766,14 @@ Display result in org table of the form:
 8. Do NOT add any text or explanations outside the org table.")))
 
 ;; TODO: Make service agnostic.
-(cl-defun chatgpt-shell-lookup (&key buffer system-prompt prompt prompt-url streaming
+(cl-defun chatgpt-shell-lookup (&key buffer model-version system-prompt prompt prompt-url streaming
                                      temperature on-success on-failure)
   "Look something up as a one-off (no shell history) and output to BUFFER.
 
 Inputs:
 
-Either (or all) of SYSTEM-PROMPT, PROMPT, PROMPT-URL (image file).
+Either (or all) of MODEL-VERSION, SYSTEM-PROMPT, PROMPT,
+and PROMPT-URL (image file).
 
 Optionally:
 
@@ -1791,7 +1792,8 @@ ON-FAILURE: (lambda (output)) for completion event."
                      (define-key map (kbd "q") 'kill-buffer-and-window)
                      map))
     (setq buffer-read-only t))
-  (let* ((model (chatgpt-shell--resolved-model))
+  (let* ((model (or (chatgpt-shell--resolved-model :versioned model-version)
+                    (error "Model \"%s\" not found" model-version)))
          (settings (list (cons :streaming streaming)
                          (cons :temperature temperature)
                          (cons :system-prompt system-prompt)))
