@@ -63,22 +63,22 @@
          :version "chatgpt-4o-latest"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-4o
-         :context-window 12800)
+         :context-window 128000)
         (chatgpt-shell-openai-make-model
          :version "o1-preview"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
-         :context-window 12800)
+         :context-window 128000)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01-mini
-         :context-window 12800)
+         :context-window 128000)
         (chatgpt-shell-openai-make-model
          :version "gpt-4o"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-40
-         :context-window 12800)))
+         :context-window 128000)))
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
