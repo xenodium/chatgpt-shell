@@ -3033,9 +3033,11 @@ Return non-nil if either inserted or cancelled (for manual merge)."
                                           '(?y ?n))))
                 (cond
                  ((eq outcome ?y)
-                  (smerge-keep-lower))
+                  (smerge-keep-lower)
+                  (message "Applied"))
                  ((eq outcome ?n)
-                  (smerge-keep-upper))
+                  (smerge-keep-upper)
+                  (message "Skipped"))
                  ((eq outcome ?i)
                   (smerge-keep-upper))
                  (t
