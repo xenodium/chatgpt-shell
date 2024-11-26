@@ -61,6 +61,10 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
 (defun chatgpt-shell-ollama-models ()
   "Build a list of Ollama LLM models available."
   (list (chatgpt-shell-ollama-make-model
+         :version "gemma2:2b"
+         :token-width 4
+         :context-window 8192)
+        (chatgpt-shell-ollama-make-model
          :version "llama3.2"
          :token-width 4
          :context-window 8192)
@@ -69,7 +73,7 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
          :token-width 4
          :context-window 8192)
         (chatgpt-shell-ollama-make-model
-         :version "gemma2:2b"
+         :version "qwen2.5-coder"
          :token-width 4
          :context-window 8192)))
 
