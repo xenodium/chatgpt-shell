@@ -1087,17 +1087,14 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
        (group "```") (or "\n" eol)))
 
 (defun chatgpt-shell-next-source-block ()
-  "Move point to previous source block."
+  "Move point to the next source block's body."
   (interactive)
-  (when-let
-      ((next-block
-        (save-excursion
-          (when-let ((current (chatgpt-shell-markdown-block-at-point)))
-            (goto-char (map-elt current 'end))
-            (end-of-line))
-          (when (re-search-forward chatgpt-shell--source-block-regexp nil t)
-            (chatgpt-shell--match-source-block)))))
-    (goto-char (car (map-elt next-block 'body)))))
+  (let ((blocks (chatgpt-shell--source-blocks))
+        (pos (point)))
+    (when-let ((next-block (seq-find (lambda (block)
+                                       (>= (car (map-elt block 'start)) pos))
+                                     blocks)))
+      (goto-char (car (map-elt next-block 'start))))))
 
 (defun chatgpt-shell-previous-item ()
   "Go to previous item.
@@ -1142,17 +1139,14 @@ Could be a prompt or a source block."
            (goto-char prompt-pos)))))
 
 (defun chatgpt-shell-previous-source-block ()
-  "Move point to previous source block."
+  "Move point to the next source block's body."
   (interactive)
-  (when-let
-      ((previous-block
-        (save-excursion
-          (when-let ((current (chatgpt-shell-markdown-block-at-point)))
-            (goto-char (map-elt current 'start))
-            (forward-line 0))
-          (when (re-search-backward chatgpt-shell--source-block-regexp nil t)
-            (chatgpt-shell--match-source-block)))))
-    (goto-char (car (map-elt previous-block 'body)))))
+  (let ((blocks (chatgpt-shell--source-blocks))
+        (pos (point)))
+    (when-let ((next-block (seq-find (lambda (block)
+                                       (< (car (map-elt block 'end)) pos))
+                                     blocks)))
+      (goto-char (car (map-elt next-block 'start))))))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--match-source-block ()

@@ -410,7 +410,8 @@ If BACKWARDS is non-nil, go to previous interaction."
              (next (with-current-buffer (chatgpt-shell--primary-buffer)
                      (shell-maker-next-command-and-response backwards))))
     (chatgpt-shell-prompt-compose-replace-interaction
-     (car next) (cdr next))))
+     (car next) (cdr next))
+    next))
 
 (defun chatgpt-shell-prompt-compose-previous-interaction ()
   "Show previous interaction (request / response)."
@@ -524,10 +525,11 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((before (point)))
-    (call-interactively #'chatgpt-shell-next-source-block)
-    (call-interactively #'chatgpt-shell-mark-block)
-    (when (eq before (point))
-      (chatgpt-shell-prompt-compose-next-interaction))))
+    (if (call-interactively #'chatgpt-shell-next-source-block)
+        (call-interactively #'chatgpt-shell-mark-block)
+      (chatgpt-shell-prompt-compose-next-interaction)
+      (when (eq before (point))
+        (user-error "No more left")))))
 
 (defun chatgpt-shell-prompt-compose-previous-block ()
   "Jump to and select previous code block."
@@ -535,10 +537,13 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (let ((before (point)))
-    (call-interactively #'chatgpt-shell-previous-source-block)
-    (call-interactively #'chatgpt-shell-mark-block)
-    (when (eq before (point))
-      (chatgpt-shell-prompt-compose-previous-interaction))))
+    (if (call-interactively #'chatgpt-shell-previous-source-block)
+        (call-interactively #'chatgpt-shell-mark-block)
+      (unless (chatgpt-shell-prompt-compose-previous-interaction)
+        (deactivate-mark)
+        (goto-char (point-min)))
+      (when (eq before (point))
+        (user-error "No more left")))))
 
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."
