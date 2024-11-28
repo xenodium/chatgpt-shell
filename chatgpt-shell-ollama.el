@@ -29,6 +29,8 @@
   (require 'cl-lib))
 (require 'shell-maker)
 (require 'map)
+(require 'seq)
+(require 'subr-x)
 
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
@@ -83,6 +85,65 @@ VALIDATE-COMMAND handler."
          :version "qwen2.5-coder"
          :token-width 4
          :context-window 32768)))
+
+(defun chatgpt-shell-ollama--fetch-model-versions ()
+  (mapcar (lambda (model)
+            (string-remove-suffix ":latest" (map-elt model 'name)))
+          (map-elt (shell-maker--json-parse-string
+                    (map-elt (shell-maker-make-http-request
+                              :async nil
+                              :url (concat chatgpt-shell-ollama-api-url-base "/api/tags"))
+                             :output))
+                   'models)))
+
+(defun chatgpt-shell-ollama--parse-token-width (quantization)
+  (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
+  (string-to-number (match-string 1 quantization)))
+
+(defun chatgpt-shell-ollama--make-model (version)
+  (let* ((data (shell-maker--json-parse-string
+                (map-elt (shell-maker-make-http-request
+                          :async nil
+                          :url (concat chatgpt-shell-ollama-api-url-base "/api/show")
+                          :data `((model . ,version)))
+                         :output)))
+         (token-width (chatgpt-shell-ollama--parse-token-width
+                       (map-elt (map-elt data 'details) 'quantization_level)))
+         (context-window (cdr (cl-find-if (lambda (cell)
+                                            (string-suffix-p "context_length" (symbol-name (car cell))))
+                                          (map-elt data 'model_info)))))
+    (chatgpt-shell-ollama-make-model
+     :version version
+     :token-width token-width
+     :context-window context-window)))
+
+(cl-defun chatgpt-shell-ollama-load-models (&key override)
+  "Query ollama for the locally installed models and add them to
+`chatgpt-shell-models' unless a model with the same name is
+already present. If OVERRIDE is non-nil (interactively with a
+prefix argument), remove all ollama models from
+`chatgpt-shell-models' before inserting locally installed models."
+  (interactive (list :override current-prefix-arg))
+  (let* ((ollama-predicate (lambda (model)
+                             (string= (map-elt model :provider) "Ollama")))
+         ;; Find the index of the first ollama model so that the new ones will
+         ;; be placed in the same part of the list.
+         (ollama-index (or (cl-position-if ollama-predicate chatgpt-shell-models)
+                           (length chatgpt-shell-models))))
+    (when override
+      (setq chatgpt-shell-models (cl-remove-if ollama-predicate chatgpt-shell-models)))
+    (let* ((existing-ollama-versions (mapcar (lambda (model)
+                                               (map-elt model :version))
+                                             (cl-remove-if-not ollama-predicate
+                                                               chatgpt-shell-models)))
+           (new-ollama-versions (cl-remove-if (lambda (version)
+                                                (member version existing-ollama-versions))
+                                              (chatgpt-shell-ollama--fetch-model-versions)))
+           (new-ollama-models (mapcar #'chatgpt-shell-ollama--make-model new-ollama-versions)))
+      (setq chatgpt-shell-models
+            (append (seq-take chatgpt-shell-models ollama-index)
+                    new-ollama-models
+                    (seq-drop chatgpt-shell-models ollama-index))))))
 
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
