@@ -1,11 +1,10 @@
-;;; chatgpt-shell.el --- OpenAI-specific logic  -*- lexical-binding: t -*-
+;;; chatgpt-shell-openai.el --- OpenAI-specific logic  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 1.23.1
-;; Package-Requires: ((emacs "28.1") (shell-maker "0.62.1"))
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.72.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -28,11 +27,17 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'map)
+(require 'shell-maker)
+
+(declare-function chatgpt-shell-crop-context "chatgpt-shell")
+(declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command)
   "Create an OpenAI model.
 
- Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
+Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
+VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width

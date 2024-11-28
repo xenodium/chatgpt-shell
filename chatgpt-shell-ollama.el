@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "29.1") (shell-maker "0.72.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -26,6 +27,12 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'shell-maker)
+(require 'map)
+
+(declare-function chatgpt-shell-crop-context "chatgpt-shell")
+(declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
+(declare-function chatgpt-shell-openai--user-assistant-messages "chatgpt-shell-openai")
 
 (cl-defun chatgpt-shell-ollama-make-model (&key version
                                                 short-version
@@ -33,7 +40,8 @@
                                                 context-window)
   "Create an Ollama model.
 
- Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
+Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
+VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width

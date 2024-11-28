@@ -4,6 +4,7 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.72.1"))
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -26,6 +27,10 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'shell-maker)
+(require 'map)
+
+(declare-function chatgpt-shell-previous-source-block "chatgpt-shell")
 
 (defcustom chatgpt-shell-anthropic-key nil
   "Anthropic API key as a string or a function that loads and returns it."
@@ -50,7 +55,8 @@ If you use Claude through a proxy service, change the URL base."
                                                     context-window)
   "Create an Anthropic model.
 
- Set VERSION, SHORT-VERSION, TOKEN-WIDTH, MAX-TOKENS, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
+Set VERSION, SHORT-VERSION, TOKEN-WIDTH, MAX-TOKENS, CONTEXT-WINDOW and
+VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width

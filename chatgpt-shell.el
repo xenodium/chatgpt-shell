@@ -334,16 +334,6 @@ Or nil if none."
                  (const :tag "No Prompt" nil))
   :group 'chatgpt-shell)
 
-(defun chatgpt-shell--model-settings ()
-  "Variable model settings.
-
-See `chatgpt-shell-streaming'
-    `chatgpt-shell-model-temperature'
-    variable `chatgpt-shell-system-prompt'."
-  (list (cons :streaming chatgpt-shell-streaming)
-        (cons :temperature chatgpt-shell-model-temperature)
-        (cons :system-prompt (chatgpt-shell-system-prompt))))
-
 (defun chatgpt-shell-model-version ()
   "Return active model version."
   (when (boundp 'chatgpt-shell-model-versions)
@@ -509,6 +499,16 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
   :type 'boolean
   :group 'chatgpt-shell)
+
+(defun chatgpt-shell--model-settings ()
+  "Variable model settings.
+
+See `chatgpt-shell-streaming'
+    `chatgpt-shell-model-temperature'
+    variable `chatgpt-shell-system-prompt'."
+  (list (cons :streaming chatgpt-shell-streaming)
+        (cons :temperature chatgpt-shell-model-temperature)
+        (cons :system-prompt (chatgpt-shell-system-prompt))))
 
 (defcustom chatgpt-shell-highlight-blocks t
   "Whether or not to highlight source blocks."
