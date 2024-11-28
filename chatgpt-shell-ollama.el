@@ -31,12 +31,9 @@
                                                 short-version
                                                 token-width
                                                 context-window)
-  "Create an Ollama model configuration.
+  "Create an Ollama model.
 
-VERSION: Mandatory. The version of the model as a string.
-SHORT-VERSION: Optional. A shortened version identifier as a string.
-TOKEN-WIDTH: Mandatory. Approximate token width (in chars) limit as integer.
-CONTEXT-WINDOW: Mandatory. The context window size as an integer."
+ Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width

@@ -48,13 +48,9 @@ If you use Claude through a proxy service, change the URL base."
                                                     token-width
                                                     max-tokens
                                                     context-window)
-  "Create an Anthropic model configuration.
+  "Create an Anthropic model.
 
-VERSION: Mandatory. The version of the model as a string.
-SHORT-VERSION: Optional. A shortened version identifier as a string.
-TOKEN-WIDTH: Mandatory. Approximate token width (in chars) limit as integer.
-MAX-TOKENS: Mandatory. The maximum number of tokens to generate before stopping.
-CONTEXT-WINDOW: Mandatory. The context window size as an integer."
+ Set VERSION, SHORT-VERSION, TOKEN-WIDTH, MAX-TOKENS, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
@@ -102,7 +98,7 @@ CONTEXT-WINDOW: Mandatory. The context window size as an integer."
           (or (map-elt model :path)
               (error "Model :path not found"))))
 
-(defun chatgpt-shell-anthropic--validate-command (_command)
+(defun chatgpt-shell-anthropic--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
   (unless chatgpt-shell-anthropic-key
     "Variable `chatgpt-shell-anthropic-key' needs to be set to your key.

@@ -226,7 +226,7 @@ See `chatgpt-shell-openai-models',
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-model-version nil
-  "The active ChatGPT OpenAI model index.
+  "The active model version as either a string.
 
 See `chatgpt-shell-models' for available model versions.
 
@@ -334,6 +334,16 @@ Or nil if none."
                  (const :tag "No Prompt" nil))
   :group 'chatgpt-shell)
 
+(defun chatgpt-shell--model-settings ()
+  "Variable model settings.
+
+See `chatgpt-shell-streaming'
+    `chatgpt-shell-model-temperature'
+    variable `chatgpt-shell-system-prompt'."
+  (list (cons :streaming chatgpt-shell-streaming)
+        (cons :temperature chatgpt-shell-model-temperature)
+        (cons :system-prompt (chatgpt-shell-system-prompt))))
+
 (defun chatgpt-shell-model-version ()
   "Return active model version."
   (when (boundp 'chatgpt-shell-model-versions)
@@ -345,7 +355,8 @@ Or nil if none."
                                               (cond ((not (map-elt model :validate-command))
                                                      t)
                                                     ((and (map-elt model :validate-command)
-                                                          (not (funcall (map-elt model :validate-command) "hello")))
+                                                          (not (funcall (map-elt model :validate-command)
+                                                                        "hello" model nil)))
                                                      t)
                                                     (t
                                                      nil)))
@@ -551,8 +562,9 @@ See `shell-maker-welcome-message' as an example."
    :validate-command
    (lambda (command)
      (when-let* ((model (chatgpt-shell--resolved-model))
+                 (settings (chatgpt-shell--model-settings))
                  (validate-command (map-elt model :validate-command)))
-       (funcall validate-command command)))
+       (funcall validate-command command model settings)))
    :execute-command
    (lambda (command shell)
      (if-let* ((model (chatgpt-shell--resolved-model))
@@ -565,9 +577,7 @@ See `shell-maker-welcome-message' as an example."
                             :command command
                             :context (map-elt shell :history))
                   :shell shell
-                  :settings (list (cons :streaming chatgpt-shell-streaming)
-                                  (cons :temperature chatgpt-shell-model-temperature)
-                                  (cons :system-prompt (chatgpt-shell-system-prompt))))
+                  :settings (chatgpt-shell--model-settings))
        (error "%s not found" (chatgpt-shell-model-version))))
    :on-command-finished
    (lambda (command output success)

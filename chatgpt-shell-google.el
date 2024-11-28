@@ -46,7 +46,9 @@ If you use Gemini through a proxy service, change the URL base."
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
 (cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window)
-  "Create an Google model with VERSION and TOKEN-WIDTH."
+  "Create a Google model.
+
+ Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless short-version
@@ -88,7 +90,7 @@ If you use Gemini through a proxy service, change the URL base."
                                          :token-width 4
                                          :context-window 1048576)))
 
-(defun chatgpt-shell-google--validate-command (_command)
+(defun chatgpt-shell-google--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
   (unless chatgpt-shell-google-key
     "Variable `chatgpt-shell-google-key' needs to be set to your key.

@@ -29,8 +29,10 @@
 (eval-when-compile
   (require 'cl-lib))
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window)
-  "Create an OpenAI model with VERSION and TOKEN-WIDTH."
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command)
+  "Create an OpenAI model.
+
+ Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
@@ -55,7 +57,7 @@
     (:url . chatgpt-shell-openai--make-url)
     (:key . chatgpt-shell-openai-key)
     (:url-base . chatgpt-shell-api-url-base)
-    (:validate-command . chatgpt-shell-openai--validate-command)))
+    (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))))
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
@@ -69,12 +71,26 @@
          :version "o1-preview"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
-         :context-window 128000)
+         :context-window 128000
+         :validate-command
+         ;; TODO: Standardize whether or not a model supports system prompts.
+         (lambda (command model settings)
+           (or (chatgpt-shell-openai--validate-command command model settings)
+               (when (map-elt settings :system-prompt)
+                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
+                         (map-elt model :version))))))
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01-mini
-         :context-window 128000)
+         :context-window 128000
+         :validate-command
+         ;; TODO: Standardize whether or not a model supports system prompts.
+         (lambda (command model settings)
+           (or (chatgpt-shell-openai--validate-command command model settings)
+               (when (map-elt settings :system-prompt)
+                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
+                         (map-elt model :version))))))
         (chatgpt-shell-openai-make-model
          :version "gpt-4o"
          :token-width 3
@@ -229,7 +245,7 @@ Otherwise:
   (list "Content-Type: application/json; charset=utf-8"
         (format "Authorization: Bearer %s" (chatgpt-shell-openai-key))))
 
-(defun chatgpt-shell-openai--validate-command (_command)
+(defun chatgpt-shell-openai--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
   (unless chatgpt-shell-openai-key
     "Variable `chatgpt-shell-openai-key' needs to be set to your key.
