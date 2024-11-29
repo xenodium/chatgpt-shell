@@ -33,6 +33,8 @@
 (require 'seq)
 (require 'subr-x)
 
+;; Muffle warning about free variable.
+(defvar chatgpt-shell-models)
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-openai--user-assistant-messages "chatgpt-shell-openai")
@@ -65,6 +67,16 @@ VALIDATE-COMMAND handler."
     (:filter . chatgpt-shell-ollama--extract-ollama-response)
     (:payload . chatgpt-shell-ollama-make-payload)
     (:url . chatgpt-shell-ollama--make-url)))
+
+(defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
+  "Ollama API's base URL.
+
+API url = base + path.
+
+If you use Ollama through a proxy service, change the URL base."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
 
 (defun chatgpt-shell-ollama-models ()
   "Build a list of Ollama LLM models available."
@@ -167,16 +179,6 @@ replace all models with locally installed ollama models."
                                                 :settings settings)
    :filter #'chatgpt-shell-ollama--extract-ollama-response
    :shell shell))
-
-(defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
-"Ollama API's base URL.
-
-API url = base + path.
-
-If you use Ollama through a proxy service, change the URL base."
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-ollama--make-url (&key _model _settings)
   "Create the API URL using MODEL and SETTINGS."
