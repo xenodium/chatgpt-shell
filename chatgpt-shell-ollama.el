@@ -100,7 +100,7 @@ VALIDATE-COMMAND handler."
   (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
   (string-to-number (match-string 1 quantization)))
 
-(defun chatgpt-shell-ollama--make-model (version)
+(defun chatgpt-shell-ollama--fetch-model (version)
   (let* ((data (shell-maker--json-parse-string
                 (map-elt (shell-maker-make-http-request
                           :async nil
@@ -142,7 +142,7 @@ replace all models with locally installed ollama models."
            (new-ollama-versions (cl-remove-if (lambda (version)
                                                 (member version existing-ollama-versions))
                                               (chatgpt-shell-ollama--fetch-model-versions)))
-           (new-ollama-models (mapcar #'chatgpt-shell-ollama--make-model new-ollama-versions)))
+           (new-ollama-models (mapcar #'chatgpt-shell-ollama--fetch-model new-ollama-versions)))
       (setq chatgpt-shell-models
             (append (seq-take chatgpt-shell-models ollama-index)
                     new-ollama-models
