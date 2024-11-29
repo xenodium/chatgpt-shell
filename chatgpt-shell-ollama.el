@@ -120,9 +120,10 @@ VALIDATE-COMMAND handler."
 (cl-defun chatgpt-shell-ollama-load-models (&key override)
   "Query ollama for the locally installed models and add them to
 `chatgpt-shell-models' unless a model with the same name is
-already present. If OVERRIDE is non-nil (interactively with a
-prefix argument), remove all ollama models from
-`chatgpt-shell-models' before inserting locally installed models."
+already present. By default, replace the ollama models in
+`chatgpt-shell-models' locally installed ollama models. When
+OVERRIDE is non-nil (interactively with a prefix argument),
+replace all models with locally installed ollama models."
   (interactive (list :override current-prefix-arg))
   (let* ((ollama-predicate (lambda (model)
                              (string= (map-elt model :provider) "Ollama")))
@@ -130,8 +131,8 @@ prefix argument), remove all ollama models from
          ;; be placed in the same part of the list.
          (ollama-index (or (cl-position-if ollama-predicate chatgpt-shell-models)
                            (length chatgpt-shell-models))))
-    (when override
-      (setq chatgpt-shell-models (cl-remove-if ollama-predicate chatgpt-shell-models)))
+    (setq chatgpt-shell-models (and (not override)
+                                    (cl-remove-if ollama-predicate chatgpt-shell-models)))
     (let* ((existing-ollama-versions (mapcar (lambda (model)
                                                (map-elt model :version))
                                              (cl-remove-if-not ollama-predicate
