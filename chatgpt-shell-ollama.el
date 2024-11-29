@@ -109,6 +109,8 @@ VALIDATE-COMMAND handler."
                          :output)))
          (token-width (chatgpt-shell-ollama--parse-token-width
                        (map-elt (map-elt data 'details) 'quantization_level)))
+         ;; The context length key depends on the name of the model. For qwen2,
+         ;; it's at: model_info -> qwen2.context_length.
          (context-window (cdr (cl-find-if (lambda (cell)
                                             (string-suffix-p "context_length" (symbol-name (car cell))))
                                           (map-elt data 'model_info)))))
