@@ -144,7 +144,10 @@ replace all models with locally installed ollama models."
       (setq chatgpt-shell-models
             (append (seq-take chatgpt-shell-models ollama-index)
                     new-ollama-models
-                    (seq-drop chatgpt-shell-models ollama-index))))))
+                    (seq-drop chatgpt-shell-models ollama-index)))
+      (message "Added %d ollama model(s); kept %d existing ollama model(s)"
+               (length new-ollama-models)
+               (length existing-ollama-versions)))))
 
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
