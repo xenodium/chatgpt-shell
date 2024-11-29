@@ -59,10 +59,10 @@ VALIDATE-COMMAND handler."
     (error "Missing mandatory :short-version param"))
   (unless path
     (error "Missing mandatory :path param"))
-  (unless (integerp token-width)
-    (error ":token-width must be an integer"))
-  (unless (integerp context-window)
-    (error ":context-window must be an integer"))
+  (unless token-width
+    (error "Missing mandatory :token-width param for %s" version))
+  (unless context-window
+    (error "Missing mandatory :context-window param for %s" version))
   `((:version . ,version)
     (:short-version . ,short-version)
     (:label . "Gemini")

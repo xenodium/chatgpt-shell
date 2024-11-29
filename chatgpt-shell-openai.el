@@ -41,9 +41,9 @@ VALIDATE-COMMAND handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
-    (error "Missing mandatory :token-width param"))
+    (error "Missing mandatory :token-width param for %s" version))
   (unless context-window
-    (error "Missing mandatory :context-window param"))
+    (error "Missing mandatory :context-window param for %s" version))
   (unless (integerp token-width)
     (error ":token-width must be an integer"))
   (unless (integerp context-window)

@@ -65,10 +65,10 @@ VALIDATE-COMMAND handler."
     (error "Missing mandatory :max-tokens param"))
   (unless context-window
     (error "Missing mandatory :context-window param"))
-  (unless (integerp token-width)
-    (error ":token-width must be an integer"))
-  (unless (integerp context-window)
-    (error ":context-window must be an integer"))
+  (unless token-width
+    (error "Missing mandatory :token-width param for %s" version))
+  (unless context-window
+    (error "Missing mandatory :context-window param for %s" version))
   `((:provider . "Anthropic")
     (:label . "Claude")
     (:path . "/v1/messages")
