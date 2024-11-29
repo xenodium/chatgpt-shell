@@ -27,9 +27,14 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'let-alist)
 (require 'shell-maker)
 (require 'map)
+(require 'seq)
+(require 'subr-x)
 
+;; Muffle warning about free variable.
+(defvar chatgpt-shell-models)
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-openai--user-assistant-messages "chatgpt-shell-openai")
@@ -63,6 +68,16 @@ VALIDATE-COMMAND handler."
     (:payload . chatgpt-shell-ollama-make-payload)
     (:url . chatgpt-shell-ollama--make-url)))
 
+(defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
+  "Ollama API's base URL.
+
+API url = base + path.
+
+If you use Ollama through a proxy service, change the URL base."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
 (defun chatgpt-shell-ollama-models ()
   "Build a list of Ollama LLM models available."
   ;; Context windows have been verified via ollama show <model> as of
@@ -84,6 +99,72 @@ VALIDATE-COMMAND handler."
          :token-width 4
          :context-window 32768)))
 
+(defun chatgpt-shell-ollama--fetch-model-versions ()
+  (mapcar (lambda (model)
+            (string-remove-suffix ":latest" (map-elt model 'name)))
+          (map-elt (shell-maker--json-parse-string
+                    (map-elt (shell-maker-make-http-request
+                              :async nil
+                              :url (concat chatgpt-shell-ollama-api-url-base "/api/tags"))
+                             :output))
+                   'models)))
+
+(defun chatgpt-shell-ollama--parse-token-width (quantization)
+  (when (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
+    (string-to-number (match-string 1 quantization))))
+
+(defun chatgpt-shell-ollama--fetch-model (version)
+  (let* ((data (shell-maker--json-parse-string
+                (map-elt (shell-maker-make-http-request
+                          :async nil
+                          :url (concat chatgpt-shell-ollama-api-url-base "/api/show")
+                          :data `((model . ,version)))
+                         :output)))
+         (token-width (let-alist data
+                        (chatgpt-shell-ollama--parse-token-width
+                         .details.quantization_level)))
+         ;; The context length key depends on the name of the model. For qwen2,
+         ;; it's at: model_info -> qwen2.context_length.
+         (context-window (cdr (cl-find-if (lambda (cell)
+                                            (string-suffix-p "context_length" (symbol-name (car cell))))
+                                          (map-elt data 'model_info)))))
+    (chatgpt-shell-ollama-make-model
+     :version version
+     :token-width token-width
+     :context-window context-window)))
+
+(cl-defun chatgpt-shell-ollama-load-models (&key override)
+  "Query ollama for the locally installed models and add them to
+`chatgpt-shell-models' unless a model with the same name is
+already present. By default, replace the ollama models in
+`chatgpt-shell-models' locally installed ollama models. When
+OVERRIDE is non-nil (interactively with a prefix argument),
+replace all models with locally installed ollama models."
+  (interactive (list :override current-prefix-arg))
+  (let* ((ollama-predicate (lambda (model)
+                             (string= (map-elt model :provider) "Ollama")))
+         ;; Find the index of the first ollama model so that the new ones will
+         ;; be placed in the same part of the list.
+         (ollama-index (or (cl-position-if ollama-predicate chatgpt-shell-models)
+                           (length chatgpt-shell-models))))
+    (setq chatgpt-shell-models (and (not override)
+                                    (cl-remove-if ollama-predicate chatgpt-shell-models)))
+    (let* ((existing-ollama-versions (mapcar (lambda (model)
+                                               (map-elt model :version))
+                                             (cl-remove-if-not ollama-predicate
+                                                               chatgpt-shell-models)))
+           (new-ollama-versions (cl-remove-if (lambda (version)
+                                                (member version existing-ollama-versions))
+                                              (chatgpt-shell-ollama--fetch-model-versions)))
+           (new-ollama-models (mapcar #'chatgpt-shell-ollama--fetch-model new-ollama-versions)))
+      (setq chatgpt-shell-models
+            (append (seq-take chatgpt-shell-models ollama-index)
+                    new-ollama-models
+                    (seq-drop chatgpt-shell-models ollama-index)))
+      (message "Added %d ollama model(s); kept %d existing ollama model(s)"
+               (length new-ollama-models)
+               (length existing-ollama-versions)))))
+
 (cl-defun chatgpt-shell-ollama--handle-ollama-command (&key model command context shell settings)
   "Handle Ollama shell COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (shell-maker-make-http-request
@@ -98,16 +179,6 @@ VALIDATE-COMMAND handler."
                                                 :settings settings)
    :filter #'chatgpt-shell-ollama--extract-ollama-response
    :shell shell))
-
-(defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
-"Ollama API's base URL.
-
-API url = base + path.
-
-If you use Ollama through a proxy service, change the URL base."
-  :type 'string
-  :safe #'stringp
-  :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-ollama--make-url (&key _model _settings)
   "Create the API URL using MODEL and SETTINGS."
