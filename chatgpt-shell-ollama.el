@@ -98,8 +98,8 @@ VALIDATE-COMMAND handler."
                    'models)))
 
 (defun chatgpt-shell-ollama--parse-token-width (quantization)
-  (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
-  (string-to-number (match-string 1 quantization)))
+  (when (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
+    (string-to-number (match-string 1 quantization))))
 
 (defun chatgpt-shell-ollama--fetch-model (version)
   (let* ((data (shell-maker--json-parse-string
