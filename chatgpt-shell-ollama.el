@@ -27,6 +27,7 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'let-alist)
 (require 'shell-maker)
 (require 'map)
 (require 'seq)
@@ -107,8 +108,9 @@ VALIDATE-COMMAND handler."
                           :url (concat chatgpt-shell-ollama-api-url-base "/api/show")
                           :data `((model . ,version)))
                          :output)))
-         (token-width (chatgpt-shell-ollama--parse-token-width
-                       (map-elt (map-elt data 'details) 'quantization_level)))
+         (token-width (let-alist data
+                        (chatgpt-shell-ollama--parse-token-width
+                         .details.quantization_level)))
          ;; The context length key depends on the name of the model. For qwen2,
          ;; it's at: model_info -> qwen2.context_length.
          (context-window (cdr (cl-find-if (lambda (cell)
