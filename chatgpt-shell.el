@@ -55,6 +55,7 @@
 (require 'chatgpt-shell-google)
 (require 'chatgpt-shell-ollama)
 (require 'chatgpt-shell-openai)
+(require 'chatgpt-shell-perplexity)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -212,7 +213,8 @@ It returns a list containing all available models from these providers."
   (append (chatgpt-shell-openai-models)
           (chatgpt-shell-anthropic-models)
           (chatgpt-shell-google-models)
-          (chatgpt-shell-ollama-models)))
+          (chatgpt-shell-ollama-models)
+          (chatgpt-shell-perplexity-models)))
 
 (defcustom chatgpt-shell-models
   (chatgpt-shell--make-default-models)
