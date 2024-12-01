@@ -53,6 +53,7 @@
 (require 'chatgpt-shell-prompt-compose)
 (require 'chatgpt-shell-anthropic)
 (require 'chatgpt-shell-google)
+(require 'chatgpt-shell-kagi)
 (require 'chatgpt-shell-ollama)
 (require 'chatgpt-shell-openai)
 (require 'chatgpt-shell-perplexity)
@@ -213,6 +214,7 @@ It returns a list containing all available models from these providers."
   (append (chatgpt-shell-openai-models)
           (chatgpt-shell-anthropic-models)
           (chatgpt-shell-google-models)
+          (chatgpt-shell-kagi-models)
           (chatgpt-shell-ollama-models)
           (chatgpt-shell-perplexity-models)))
 
@@ -1811,7 +1813,8 @@ ON-FAILURE: (lambda (output)) for completion event."
                          (cons :system-prompt system-prompt)))
          (url (funcall (map-elt model :url)
                        :model model
-                       :settings settings))
+                       :settings settings
+                       :command prompt))
          (headers (when (map-elt model :headers)
                     (funcall (map-elt model :headers)
                              :model model
@@ -1896,9 +1899,9 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
                          (cons :system-prompt system-prompt)))
          (url (funcall (map-elt model :url)
                        :model model
-                       :settings settings))
-         (payload (or (map-elt model :payload)
-                      (error "Model :payload not found")))
+                       :settings settings
+                       :command (car (car (last context)))))
+         (payload (map-elt model :payload))
          (filter (or (map-elt model :filter)
                      (error "Model :filter not found")))
          (headers (map-elt model :headers)))
@@ -1915,10 +1918,11 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
             (shell-maker-make-http-request
              :async t
              :url url
-             :data (funcall payload
-                            :model model
-                            :context context
-                            :settings settings)
+             :data (when payload
+                     (funcall payload
+                              :model model
+                              :context context
+                              :settings settings))
              :headers (when headers
                         (funcall headers
                                  :model model
@@ -1936,10 +1940,11 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
              (shell-maker-make-http-request
               :async nil ;; Block to return result
               :url url
-              :data (funcall payload
-                             :model model
-                             :context context
-                             :settings settings)
+              :data (when payload
+                      (funcall payload
+                               :model model
+                               :context context
+                               :settings settings))
               :headers (when headers
                          (funcall headers
                                   :model model
@@ -2080,18 +2085,20 @@ If optional CAPTURE is non-nil, cature a screenshot."
   "Crop CONTEXT to fit MODEL limits appending COMMAND."
   (unless model
     (error "Missing mandatory \"model\" param"))
-  ;; Temporarily appending command for context
-  ;; calculation and removing with butlast.
-  (let ((complete-context (append context
-                                  (list (cons command nil)))))
-    (butlast
-     (last complete-context
-           (chatgpt-shell--unpaired-length
-            (if (functionp chatgpt-shell-transmitted-context-length)
-                (funcall chatgpt-shell-transmitted-context-length
-                         model complete-context)
-              chatgpt-shell-transmitted-context-length)))
-     1)))
+  (if (map-elt model :ignore-context)
+      (list (cons command nil))
+    ;; Temporarily appending command for context
+    ;; calculation and removing with butlast.
+    (let ((complete-context (append context
+                                    (list (cons command nil)))))
+      (butlast
+       (last complete-context
+             (chatgpt-shell--unpaired-length
+              (if (functionp chatgpt-shell-transmitted-context-length)
+                  (funcall chatgpt-shell-transmitted-context-length
+                           model complete-context)
+                chatgpt-shell-transmitted-context-length)))
+       1))))
 
 (defun chatgpt-shell--approximate-context-length (model context)
   "Approximate the CONTEXT length using MODEL."
