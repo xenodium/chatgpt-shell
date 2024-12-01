@@ -19,12 +19,13 @@ chatgpt-shell goes multi model 🎉
 
 It's been quite a bit of work, and I still have plenty of pending work. Please sponsor the project to make development + support sustainable.
 
-| Provider  | Model   | Supported |
-|-----------+---------+-----------|
-| OpenAI    | ChatGPT | Yes       |
-| Google    | Gemini  | New 💫   |
-| Anthropic | Claude  | New 💫   |
-| Ollama    | Llama   | New 💫   |
+| Provider   | Model       | Supported |
+|------------+-------------+-----------|
+| OpenAI     | ChatGPT     | Yes       |
+| Google     | Gemini      | New 💫   |
+| Anthropic  | Claude      | New 💫   |
+| Ollama     | Llama       | New 💫   |
+| Perplexity | Llama Sonar | New 💫   |
 
 My favourite model is missing.
 | [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
