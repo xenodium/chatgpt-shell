@@ -86,6 +86,7 @@ If you use Perplexity through a proxy service, change the URL base."
   "Build a list of Perplexity LLM models available."
   (list (chatgpt-shell-perplexity-make-model
          :version "llama-3.1-sonar-small-128k-online"
+         :short-version "llama-3.1"
          ;; TODO: Find a reference.
          :token-width 4
          ;; https://openrouter.ai/perplexity/llama-3.1-sonar-small-128k-online
