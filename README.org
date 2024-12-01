@@ -252,6 +252,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | Custom variable                                                  | Description                                                                  |
 |------------------------------------------------------------------+------------------------------------------------------------------------------|
 | chatgpt-shell-google-api-url-base                                | Google API’s base URL.                                                       |
+| chatgpt-shell-perplexity-key                                     | Perplexity API key as a string or a function that loads and returns it.      |
 | chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of ‘git-commit‘.                                               |
 | chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                   |
 | chatgpt-shell-display-function                                   | Function to display the shell.  Set to ‘display-buffer’ or custom function.  |
@@ -259,8 +260,9 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-prompt-header-refactor-code                        | Prompt header of ‘refactor-code‘.                                            |
 | chatgpt-shell-prompt-header-proofread-region                     | Prompt header used by ‘chatgpt-shell-proofread-region‘.                      |
 | chatgpt-shell-welcome-function                                   | Function returning welcome message or nil for no message.                    |
+| chatgpt-shell-perplexity-api-url-base                            | Perplexity API’s base URL.                                                   |
 | chatgpt-shell-prompt-query-response-style                        | Determines the prompt style when invoking from other buffers.                |
-| chatgpt-shell-model-version                                      | The active ChatGPT OpenAI model index.                                       |
+| chatgpt-shell-model-version                                      | The active model version as either a string.                                 |
 | chatgpt-shell-logging                                            | Logging disabled by default (slows things down).                             |
 | chatgpt-shell-api-url-base                                       | OpenAI API’s base URL.                                                       |
 | chatgpt-shell-google-key                                         | Google API key as a string or a function that loads and returns it.          |
@@ -354,7 +356,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 | Binding         | Command                                             | Description                                                                   |
 |-----------------+-----------------------------------------------------+-------------------------------------------------------------------------------|
 |                 | chatgpt-shell-japanese-lookup                       | Look Japanese term up.                                                        |
-|                 | chatgpt-shell-next-source-block                     | Move point to previous source block.                                          |
+|                 | chatgpt-shell-next-source-block                     | Move point to the next source block's body.                                   |
 |                 | chatgpt-shell-prompt-compose-request-entire-snippet | If the response code is incomplete, request the entire snippet.               |
 |                 | chatgpt-shell-prompt-compose-request-more           | Request more data.  This is useful if you already requested examples.         |
 |                 | chatgpt-shell-execute-babel-block-action-at-point   | Execute block as org babel.                                                   |
@@ -383,11 +385,12 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                 | chatgpt-shell-load-awesome-prompts                  | Load `chatgpt-shell-system-prompts' from awesome-chatgpt-prompts.             |
 |                 | chatgpt-shell-write-git-commit                      | Write commit from region using ChatGPT.                                       |
 |                 | chatgpt-shell-prompt-compose-previous-block         | Jump to and select previous code block.                                       |
-|                 | chatgpt-shell-restore-session-from-transcript       | Restore session from transcript.                                              |
+|                 | chatgpt-shell-restore-session-from-transcript       | Restore session from file transcript (or HISTORY).                            |
 |                 | chatgpt-shell-prompt-compose-next-interaction       | Show next interaction (request / response).                                   |
 | C-c C-p         | chatgpt-shell-previous-item                         | Go to previous item.                                                          |
 |                 | chatgpt-shell-fix-error-at-point                    | Fixes flymake error at point.                                                 |
 |                 | chatgpt-shell-prompt-appending-kill-ring            | Make a ChatGPT request from the minibuffer appending kill ring.               |
+|                 | chatgpt-shell-ollama-load-models                    | Query ollama for the locally installed models and add them to                 |
 | C-<down> or M-n | chatgpt-shell-next-input                            | Cycle forwards through input history.                                         |
 |                 | chatgpt-shell-prompt-compose-view-mode              | Like `view-mode`, but extended for ChatGPT Compose.                           |
 |                 | chatgpt-shell-clear-buffer                          | Clear the current shell buffer.                                               |
@@ -414,7 +417,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 | M-r             | chatgpt-shell-search-history                        | Search previous input history.                                                |
 |                 | chatgpt-shell-mode                                  | Major mode for ChatGPT shell.                                                 |
 |                 | chatgpt-shell-prompt-compose-mode                   | Major mode for composing ChatGPT prompts from a dedicated buffer.             |
-|                 | chatgpt-shell-previous-source-block                 | Move point to previous source block.                                          |
+|                 | chatgpt-shell-previous-source-block                 | Move point to the previous source block's body.                               |
 |                 | chatgpt-shell-prompt                                | Make a ChatGPT request from the minibuffer.                                   |
 |                 | chatgpt-shell-japanese-ocr-lookup                   | Select a region of the screen to OCR and look up in Japanese.                 |
 |                 | chatgpt-shell-refactor-code                         | Refactor code from region using ChatGPT.                                      |
