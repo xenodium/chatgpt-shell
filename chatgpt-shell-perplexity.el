@@ -127,7 +127,7 @@ If you use Perplexity through a proxy service, change the URL base."
    :filter #'chatgpt-shell-perplexity--extract-perplexity-response
    :shell shell))
 
-(cl-defun chatgpt-shell-perplexity--make-url (&key _model _settings)
+(cl-defun chatgpt-shell-perplexity--make-url (&key _command _model _settings)
   "Create the API URL using MODEL and SETTINGS."
   (concat chatgpt-shell-perplexity-api-url-base
           "/chat/completions"))

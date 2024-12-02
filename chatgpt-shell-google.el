@@ -117,7 +117,7 @@ or
         (t
          nil)))
 
-(cl-defun chatgpt-shell-google--make-url (&key model settings)
+(cl-defun chatgpt-shell-google--make-url (&key _command model settings)
   "Create the API URL using MODEL and SETTINGS."
   (unless model
     (error "Missing mandatory :model param"))

@@ -180,7 +180,7 @@ replace all models with locally installed ollama models."
    :filter #'chatgpt-shell-ollama--extract-ollama-response
    :shell shell))
 
-(cl-defun chatgpt-shell-ollama--make-url (&key _model _settings)
+(cl-defun chatgpt-shell-ollama--make-url (&key _command _model _settings)
   "Create the API URL using MODEL and SETTINGS."
   (concat chatgpt-shell-ollama-api-url-base
           "/api/chat"))

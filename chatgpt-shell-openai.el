@@ -238,7 +238,7 @@ Otherwise:
                     (cons :pending pending)))
         result))))
 
-(cl-defun chatgpt-shell-openai--make-url (&key model _settings)
+(cl-defun chatgpt-shell-openai--make-url (&key _command model _settings)
   "Create the API URL using MODEL."
   (concat (symbol-value (or (map-elt model :url-base)
                             (error "Model :url-base not found")))

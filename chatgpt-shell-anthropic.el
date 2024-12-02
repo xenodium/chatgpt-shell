@@ -97,7 +97,7 @@ VALIDATE-COMMAND handler."
                                         :max-tokens 8192
                                         :context-window 200000)))
 
-(cl-defun chatgpt-shell-anthropic--make-url (&key model _settings)
+(cl-defun chatgpt-shell-anthropic--make-url (&key _command model _settings)
   "Create the API URL using MODEL and SETTINGS."
   (concat (symbol-value (or (map-elt model :url-base)
                             (error "Model :url-base not found")))
