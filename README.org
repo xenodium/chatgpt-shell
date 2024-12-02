@@ -21,10 +21,11 @@ It's been quite a bit of work, and I still have plenty of pending work. Please s
 
 | Provider   | Model       | Supported |
 |------------+-------------+-----------|
-| OpenAI     | ChatGPT     | Yes       |
-| Google     | Gemini      | New 💫   |
 | Anthropic  | Claude      | New 💫   |
+| Google     | Gemini      | New 💫   |
+| Kagi       | Summarizer  | New 💫   |
 | Ollama     | Llama       | New 💫   |
+| OpenAI     | ChatGPT     | Yes       |
 | Perplexity | Llama Sonar | New 💫   |
 
 My favourite model is missing.
