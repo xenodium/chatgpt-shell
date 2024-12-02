@@ -117,10 +117,31 @@ Responses are never streamed."
       response
     (list (cons :pending raw-response))))
 
-(defun chatgpt-shell-kagi--validate-command (_command model settings)
+(chatgpt-shell-kagi--extract-url :text "lmno.lol/alvaro")
+
+
+(cl-defun chatgpt-shell-kagi--extract-url (&key text fail)
+  "Trim TEXT URL found.
+
+Optionally FAIL if none found."
+  (let* ((trimmed (string-trim text))
+         (urls (split-string trimmed "\\s-+" t))
+         (valid-url (seq-filter (lambda (url)
+                                  (or (string-match-p "^https?://" url)
+                                      (string-match-p "^[a-zA-Z0-9.-]+\\.[a-zA-Z]\\{2,\\}\\(/.*\\)?$" url))) urls)))
+    (if (and (= 1 (length valid-url)) (= 1 (length urls)))
+        (let ((url (car valid-url)))
+          (if (string-match-p "^[a-zA-Z0-9.-]+\\.[a-zA-Z]\\{2,\\}\\(/.*\\)?$" url)
+              (concat "https://" url)
+            url))
+      (if fail
+          (error "Input must contain exactly one URL")
+        nil))))
+
+(defun chatgpt-shell-kagi--validate-command (command model settings)
   "Return error string if command/setup isn't valid.
 
-Needs MODEL and SETTINGS."
+Needs COMMAND, MODEL and SETTINGS."
   (cond ((not chatgpt-shell-kagi-key)
          "Variable `chatgpt-shell-kagi-key' needs to be set to your key.
 
@@ -129,6 +150,8 @@ Try M-x set-variable chatgpt-shell-kagi-key
 or
 
 (setq chatgpt-shell-kagi-key \"my-key\")")
+        ((not (chatgpt-shell-kagi--extract-url :text command))
+         "Needs one and only one URL")
         ((map-elt settings :system-prompt)
          (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
                  (map-elt model :version)))))
