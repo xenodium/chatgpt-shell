@@ -117,9 +117,6 @@ Responses are never streamed."
       response
     (list (cons :pending raw-response))))
 
-(chatgpt-shell-kagi--extract-url :text "lmno.lol/alvaro")
-
-
 (cl-defun chatgpt-shell-kagi--extract-url (&key text fail)
   "Trim TEXT URL found.
 
