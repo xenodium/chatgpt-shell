@@ -19,14 +19,14 @@ chatgpt-shell goes multi model 🎉
 
 It's been quite a bit of work, and I still have plenty of pending work. Please sponsor the project to make development + support sustainable.
 
-| Provider   | Model       | Supported |
-|------------+-------------+-----------|
-| Anthropic  | Claude      | New 💫   |
-| Google     | Gemini      | New 💫   |
-| Kagi       | Summarizer  | New 💫   |
-| Ollama     | Llama       | New 💫   |
-| OpenAI     | ChatGPT     | Yes       |
-| Perplexity | Llama Sonar | New 💫   |
+| Provider   | Model       | Supported | Setup                           |
+|------------+-------------+-----------+---------------------------------|
+| Anthropic  | Claude      | New 💫   | Set chatgpt-shell-anthropic-key |
+| Google     | Gemini      | New 💫   | Set chatgpt-shell-google-key    |
+| Kagi       | Summarizer  | New 💫   | Set chatgpt-shell-kagi-key      |
+| Ollama     | Llama       | New 💫   | Install [[https://ollama.com/][Ollama]]                  |
+| OpenAI     | ChatGPT     | Yes       | Set chatgpt-shell-openai-key    |
+| Perplexity | Llama Sonar | New 💫   | Set chatgpt-shell-perplexity-key |
 
 My favourite model is missing.
 | [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
