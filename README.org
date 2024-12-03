@@ -39,7 +39,7 @@ chatgpt-shell is a [[https://www.gnu.org/software/emacs/manual/html_node/emacs/S
 
 ** Swap models
 
-One shell to query all. Swap LLM provider and continue with your familiar flow.
+One shell to query all. Swap LLM provider (via =M-x chatgpt-shell-swap-model=) and continue with your familiar flow.
 
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/multi-model-shell.gif" width="80%" />
 
