@@ -103,11 +103,9 @@ Finding it useful? Like the package? I'd love to hear from you. Get in touch ([[
 
 * Install
 
-- Load =(require 'chatgpt-shell)=
-
 ** MELPA
 
-If using [[https://github.com/jwiegley/use-package][use-package]], you can install with =:ensure t=.
+Via [[https://github.com/jwiegley/use-package][use-package]], you can install with =:ensure t=.
 
 #+begin_src emacs-lisp :lexical no
   (use-package chatgpt-shell
