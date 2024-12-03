@@ -100,7 +100,12 @@ VALIDATE-COMMAND handler."
          :version "gpt-4o"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-40
-         :context-window 128000)))
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-3.5-turbo"
+         :token-width 4
+         ;; https://platform.openai.com/docs/models/gpt-3.5-turbo#gpt-3-5-turbo
+         :context-window 16385)))
 
 (defcustom chatgpt-shell-api-url-base "https://api.openai.com"
   "OpenAI API's base URL.
