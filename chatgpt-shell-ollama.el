@@ -66,7 +66,8 @@ VALIDATE-COMMAND handler."
     (:handler . chatgpt-shell-ollama--handle-ollama-command)
     (:filter . chatgpt-shell-ollama--extract-ollama-response)
     (:payload . chatgpt-shell-ollama-make-payload)
-    (:url . chatgpt-shell-ollama--make-url)))
+    (:url . chatgpt-shell-ollama--make-url)
+    (:validate-command . chatgpt-shell-ollama--validate-command)))
 
 (defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
   "Ollama API's base URL.
@@ -250,6 +251,26 @@ CONTEXT: Excludes PROMPT."
                       (when prompt-url
                         `(((type . "image_url")
                            (image_url . ,prompt-url))))))))))))
+
+(defun chatgpt-shell-ollama--validate-command (_command model _settings)
+  "Return error string if command/setup isn't valid."
+  (unless (seq-contains-p (chatgpt-shell-ollama--fetch-model-versions)
+                          (map-elt model :version))
+    (format "  Local model \"%s\" not found.
+
+  Try installing from the command line via:
+
+    %% ollama pull %s
+
+  Alternatively, fetch available models from Emacs via:
+
+    M-x chatgpt-shell-ollama-load-models
+
+  Then swap active model with:
+
+    M-x chatgpt-shell-swap-system-prompt"
+            (map-elt model :version)
+            (map-elt model :version))))
 
 (provide 'chatgpt-shell-ollama)
 
