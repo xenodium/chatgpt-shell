@@ -1,4 +1,4 @@
-;;; chatgpt-shell.el --- A multi-llm Emacs shell (ChatGPT, Claude, Gemini, Ollama, Perplexity) + editing integrations  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- A multi-LLM shell (ChatGPT, Claude, Gemini, Kagi, Ollama, Perplexity) + editing integrations  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
