@@ -28,6 +28,8 @@ It's been quite a bit of work, and I still have plenty of pending work. Please s
 | OpenAI     | ChatGPT     | Yes       | Set chatgpt-shell-openai-key    |
 | Perplexity | Llama Sonar | New 💫   | Set chatgpt-shell-perplexity-key |
 
+Note: With the exception of [[https://ollama.com/][Ollama]], you typically have to pay the cloud services for API access. Please check with each respective LLM service.
+
 My favourite model is missing.
 | [[https://github.com/xenodium/chatgpt-shell/issues][File a feature request]] | [[https://github.com/sponsors/xenodium][sponsor the work]] |
 
