@@ -262,6 +262,8 @@ CONTEXT: Excludes PROMPT."
 
     %% ollama pull %s
 
+  Check out the [Ollama CLI reference](https://github.com/ollama/ollama?tab=readme-ov-file#cli-reference)
+
   Alternatively, fetch available models from Emacs via:
 
     M-x chatgpt-shell-ollama-load-models
