@@ -91,10 +91,10 @@ t if invoked from a transient frame (quitting closes the frame).")
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "g") #'chatgpt-shell-prompt-compose-retry)
     (define-key map (kbd "C-M-h") #'chatgpt-shell-mark-block)
-    (define-key map (kbd "n") #'chatgpt-shell-prompt-compose-next-block)
-    (define-key map (kbd "p") #'chatgpt-shell-prompt-compose-previous-block)
-    (define-key map (kbd "<tab>") #'chatgpt-shell-prompt-compose-next-block)
-    (define-key map (kbd "<backtab>") #'chatgpt-shell-prompt-compose-previous-block)
+    (define-key map (kbd "n") #'chatgpt-shell-prompt-compose-next-item)
+    (define-key map (kbd "p") #'chatgpt-shell-prompt-compose-previous-item)
+    (define-key map (kbd "<tab>") #'chatgpt-shell-prompt-compose-next-item)
+    (define-key map (kbd "<backtab>") #'chatgpt-shell-prompt-compose-previous-item)
     (define-key map (kbd "r") #'chatgpt-shell-prompt-compose-reply)
     (define-key map (kbd "q") #'chatgpt-shell-prompt-compose-quit-and-close-frame)
     (define-key map (kbd "e") #'chatgpt-shell-prompt-compose-request-entire-snippet)
@@ -147,8 +147,8 @@ query in-progress.
  `\\[View-quit]` Exits the read-only buffer.
  `\\[chatgpt-shell-prompt-compose-retry]` Refresh (re-send the query).  Useful
 to retry on disconnects.
- `\\[chatgpt-shell-prompt-compose-next-block]` Jump to next source block.
- `\\[chatgpt-shell-prompt-compose-previous-block]` Jump to next previous block.
+ `\\[chatgpt-shell-prompt-compose-next-item]` Jump to next source block.
+ `\\[chatgpt-shell-prompt-compose-previous-item]` Jump to next previous block.
  `\\[chatgpt-shell-prompt-compose-reply]` Reply to follow-up with additional questions.
  `\\[chatgpt-shell-prompt-compose-request-entire-snippet]` Send \"Show entire snippet\" query.
  `\\[chatgpt-shell-prompt-compose-insert-block-at-point]` Insert block at point at last known location.
@@ -521,28 +521,77 @@ Useful if sending a request failed, perhaps from failed connectivity."
               (setq chatgpt-shell-prompt-compose--last-known-region origin))
           (set-window-configuration window-config))))))
 
-(defun chatgpt-shell-prompt-compose-next-block ()
-  "Jump to and select next code block."
+(defun chatgpt-shell-prompt-compose-next-item ()
+  "Jump to and select next item (block, link, interaction)."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
-  (let ((before (point)))
-    (if (call-interactively #'chatgpt-shell-next-source-block)
-        (call-interactively #'chatgpt-shell-mark-block)
-      (chatgpt-shell-prompt-compose-next-interaction))))
+  (let ((next-block (save-excursion
+                      (call-interactively #'chatgpt-shell-next-source-block)
+                      (point)))
+        (next-link (save-excursion
+                     (call-interactively #'chatgpt-shell-next-link)
+                     (point))))
+    (cond ((and next-block next-link
+                (< next-block next-link)
+                (not (eq next-block (point))))
+           (deactivate-mark)
+           (goto-char next-block)
+           (call-interactively #'chatgpt-shell-mark-block))
+          ((and next-block next-link
+                (< next-link next-block)
+                (not (eq next-link (point))))
+           (deactivate-mark)
+           (goto-char next-link))
+          ((and next-link
+                (not (eq next-link (point))))
+           (deactivate-mark)
+           (goto-char next-link))
+          ((and next-block
+                (not (eq next-block (point))))
+           (deactivate-mark)
+           (goto-char next-block)
+           (call-interactively #'chatgpt-shell-mark-block))
+          (t
+           (chatgpt-shell-prompt-compose-next-interaction)))))
 
-(defun chatgpt-shell-prompt-compose-previous-block ()
-  "Jump to and select previous code block."
+(defun chatgpt-shell-prompt-compose-previous-item ()
+  "Jump to and select previous item (block, link, interaction)."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
-  (let ((before (point)))
-    (if (call-interactively #'chatgpt-shell-previous-source-block)
-        (call-interactively #'chatgpt-shell-mark-block)
-      (deactivate-mark)
-      (if (eq (point) (point-min))
-          (chatgpt-shell-prompt-compose-previous-interaction)
-        (goto-char (point-min))))))
+  (let ((previous-block (save-excursion
+                      (call-interactively #'chatgpt-shell-previous-source-block)
+                      (point)))
+        (previous-link (save-excursion
+                     (call-interactively #'chatgpt-shell-previous-link)
+                     (point))))
+    (cond ((eq (point) (point-min))
+           (deactivate-mark)
+           (chatgpt-shell-prompt-compose-previous-interaction))
+          ((and previous-block previous-link
+                (> previous-block previous-link)
+                (not (eq previous-block (point))))
+           (deactivate-mark)
+           (goto-char previous-block)
+           (call-interactively #'chatgpt-shell-mark-block))
+          ((and previous-block previous-link
+                (> previous-link previous-block)
+                (not (eq previous-link (point))))
+           (deactivate-mark)
+           (goto-char previous-link))
+          ((and previous-link
+                (not (eq previous-link (point))))
+           (deactivate-mark)
+           (goto-char previous-link))
+          ((and previous-block
+                (not (eq previous-block (point))))
+           (deactivate-mark)
+           (goto-char previous-block)
+           (call-interactively #'chatgpt-shell-mark-block))
+          (t
+           (deactivate-mark)
+           (goto-char (point-min))))))
 
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."

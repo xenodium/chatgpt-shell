@@ -1110,6 +1110,16 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                                      blocks)))
       (goto-char (car (map-elt next-block 'start))))))
 
+(defun chatgpt-shell-next-link ()
+  "Move point to the next link."
+  (interactive)
+  (let ((links (chatgpt-shell--markdown-links))
+        (pos (point)))
+    (when-let ((next-link (seq-find (lambda (link)
+                                       (>= (map-elt link 'start) pos))
+                                     links)))
+      (goto-char (map-elt next-link 'start)))))
+
 (defun chatgpt-shell-previous-item ()
   "Go to previous item.
 
@@ -1161,6 +1171,16 @@ Could be a prompt or a source block."
                                        (< (car (map-elt block 'end)) pos))
                                      blocks)))
       (goto-char (car (map-elt next-block 'start))))))
+
+(defun chatgpt-shell-previous-link ()
+  "Move point to the previous link."
+  (interactive)
+  (let ((links (chatgpt-shell--markdown-links))
+        (pos (point)))
+    (when-let ((previous-link (seq-find (lambda (link)
+                                          (< (map-elt link 'end) pos))
+                                        (reverse links))))
+      (goto-char (map-elt previous-link 'start)))))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--match-source-block ()
