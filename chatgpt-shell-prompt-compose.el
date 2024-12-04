@@ -529,9 +529,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (let ((before (point)))
     (if (call-interactively #'chatgpt-shell-next-source-block)
         (call-interactively #'chatgpt-shell-mark-block)
-      (chatgpt-shell-prompt-compose-next-interaction)
-      (when (eq before (point))
-        (user-error "No more left")))))
+      (chatgpt-shell-prompt-compose-next-interaction))))
 
 (defun chatgpt-shell-prompt-compose-previous-block ()
   "Jump to and select previous code block."
@@ -541,11 +539,10 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (let ((before (point)))
     (if (call-interactively #'chatgpt-shell-previous-source-block)
         (call-interactively #'chatgpt-shell-mark-block)
-      (unless (chatgpt-shell-prompt-compose-previous-interaction)
-        (deactivate-mark)
-        (goto-char (point-min)))
-      (when (eq before (point))
-        (user-error "No more left")))))
+      (deactivate-mark)
+      (if (eq (point) (point-min))
+          (chatgpt-shell-prompt-compose-previous-interaction)
+        (goto-char (point-min))))))
 
 (defun chatgpt-shell-prompt-compose-reply ()
   "Reply as a follow-up and compose another query."
