@@ -1169,7 +1169,7 @@ Could be a prompt or a source block."
         (pos (point)))
     (when-let ((next-block (seq-find (lambda (block)
                                        (< (car (map-elt block 'end)) pos))
-                                     blocks)))
+                                     (reverse blocks))))
       (goto-char (car (map-elt next-block 'start))))))
 
 (defun chatgpt-shell-previous-link ()
