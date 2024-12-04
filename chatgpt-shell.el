@@ -1205,7 +1205,11 @@ Could be a prompt or a source block."
     (when-let ((previous-link (seq-find (lambda (link)
                                           (< (map-elt link 'end) pos))
                                         (reverse links))))
+      ;; May not be on actual URL text because of overlay (not too sure).
+      ;; So, pressing RET does not open link.
+      ;; Work around by moving forward 1 char (not visible to user).
       (goto-char (map-elt previous-link 'start))
+      (forward-char)
       (point))))
 
 ;; TODO: Move to shell-maker.
