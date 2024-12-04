@@ -692,7 +692,11 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
       #'chatgpt-shell-swap-system-prompt)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-p")
       #'chatgpt-shell-previous-item)
+    (define-key chatgpt-shell-mode-map (kbd "<backtab>")
+      #'chatgpt-shell-previous-item)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-n")
+      #'chatgpt-shell-next-item)
+    (define-key chatgpt-shell-mode-map (kbd "<tab>")
       #'chatgpt-shell-next-item)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-e")
       #'chatgpt-shell-prompt-compose)
@@ -1106,9 +1110,10 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
   (let ((blocks (chatgpt-shell--source-blocks))
         (pos (point)))
     (when-let ((next-block (seq-find (lambda (block)
-                                       (>= (car (map-elt block 'start)) pos))
+                                       (> (car (map-elt block 'start)) pos))
                                      blocks)))
-      (goto-char (car (map-elt next-block 'start))))))
+      (goto-char (car (map-elt next-block 'start)))
+      (point))))
 
 (defun chatgpt-shell-next-link ()
   "Move point to the next link."
@@ -1116,9 +1121,10 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
   (let ((links (chatgpt-shell--markdown-links))
         (pos (point)))
     (when-let ((next-link (seq-find (lambda (link)
-                                       (>= (map-elt link 'start) pos))
+                                       (> (map-elt link 'start) pos))
                                      links)))
-      (goto-char (map-elt next-link 'start)))))
+      (goto-char (map-elt next-link 'start))
+      (point))))
 
 (defun chatgpt-shell-previous-item ()
   "Go to previous item.
@@ -1127,19 +1133,29 @@ Could be a prompt or a source block."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (let ((prompt-pos (save-excursion
-                      (when (comint-next-prompt (- 1))
-                        (point))))
-        (block-pos (save-excursion
-                     (when (chatgpt-shell-previous-source-block)
-                       (point)))))
-    (cond ((and block-pos prompt-pos)
-           (goto-char (max prompt-pos
-                           block-pos)))
-          (block-pos
-           (goto-char block-pos))
-          (prompt-pos
-           (goto-char prompt-pos)))))
+  (let* ((prompt-pos (save-excursion
+                       (when (comint-next-prompt (- 1))
+                         (point))))
+         (block-pos (save-excursion
+                      (chatgpt-shell-previous-source-block)))
+         (link-pos (save-excursion
+                     (chatgpt-shell-previous-link)))
+         (positions (delq nil (list prompt-pos
+                                    block-pos
+                                    link-pos)))
+         (next-pos (when positions
+                     (apply 'max positions))))
+    (when next-pos
+      (cond ((eq next-pos prompt-pos)
+             (deactivate-mark)
+             (goto-char prompt-pos))
+            ((eq next-pos block-pos)
+             (deactivate-mark)
+             (goto-char block-pos)
+             (call-interactively #'chatgpt-shell-mark-block))
+            ((eq next-pos link-pos)
+             (deactivate-mark)
+             (goto-char link-pos))))))
 
 (defun chatgpt-shell-next-item ()
   "Go to next item.
@@ -1148,19 +1164,27 @@ Could be a prompt or a source block."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-mode)
     (user-error "Not in a shell"))
-  (let ((prompt-pos (save-excursion
-                      (when (comint-next-prompt 1)
-                        (point))))
-        (block-pos (save-excursion
-                     (when (chatgpt-shell-next-source-block)
-                       (point)))))
-    (cond ((and block-pos prompt-pos)
-           (goto-char (min prompt-pos
-                           block-pos)))
-          (block-pos
-           (goto-char block-pos))
-          (prompt-pos
-           (goto-char prompt-pos)))))
+  (let* ((prompt-pos (save-excursion
+                       (when (comint-next-prompt 1)
+                         (point))))
+         (block-pos (save-excursion
+                      (chatgpt-shell-next-source-block)))
+         (link-pos (save-excursion
+                     (chatgpt-shell-next-link)))
+         (next-pos (apply 'min (delq nil (list prompt-pos
+                                               block-pos
+                                               link-pos)))))
+    (when next-pos
+      (cond ((eq next-pos prompt-pos)
+             (deactivate-mark)
+             (goto-char prompt-pos))
+            ((eq next-pos block-pos)
+             (deactivate-mark)
+             (goto-char block-pos)
+             (call-interactively #'chatgpt-shell-mark-block))
+            ((eq next-pos link-pos)
+             (deactivate-mark)
+             (goto-char link-pos))))))
 
 (defun chatgpt-shell-previous-source-block ()
   "Move point to the previous source block's body."
@@ -1170,7 +1194,8 @@ Could be a prompt or a source block."
     (when-let ((next-block (seq-find (lambda (block)
                                        (< (car (map-elt block 'end)) pos))
                                      (reverse blocks))))
-      (goto-char (car (map-elt next-block 'start))))))
+      (goto-char (car (map-elt next-block 'start)))
+      (point))))
 
 (defun chatgpt-shell-previous-link ()
   "Move point to the previous link."
@@ -1180,7 +1205,8 @@ Could be a prompt or a source block."
     (when-let ((previous-link (seq-find (lambda (link)
                                           (< (map-elt link 'end) pos))
                                         (reverse links))))
-      (goto-char (map-elt previous-link 'start)))))
+      (goto-char (map-elt previous-link 'start))
+      (point))))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--match-source-block ()
