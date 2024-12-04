@@ -184,10 +184,10 @@ you can customize option ~chatgpt-shell-api-url-path~.
 * Using ChatGPT through HTTP(S) proxy
 
 Behind the scenes chatgpt-shell uses =curl= to send requests to the openai server.
-If you use ChatGPT through a HTTP proxy (for example you are in a corporate network and a HTTP proxy shields the corporate network from the internet),
-you need to tell =curl= to use the proxy via the curl option =-x http://your_proxy=.
-One way to do this is to set the proxy url via the customizable variable =chatgpt-shell-additional-curl-options=. If you set this variable via the Emacs Customize interface you should insert two
-separate items =-x= and =http://your_proxy=. See the curl manpage for more details and further options.
+If you use ChatGPT through a HTTP proxy (for example you are in a corporate network and a HTTP proxy shields the corporate network from the internet), you need to tell =curl= to use the proxy via the curl option =-x http://your_proxy=.
+For this, use =chatgpt-shell-proxy=.
+
+For example, if you want curl =-x= and =http://your_proxy=, set =chatgpt-shell-proxy= to "=http://your_proxy=".
 
 * Using ChatGPT through Azure OpenAI Service
 
