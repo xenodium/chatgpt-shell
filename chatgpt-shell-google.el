@@ -30,6 +30,8 @@
 (require 'shell-maker)
 (require 'map)
 
+(defvar chatgpt-shell-proxy)
+
 (defcustom chatgpt-shell-google-key nil
   "Google API key as a string or a function that loads and returns it."
   :type '(choice (function :tag "Function")
@@ -151,6 +153,7 @@ or
    :async t
    :url (chatgpt-shell-google--make-url :model model
                                         :settings settings)
+   :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-google--make-gemini-payload
           :prompt command
           :context context

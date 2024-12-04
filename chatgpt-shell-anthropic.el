@@ -30,6 +30,7 @@
 (require 'shell-maker)
 (require 'map)
 
+(defvar chatgpt-shell-proxy)
 (declare-function chatgpt-shell-previous-source-block "chatgpt-shell")
 
 (defcustom chatgpt-shell-anthropic-key nil
@@ -164,6 +165,7 @@ or
    :async t
    :url (chatgpt-shell-anthropic--make-url :model model
                                            :settings settings)
+   :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-anthropic--make-payload :model model
                                                 :context
                                                 (append

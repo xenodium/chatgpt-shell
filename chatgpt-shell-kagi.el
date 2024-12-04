@@ -33,6 +33,8 @@
 (require 'seq)
 (require 'subr-x)
 
+(defvar chatgpt-shell-proxy)
+
 (cl-defun chatgpt-shell-kagi-make-summarizer-model ()
   "Create an Kagi model.
 
@@ -93,6 +95,7 @@ If you use Kagi through a proxy service, change the URL base."
    :url (chatgpt-shell-kagi--make-summarizer-url :model model
                                                  :settings settings
                                                  :command command)
+   :proxy chatgpt-shell-proxy
    :headers (chatgpt-shell-kagi--make-summarizer-headers)
    :filter #'chatgpt-shell-kagi--extract-summarizer-response
    :shell shell))

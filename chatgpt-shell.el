@@ -504,6 +504,11 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   :type 'boolean
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-proxy nil
+  "When non-nil, use as a proxy (for example http or socks5)."
+  :type 'string
+  :group 'chatgpt-shell)
+
 (defun chatgpt-shell--model-settings ()
   "Variable model settings.
 
@@ -1880,6 +1885,7 @@ ON-FAILURE: (lambda (output)) for completion event."
     (shell-maker-make-http-request
      :async t
      :url url
+     :proxy chatgpt-shell-proxy
      :data (chatgpt-shell-openai-make-chatgpt-request-data
             :prompt prompt
             :prompt-url prompt-url
@@ -1971,6 +1977,7 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
             (shell-maker-make-http-request
              :async t
              :url url
+             :proxy chatgpt-shell-proxy
              :data (when payload
                      (funcall payload
                               :model model
@@ -1993,6 +2000,7 @@ If ON-FINISHED, ON-SUCCESS, and ON-FINISHED are missing, execute synchronously."
              (shell-maker-make-http-request
               :async nil ;; Block to return result
               :url url
+              :proxy chatgpt-shell-proxy
               :data (when payload
                       (funcall payload
                                :model model

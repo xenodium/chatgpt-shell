@@ -33,6 +33,7 @@
 (require 'seq)
 (require 'subr-x)
 
+(defvar chatgpt-shell-proxy)
 (declare-function chatgpt-shell-openai--make-payload "chatgpt-shell-openai")
 
 (cl-defun chatgpt-shell-perplexity-make-model (&key version
@@ -116,7 +117,8 @@ If you use Perplexity through a proxy service, change the URL base."
   (shell-maker-make-http-request
    :async t
    :url (chatgpt-shell-perplexity--make-url :model model
-                                           :settings settings)
+                                            :settings settings)
+   :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-openai--make-payload :model model
                                              :context
                                              (append
