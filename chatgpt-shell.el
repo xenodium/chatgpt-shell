@@ -1706,7 +1706,9 @@ ON-FINISHED is invoked when the entire interaction is finished and of the form:
                                                                 (marker-position marker))))))))
                      :on-finished (lambda (input output success)
                                     (when on-finished
-                                      (funcall on-finished input output success)))))))
+                                      (funcall on-finished input output success))
+                                    (with-current-buffer (chatgpt-shell--primary-buffer)
+                                      (chatgpt-shell--put-source-block-overlays)))))))
         (if (or (eq response-style 'inline)
                 handler)
             (with-current-buffer (chatgpt-shell--primary-buffer)
