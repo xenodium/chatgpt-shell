@@ -285,6 +285,7 @@ or
    :url (concat chatgpt-shell-api-url-base
                 (or (map-elt model :path)
                     (error "Model :path not found")))
+   :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-openai-make-chatgpt-request-data
           :prompt command
           :system-prompt (map-elt settings :system-prompt)
