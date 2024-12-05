@@ -427,7 +427,7 @@ If BACKWARDS is non-nil, go to previous interaction."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (save-excursion
-      (insert (propertize (concat prompt "\n\n") 'face font-lock-doc-face))
+      (insert (propertize (concat prompt "\n\n\n") 'face font-lock-doc-face))
       (when response
         (insert response))
       (chatgpt-shell--put-source-block-overlays))
