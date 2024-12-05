@@ -424,14 +424,30 @@ If BACKWARDS is non-nil, go to previous interaction."
   "Replace the current compose's buffer interaction with PROMPT and RESPONSE."
   (unless (eq (current-buffer) (chatgpt-shell-prompt-compose-buffer))
     (error "Not in a compose buffer"))
-  (let ((inhibit-read-only t))
+  (let ((inhibit-read-only t)
+        (pos (chatgpt-shell-prompt-compose--position)))
     (erase-buffer)
     (save-excursion
-      (insert (propertize (concat prompt "\n\n\n") 'face font-lock-doc-face))
+      (insert (concat
+               (when pos
+                 (propertize (format "[%d/%d] " (car pos) (cdr pos))
+                             'face font-lock-comment-face))
+               (propertize (concat
+                            prompt
+                            "\n\n\n") 'face font-lock-doc-face)))
       (when response
         (insert response))
       (chatgpt-shell--put-source-block-overlays))
     (chatgpt-shell-prompt-compose-view-mode +1)))
+
+(defun chatgpt-shell-prompt-compose--position ()
+  "Return the position in history of the primary shell buffer."
+  (when-let* ((current (with-current-buffer (chatgpt-shell--primary-buffer)
+                         (shell-maker--command-and-response-at-point)))
+              (history (with-current-buffer (chatgpt-shell--primary-buffer)
+                         (shell-maker-history)))
+              (pos (seq-position history current)))
+    (cons (1+ pos) (length history))))
 
 ;; TODO: Delete and use chatgpt-shell-prompt-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-prompt-compose-cancel ()
