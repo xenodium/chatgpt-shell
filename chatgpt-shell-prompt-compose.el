@@ -311,18 +311,14 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                          (if chatgpt-shell--ring-index
                              (1+ chatgpt-shell--ring-index)
                            0))))
-      (let ((prompt (buffer-string)))
-        (with-current-buffer (chatgpt-shell--primary-buffer)
-          (unless (ring-member comint-input-ring prompt)
-            (ring-insert comint-input-ring prompt))))
       (if next-index
           (if (>= next-index (seq-length ring))
               (setq chatgpt-shell--ring-index (1- (seq-length ring)))
             (setq chatgpt-shell--ring-index next-index))
         (setq chatgpt-shell--ring-index nil))
       (when chatgpt-shell--ring-index
-        (erase-buffer)
-        (insert (seq-elt ring chatgpt-shell--ring-index))))))
+        (chatgpt-shell-prompt-compose--initialize
+         (seq-elt ring chatgpt-shell--ring-index))))))
 
 (defun chatgpt-shell-prompt-compose-next-history ()
   "Insert next prompt from history into compose buffer."
@@ -343,8 +339,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
             (setq chatgpt-shell--ring-index next-index))
         (setq chatgpt-shell--ring-index nil))
       (when chatgpt-shell--ring-index
-        (erase-buffer)
-        (insert (seq-elt ring chatgpt-shell--ring-index))))))
+        (chatgpt-shell-prompt-compose--initialize
+         (seq-elt ring chatgpt-shell--ring-index))))))
 
 (defun chatgpt-shell-prompt-compose--initialize (&optional prompt)
   "Initialize compose buffer.
@@ -488,7 +484,7 @@ If BACKWARDS is non-nil, go to previous interaction."
         (unless (get-text-property pos 'ignore text)
           (setq result (concat result (substring text pos next))))
         (setq pos next)))
-    result))
+    (string-trim result)))
 
 ;; TODO: Delete and use chatgpt-shell-prompt-compose-quit-and-close-frame instead.
 (defun chatgpt-shell-prompt-compose-cancel ()
