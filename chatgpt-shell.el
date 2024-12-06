@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.8.1
+;; Version: 2.8.2
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.74.1"))
-(defconst chatgpt-shell--version "2.8.1")
+(defconst chatgpt-shell--version "2.8.2")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1818,8 +1818,10 @@ Display result in org table of the form:
                                           (let ((inhibit-read-only t))
                                             (goto-char (point-min))
                                             (org-table-align)
-                                            (when (fboundp 'valign-mode)
-                                              (valign-mode +1))
+                                            (when (fboundp 'org-modern-mode)
+                                              (org-modern-mode +1))
+                                            ;; (when (fboundp 'valign-mode)
+                                            ;;   (valign-mode +1))
                                             (visual-line-mode -1))))
                           :prompt-url file
                           :streaming t
