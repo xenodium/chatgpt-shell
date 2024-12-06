@@ -412,7 +412,10 @@ Optionally set its PROMPT."
                                         (lambda (_input _output _success)
                                           (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                             (chatgpt-shell--put-source-block-overlays)))
-                                        'inline))))))
+                                        'inline))
+        ;; Point should go to beginning of prompt after submission.
+        (goto-char (point-min))
+        (text-property-search-forward 'prompt t)))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
