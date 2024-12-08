@@ -422,7 +422,28 @@ Or nil if none."
   (chatgpt-shell-interrupt nil)
   (chatgpt-shell--save-variables))
 
-(declare-function pcsv-parse-file "pcsv" (file &optional coding-system))
+(defun chatgpt-shell--load-awesome-prompts-parse-alist ()
+  "Helper function for `claude-shell-load-awesome-prompts'.
+
+Download awesome-prompts and parse into a list of label and
+prompt cons."
+  (let ((url "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv")
+        (collector '()))
+    (with-current-buffer (url-retrieve-synchronously url)
+
+      (goto-char (if (boundp 'url-http-end-of-headers)
+                     url-http-end-of-headers
+                   (error "`url-http-end-of-headers' marker is not defined")))
+
+      (forward-line 2)
+      (while (not (eobp))
+        (let* ((line (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+               (split (split-string line "," 'nil "\""))
+               (head (car split))
+               (tail (apply #'concat (cdr split))))
+          (push (cons head tail) collector)
+          (forward-line 1))))
+    collector))
 
 ;;;###autoload
 (defun chatgpt-shell-load-awesome-prompts ()
@@ -430,26 +451,11 @@ Or nil if none."
 
 Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (interactive)
-  (unless (fboundp 'pcsv-parse-file)
-    (user-error "Please install pcsv"))
-  (require 'pcsv)
-  (let ((csv-path (concat (temporary-file-directory) "awesome-chatgpt-prompts.csv")))
-    (url-copy-file "https://raw.githubusercontent.com/f/awesome-chatgpt-prompts/main/prompts.csv"
-                   csv-path t)
+  (let ((prompts (chatgpt-shell--load-awesome-prompts-parse-alist)))
     (setq chatgpt-shell-system-prompts
-         (map-merge 'list
-                    chatgpt-shell-system-prompts
-                    ;; Based on Daniel Gomez's parsing code from
-                    ;; https://github.com/xenodium/chatgpt-shell/issues/104
-                    (seq-sort (lambda (rhs lhs)
-                                (string-lessp (car rhs)
-                                              (car lhs)))
-                              (cdr
-                               (mapcar
-                                (lambda (row)
-                                  (cons (car row)
-                                        (cadr row)))
-                                (pcsv-parse-file csv-path))))))
+          (map-merge 'list
+                     chatgpt-shell-system-prompts
+                     (seq-sort (lambda (lhs rhs) (string-lessp (car lhs) (car rhs))) prompts)))
     (message "Loaded awesome-chatgpt-prompts")
     (setq chatgpt-shell-system-prompt nil)
     (chatgpt-shell--update-prompt t)
