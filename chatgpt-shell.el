@@ -493,7 +493,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                        (map-elt model :provider)
                                        (map-elt model :version)))
                              chatgpt-shell-models))
-            (selection (nth 1 (string-split (completing-read "Model version: "
+            (selection (nth 1 (split-string (completing-read "Model version: "
                                                              models nil t)))))
       (progn
         (when (derived-mode-p 'chatgpt-shell-mode)
