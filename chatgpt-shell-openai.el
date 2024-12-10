@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -50,8 +50,8 @@ VALIDATE-COMMAND handler."
     (error ":context-window must be an integer"))
   `((:version . ,version)
     (:short-version . ,short-version)
-    (:label . "ChatGPT")
-    (:provider . "OpenAI")
+    (:label . ,label)
+    (:provider . ,provider)
     (:path . "/v1/chat/completions")
     (:token-width . ,token-width)
     (:context-window . ,context-window)
@@ -61,8 +61,9 @@ VALIDATE-COMMAND handler."
     (:headers . chatgpt-shell-openai--make-headers)
     (:url . chatgpt-shell-openai--make-url)
     (:key . chatgpt-shell-openai-key)
-    (:url-base . chatgpt-shell-api-url-base)
-    (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))))
+    (:url-base . ,url-base)
+    (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
+    (:other-params . ,other-params)))
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
@@ -268,12 +269,14 @@ or
 
 (cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
-  (chatgpt-shell-openai-make-chatgpt-request-data
+  (apply
+   #'chatgpt-shell-openai-make-chatgpt-request-data
    :system-prompt (map-elt settings :system-prompt)
    :context context
    :version (map-elt model :version)
    :temperature (map-elt settings :temperature)
-   :streaming (map-elt settings :streaming)))
+   :streaming (map-elt settings :streaming)
+   :other-params (map-elt model :other-params)))
 
 (cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
@@ -292,7 +295,8 @@ or
           :context context
           :version (map-elt model :version)
           :temperature (map-elt settings :temperature)
-          :streaming (map-elt settings :streaming))
+          :streaming (map-elt settings :streaming)
+          :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
                   (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
    :filter #'chatgpt-shell-openai--filter-output

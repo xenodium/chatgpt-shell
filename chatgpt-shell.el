@@ -1902,7 +1902,8 @@ ON-FAILURE: (lambda (output)) for completion event."
             :system-prompt system-prompt
             :version (map-elt model :version)
             :temperature (or temperature 1)
-            :streaming streaming)
+            :streaming streaming
+            :other-params (map-elt model :other-params))
      :headers headers
      :filter #'chatgpt-shell-openai--filter-output
      :on-output
