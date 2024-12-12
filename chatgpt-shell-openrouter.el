@@ -20,7 +20,7 @@
          :version "qwen/qwq-32b-preview"
          :provider "OpenRouter"
          :token-width 16
-         ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
+         ;; See
          :context-window 32768
          ;; Multiple quantizations are offered for this model by different
          ;; providers so we restrict to one for consistency. Note that the sense
@@ -28,13 +28,13 @@
          ;; OpenRouter. This is different from the meaning of the :provider
          ;; argument.
          ;;
-         ;; See https://openrouter.ai/docs/provider-routing#quantization
+         ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openai-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :provider "OpenRouter"
          :token-width 16
-         ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
+         ;; See
          :context-window 32768
          ;; Multiple quantizations are offered for this model by different
          ;; providers so we restrict to one for consistency. Note that the sense
@@ -42,7 +42,7 @@
          ;; OpenRouter. This is different from the meaning of the :provider
          ;; argument.
          ;;
-         ;; See https://openrouter.ai/docs/provider-routing#quantization
+         ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))))
 
 (provide 'chatgpt-shell-openrouter)
