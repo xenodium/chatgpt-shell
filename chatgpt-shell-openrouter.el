@@ -45,5 +45,23 @@
          ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))))
 
+(defcustom chatgpt-shell-openrouter-key nil
+  "OpenRouter key as a string or a function that loads and returns it."
+  :type '(choice (function :tag "Function")
+                 (string :tag "String"))
+  :group 'chatgpt-shell)
+
+(defun chatgpt-shell-openrouter-key ()
+  "Get the OpenRouter key."
+  (cond ((stringp chatgpt-shell-openrouter-key)
+         chatgpt-shell-openrouter-key)
+        ((functionp chatgpt-shell-openrouter-key)
+         (condition-case _err
+             (funcall chatgpt-shell-openrouter-key)
+           (error
+            "KEY-NOT-FOUND")))
+        (t
+         nil)))
+
 (provide 'chatgpt-shell-openrouter)
 ;;; chatgpt-shell-openrouter.el ends here
