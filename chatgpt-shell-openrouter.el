@@ -1,10 +1,15 @@
 ;;; chatgpt-shell-openrouter.el --- OpenRouter-specific logic -*- lexical-binding: t; -*-
 
+(cl-defun chatgpt-shell-openrouter-make-model (&rest args &key version short-version token-width context-window validate-command other-params)
+  (apply #'chatgpt-shell-openai-make-model
+         args
+         :provider "OpenRouter"
+         :key #'chatgpt-shell-openrouter-key))
+
 (defun chatgpt-shell-openrouter-models ()
   "Build a list of OpenRouter LLM models."
   (list (chatgpt-shell-openai-make-model
          :version "meta-llama/llama-3.3-70b-instruct"
-         :provider "OpenRouter"
          :token-width 16
          ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
          :context-window 131072
@@ -18,7 +23,6 @@
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openai-make-model
          :version "qwen/qwq-32b-preview"
-         :provider "OpenRouter"
          :token-width 16
          ;; See
          :context-window 32768
@@ -32,7 +36,6 @@
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openai-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
-         :provider "OpenRouter"
          :token-width 16
          ;; See
          :context-window 32768
