@@ -10,6 +10,7 @@
   "Build a list of OpenRouter LLM models."
   (list (chatgpt-shell-openrouter-make-model
          :version "meta-llama/llama-3.3-70b-instruct"
+         :short-version "llama-3.3-70b"
          :token-width 16
          ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
          :context-window 131072
@@ -23,6 +24,7 @@
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwq-32b-preview"
+         :short-version "qwq-32b-preview"
          :token-width 16
          ;; See
          :context-window 32768
@@ -36,6 +38,7 @@
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
+         :short-version "qwen-2.5-coder-32b"
          :token-width 16
          ;; See
          :context-window 32768
