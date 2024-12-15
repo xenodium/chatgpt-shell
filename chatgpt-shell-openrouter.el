@@ -2,6 +2,7 @@
 
 (cl-defun chatgpt-shell-openrouter-make-model (&rest args &key version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
+         :url-base chatgpt-shell-openrouter-api-url-base
          :provider "OpenRouter"
          :key #'chatgpt-shell-openrouter-key
          args))
@@ -50,6 +51,16 @@
          ;;
          ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))))
+
+(defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai/api/v1"
+  "OpenRouter API's base URL.
+
+API url = base + path.
+
+If you use OpenRouter through a proxy service, change the URL base."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-openrouter-key nil
   "OpenRouter key as a string or a function that loads and returns it."
