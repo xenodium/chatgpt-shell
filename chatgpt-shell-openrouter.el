@@ -2,9 +2,9 @@
 
 (cl-defun chatgpt-shell-openrouter-make-model (&rest args &key version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
-         args
          :provider "OpenRouter"
-         :key #'chatgpt-shell-openrouter-key))
+         :key #'chatgpt-shell-openrouter-key
+         args))
 
 (defun chatgpt-shell-openrouter-models ()
   "Build a list of OpenRouter LLM models."
