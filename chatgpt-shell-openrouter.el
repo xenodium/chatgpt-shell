@@ -8,7 +8,7 @@
 
 (defun chatgpt-shell-openrouter-models ()
   "Build a list of OpenRouter LLM models."
-  (list (chatgpt-shell-openai-make-model
+  (list (chatgpt-shell-openrouter-make-model
          :version "meta-llama/llama-3.3-70b-instruct"
          :token-width 16
          ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
@@ -21,7 +21,7 @@
          ;;
          ;; See https://openrouter.ai/docs/provider-routing#quantization
          :other-params '((provider (quantizations . ["bf16"]))))
-        (chatgpt-shell-openai-make-model
+        (chatgpt-shell-openrouter-make-model
          :version "qwen/qwq-32b-preview"
          :token-width 16
          ;; See
@@ -34,7 +34,7 @@
          ;;
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"]))))
-        (chatgpt-shell-openai-make-model
+        (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :token-width 16
          ;; See
