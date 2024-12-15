@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (key chatgpt-shell-openai-key) (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (key chatgpt-shell-openai-key) (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -55,7 +55,7 @@ VALIDATE-COMMAND handler."
     (:path . "/v1/chat/completions")
     (:token-width . ,token-width)
     (:context-window . ,context-window)
-    (:handler . chatgpt-shell-openai--handle-chatgpt-command)
+    (:handler . ,handler)
     (:filter . chatgpt-shell-openai--filter-output)
     (:payload . chatgpt-shell-openai--make-payload)
     (:headers . chatgpt-shell-openai--make-headers)
@@ -278,7 +278,7 @@ or
    :streaming (map-elt settings :streaming)
    :other-params (map-elt model :other-params)))
 
-(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
+(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key))
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (unless (chatgpt-shell-openai-key)
     (funcall (map-elt shell :write-output) "Your chatgpt-shell-openai-key is missing")
@@ -298,7 +298,7 @@ or
           :streaming (map-elt settings :streaming)
           :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
-                  (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
+                  (format "Authorization: Bearer %s" (funcall key)))
    :filter #'chatgpt-shell-openai--filter-output
    :shell shell))
 

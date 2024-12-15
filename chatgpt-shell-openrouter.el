@@ -5,6 +5,7 @@
          :url-base chatgpt-shell-openrouter-api-url-base
          :provider "OpenRouter"
          :key #'chatgpt-shell-openrouter-key
+         :handler #'chatgpt-shell-openrouter--handle-chatgpt-command
          args))
 
 (defun chatgpt-shell-openrouter-models ()
@@ -79,6 +80,11 @@ If you use OpenRouter through a proxy service, change the URL base."
             "KEY-NOT-FOUND")))
         (t
          nil)))
+
+(defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
+  (apply #'chatgpt-shell-openai--handle-chatgpt-command
+         :key #'chatgpt-shell-openrouter-key
+         args))
 
 (provide 'chatgpt-shell-openrouter)
 ;;; chatgpt-shell-openrouter.el ends here
