@@ -5,6 +5,7 @@
          :url-base chatgpt-shell-openrouter-api-url-base
          :provider "OpenRouter"
          :key #'chatgpt-shell-openrouter-key
+         :headers #'chatgpt-shell-openrouter--make-headers
          :handler #'chatgpt-shell-openrouter--handle-chatgpt-command
          args))
 
@@ -83,6 +84,11 @@ If you use OpenRouter through a proxy service, change the URL base."
 
 (defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
+         :key #'chatgpt-shell-openrouter-key
+         args))
+
+(defun chatgpt-shell-openrouter--make-headers (&rest args)
+  (apply #'chatgpt-shell-openai--make-headers
          :key #'chatgpt-shell-openrouter-key
          args))
 

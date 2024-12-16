@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (key chatgpt-shell-openai-key) (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -58,7 +58,7 @@ VALIDATE-COMMAND handler."
     (:handler . ,handler)
     (:filter . chatgpt-shell-openai--filter-output)
     (:payload . chatgpt-shell-openai--make-payload)
-    (:headers . chatgpt-shell-openai--make-headers)
+    (:headers . ,headers)
     (:url . chatgpt-shell-openai--make-url)
     (:key . ,key)
     (:url-base . ,url-base)
@@ -251,10 +251,10 @@ Otherwise:
           (or (map-elt model :path)
               (error "Model :path not found"))))
 
-(cl-defun chatgpt-shell-openai--make-headers (&key _model _settings)
+(cl-defun chatgpt-shell-openai--make-headers (&key _model _settings (key #'chatgpt-shell-openai-key))
   "Create the API headers."
   (list "Content-Type: application/json; charset=utf-8"
-        (format "Authorization: Bearer %s" (chatgpt-shell-openai-key))))
+        (format "Authorization: Bearer %s" (funcall key))))
 
 (defun chatgpt-shell-openai--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
