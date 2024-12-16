@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -285,10 +285,7 @@ or
     (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
-   :url (concat (or (map-elt model :url-base)
-                    (error "Model :url-base not found"))
-                (or (map-elt model :path)
-                    (error "Model :path not found")))
+   :url (chatgpt-shell-openai--make-url :model model)
    :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-openai-make-chatgpt-request-data
           :prompt command

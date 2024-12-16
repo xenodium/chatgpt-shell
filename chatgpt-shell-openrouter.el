@@ -2,7 +2,7 @@
 
 (cl-defun chatgpt-shell-openrouter-make-model (&rest args &key version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
-         :url-base chatgpt-shell-openrouter-api-url-base
+         :url-base 'chatgpt-shell-openrouter-api-url-base
          :provider "OpenRouter"
          :key #'chatgpt-shell-openrouter-key
          :headers #'chatgpt-shell-openrouter--make-headers
@@ -54,7 +54,7 @@
          ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))))
 
-(defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai/api/v1"
+(defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai"
   "OpenRouter API's base URL.
 
 API url = base + path.
