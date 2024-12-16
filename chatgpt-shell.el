@@ -34,9 +34,17 @@
 ;; M-x `chatgpt-shell-describe-image'
 ;; M-x `chatgpt-shell-japanese-lookup'
 ;;
-;; You must set `chatgpt-shell-openai-key' to your key before using.
+;; You must set an API key for most cloud services. Check out:
 ;;
-;; Run `chatgpt-shell' to get a ChatGPT shell.
+;;   `chatgpt-shell-openai-key'.
+;;   `chatgpt-shell-anthropic-key'.
+;;   `chatgpt-shell-google-key'.
+;;   `chatgpt-shell-kagi-key'.
+;;   `chatgpt-shell-perplexity-key'.
+;;
+;; Alternatively, local services like Ollama do not require an API key.
+;;
+;; Run `chatgpt-shell' to open an LLM shell.
 ;;
 ;; Please report issues or send patches to
 ;; https://github.com/xenodium/chatgpt-shell
