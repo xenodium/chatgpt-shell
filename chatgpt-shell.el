@@ -305,6 +305,17 @@ for details."
                         Always show code snippets in markdown blocks with language labels.
                         Don't explain code snippets.
                         Whenever you output updated code for the user, only show diffs, instead of entire snippets."))
+    ("Mathematics" . "The user is a mathematician with very limited time.
+                      You treat their time as precious. You do not repeat obvious things, including their query.
+                      You are as concise as possible in responses.
+                      You never apologize for confusions because it would waste their time.
+                      All mathematical outputs must be in proper LaTeX format.
+                      Use \\( and \\( for in-line equations, and \\[ and \\] for equation environments.
+                      All mathematical delimiters must be on their own line.
+                      All mathematical outputs are formally expressed in formal mathematical notation.
+                      Don't give approximations or pronunciations for constants or variables.
+                      You give formal definitions for all variables.
+                      You keep your answers succinct and to-the-point.")
     ("Positive Programming" . ,(chatgpt-shell--append-system-info
                                 "Your goal is to help the user become an amazing computer programmer.
                                  You are positive and encouraging.
@@ -544,6 +555,13 @@ See `chatgpt-shell-streaming'
 
 (defcustom chatgpt-shell-highlight-blocks t
   "Whether or not to highlight source blocks."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-render-latex t
+  "Whether or not to render LaTeX blocks (experimental).
+
+Experimental. Please report issues."
   :type 'boolean
   :group 'chatgpt-shell)
 
@@ -2500,13 +2518,13 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--put-source-block-overlays ()
   "Put overlays for all source blocks."
-  (when chatgpt-shell-highlight-blocks
-    (let* ((source-blocks (chatgpt-shell--source-blocks))
-           (avoid-ranges (seq-map (lambda (block)
-                                    (map-elt block 'body))
-                                  source-blocks)))
-      (dolist (overlay (overlays-in (point-min) (point-max)))
-        (delete-overlay overlay))
+  (let* ((source-blocks (chatgpt-shell--source-blocks))
+         (avoid-ranges (seq-map (lambda (block)
+                                  (map-elt block 'body))
+                                source-blocks)))
+    (dolist (overlay (overlays-in (point-min) (point-max)))
+      (delete-overlay overlay))
+    (when chatgpt-shell-highlight-blocks
       (dolist (block source-blocks)
         (chatgpt-shell--fontify-source-block
          (car (map-elt block 'start))
@@ -2518,48 +2536,57 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
          (car (map-elt block 'body))
          (cdr (map-elt block 'body))
          (car (map-elt block 'end))
-         (cdr (map-elt block 'end))))
-      (when chatgpt-shell-insert-dividers
-        (dolist (divider (shell-maker--prompt-end-markers))
-          (chatgpt-shell--fontify-divider (car divider) (cdr divider))))
-      (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
-        (chatgpt-shell--fontify-link
-         (map-elt link 'start)
-         (map-elt link 'end)
-         (car (map-elt link 'title))
-         (cdr (map-elt link 'title))
-         (car (map-elt link 'url))
-         (cdr (map-elt link 'url))))
-      (dolist (header (chatgpt-shell--markdown-headers avoid-ranges))
-        (chatgpt-shell--fontify-header
-         (map-elt header 'start)
-         (map-elt header 'end)
-         (car (map-elt header 'level))
-         (cdr (map-elt header 'level))
-         (car (map-elt header 'title))
-         (cdr (map-elt header 'title))))
-      (dolist (bold (chatgpt-shell--markdown-bolds avoid-ranges))
-        (chatgpt-shell--fontify-bold
-         (map-elt bold 'start)
-         (map-elt bold 'end)
-         (car (map-elt bold 'text))
-         (cdr (map-elt bold 'text))))
-      (dolist (italic (chatgpt-shell--markdown-italics avoid-ranges))
-        (chatgpt-shell--fontify-italic
-         (map-elt italic 'start)
-         (map-elt italic 'end)
-         (car (map-elt italic 'text))
-         (cdr (map-elt italic 'text))))
-      (dolist (strikethrough (chatgpt-shell--markdown-strikethroughs avoid-ranges))
-        (chatgpt-shell--fontify-strikethrough
-         (map-elt strikethrough 'start)
-         (map-elt strikethrough 'end)
-         (car (map-elt strikethrough 'text))
-         (cdr (map-elt strikethrough 'text))))
-      (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
-        (chatgpt-shell--fontify-inline-code
-         (car (map-elt inline-code 'body))
-         (cdr (map-elt inline-code 'body)))))))
+         (cdr (map-elt block 'end)))))
+    (when chatgpt-shell-insert-dividers
+      (dolist (divider (shell-maker--prompt-end-markers))
+        (chatgpt-shell--fontify-divider (car divider) (cdr divider))))
+    (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
+      (chatgpt-shell--fontify-link
+       (map-elt link 'start)
+       (map-elt link 'end)
+       (car (map-elt link 'title))
+       (cdr (map-elt link 'title))
+       (car (map-elt link 'url))
+       (cdr (map-elt link 'url))))
+    (dolist (header (chatgpt-shell--markdown-headers avoid-ranges))
+      (chatgpt-shell--fontify-header
+       (map-elt header 'start)
+       (map-elt header 'end)
+       (car (map-elt header 'level))
+       (cdr (map-elt header 'level))
+       (car (map-elt header 'title))
+       (cdr (map-elt header 'title))))
+    (dolist (bold (chatgpt-shell--markdown-bolds avoid-ranges))
+      (chatgpt-shell--fontify-bold
+       (map-elt bold 'start)
+       (map-elt bold 'end)
+       (car (map-elt bold 'text))
+       (cdr (map-elt bold 'text))))
+    (dolist (italic (chatgpt-shell--markdown-italics avoid-ranges))
+      (chatgpt-shell--fontify-italic
+       (map-elt italic 'start)
+       (map-elt italic 'end)
+       (car (map-elt italic 'text))
+       (cdr (map-elt italic 'text))))
+    (dolist (strikethrough (chatgpt-shell--markdown-strikethroughs avoid-ranges))
+      (chatgpt-shell--fontify-strikethrough
+       (map-elt strikethrough 'start)
+       (map-elt strikethrough 'end)
+       (car (map-elt strikethrough 'text))
+       (cdr (map-elt strikethrough 'text))))
+    (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
+      (chatgpt-shell--fontify-inline-code
+       (car (map-elt inline-code 'body))
+       (cdr (map-elt inline-code 'body))))
+    (when chatgpt-shell-render-latex
+      (require 'org)
+      (let ((major-mode 'org-mode)) ;; Silence org-element warnings.
+        (save-excursion
+          (org-format-latex
+           (concat org-preview-latex-image-directory "chatgpt-shell")
+           (point-min) (point-max)
+           temporary-file-directory
+           'overlays nil 'forbuffer org-preview-latex-default-process))))))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--unpaired-length (length)
