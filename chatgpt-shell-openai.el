@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -56,7 +56,7 @@ VALIDATE-COMMAND handler."
     (:token-width . ,token-width)
     (:context-window . ,context-window)
     (:handler . ,handler)
-    (:filter . chatgpt-shell-openai--filter-output)
+    (:filter . ,filter)
     (:payload . chatgpt-shell-openai--make-payload)
     (:headers . ,headers)
     (:url . chatgpt-shell-openai--make-url)

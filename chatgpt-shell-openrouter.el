@@ -8,6 +8,7 @@
          :key #'chatgpt-shell-openrouter-key
          :headers #'chatgpt-shell-openrouter--make-headers
          :handler #'chatgpt-shell-openrouter--handle-chatgpt-command
+         :filter #'chatgpt-shell-openrouter--filter-output
          args))
 
 (defun chatgpt-shell-openrouter-models ()
@@ -42,13 +43,13 @@
          ;;
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"]))))
-        ;; (chatgpt-shell-openrouter-make-model
-        ;;  :version "openai/o1"
-        ;;  :short-version "o1"
-        ;;  :label "ChatGPT"
-        ;;  :token-width 3
-        ;;  ;; See https://openrouter.ai/openai/o1-2024-12-17
-        ;;  :context-window 200000)
+        (chatgpt-shell-openrouter-make-model
+         :version "openai/o1"
+         :short-version "o1"
+         :label "ChatGPT"
+         :token-width 3
+         ;; See https://openrouter.ai/openai/o1-2024-12-17
+         :context-window 200000)
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :short-version "qwen-2.5-coder-32b"
@@ -97,6 +98,10 @@ If you use OpenRouter through a proxy service, change the URL base."
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
          :key #'chatgpt-shell-openrouter-key
          args))
+
+(defun chatgpt-shell-openrouter--filter-output (raw-response)
+  (unless (string= (string-trim raw-response) ": OPENROUTER PROCESSING")
+    (chatgpt-shell-openai--filter-output raw-response)))
 
 (defun chatgpt-shell-openrouter--make-headers (&rest args)
   (apply #'chatgpt-shell-openai--make-headers
