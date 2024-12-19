@@ -1,8 +1,9 @@
 ;;; chatgpt-shell-openrouter.el --- OpenRouter-specific logic -*- lexical-binding: t; -*-
 
-(cl-defun chatgpt-shell-openrouter-make-model (&rest args &key version short-version token-width context-window validate-command other-params)
+(cl-defun chatgpt-shell-openrouter-make-model (&rest args &key label version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
          :url-base 'chatgpt-shell-openrouter-api-url-base
+         :path "/v1/chat/completions"
          :provider "OpenRouter"
          :key #'chatgpt-shell-openrouter-key
          :headers #'chatgpt-shell-openrouter--make-headers
@@ -14,6 +15,7 @@
   (list (chatgpt-shell-openrouter-make-model
          :version "meta-llama/llama-3.3-70b-instruct"
          :short-version "llama-3.3-70b"
+         :label "Llama"
          :token-width 16
          ;; See https://openrouter.ai/meta-llama/llama-3.3-70b-instruct.
          :context-window 131072
@@ -28,6 +30,7 @@
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwq-32b-preview"
          :short-version "qwq-32b-preview"
+         :label "Qwen"
          :token-width 16
          ;; See
          :context-window 32768
@@ -39,9 +42,17 @@
          ;;
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"]))))
+        ;; (chatgpt-shell-openrouter-make-model
+        ;;  :version "openai/o1"
+        ;;  :short-version "o1"
+        ;;  :label "ChatGPT"
+        ;;  :token-width 3
+        ;;  ;; See https://openrouter.ai/openai/o1-2024-12-17
+        ;;  :context-window 200000)
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :short-version "qwen-2.5-coder-32b"
+         :label "Qwen"
          :token-width 16
          ;; See
          :context-window 32768
