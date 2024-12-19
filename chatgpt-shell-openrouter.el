@@ -49,7 +49,8 @@
          :label "ChatGPT"
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
-         :context-window 200000)
+         :context-window 200000
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :short-version "qwen-2.5-coder-32b"
@@ -97,6 +98,7 @@ If you use OpenRouter through a proxy service, change the URL base."
 (defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
          :key #'chatgpt-shell-openrouter-key
+         :filter #'chatgpt-shell-openrouter--filter-output
          args))
 
 (defun chatgpt-shell-openrouter--filter-output (raw-response)

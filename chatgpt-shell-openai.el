@@ -78,13 +78,7 @@ VALIDATE-COMMAND handler."
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
@@ -278,7 +272,7 @@ or
    :streaming (map-elt settings :streaming)
    :other-params (map-elt model :other-params)))
 
-(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key))
+(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key) (filter #'chatgpt-shell-openai--filter-output))
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (unless (funcall key)
     (funcall (map-elt shell :write-output) "Your chatgpt-shell-openai-key is missing")
@@ -297,7 +291,7 @@ or
           :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
                   (format "Authorization: Bearer %s" (funcall key)))
-   :filter #'chatgpt-shell-openai--filter-output
+   :filter filter
    :shell shell))
 
 (defun chatgpt-shell-openai--user-assistant-messages (history)

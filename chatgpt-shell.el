@@ -401,6 +401,12 @@ Or nil if none."
         (push key seen)))
     duplicates))
 
+(defun chatgpt-shell-validate-no-system-prompt (command model settings)
+    (or (chatgpt-shell-openai--validate-command command model settings)
+        (when (map-elt settings :system-prompt)
+          (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
+                  (map-elt model :version)))))
+
 ;;;###autoload
 (defun chatgpt-shell-swap-system-prompt ()
   "Swap system prompt from `chatgpt-shell-system-prompts'."
