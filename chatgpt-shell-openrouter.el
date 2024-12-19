@@ -54,7 +54,7 @@
          ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))))
 
-(defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai"
+(defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai/api"
   "OpenRouter API's base URL.
 
 API url = base + path.
