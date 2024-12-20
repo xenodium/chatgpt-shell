@@ -1537,7 +1537,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
     "Implements `??' eshell command."
     (interactive)
     (let ((prompt (concat
-                   "What's wrong with the following command execution?\n\n"
+                   "What's wrong with the following command execution? Be succinct.\n\n"
                    (chatgpt-shell--eshell-last-last-command)))
           (prompt-file (concat temporary-file-directory
                                "chatgpt-shell-command-line-prompt")))
