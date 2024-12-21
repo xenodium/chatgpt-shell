@@ -74,6 +74,7 @@
 (require 'chatgpt-shell-ollama)
 (require 'chatgpt-shell-openai)
 (require 'chatgpt-shell-perplexity)
+(require 'chatgpt-shell-openrouter)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -233,7 +234,8 @@ It returns a list containing all available models from these providers."
           (chatgpt-shell-google-models)
           (chatgpt-shell-kagi-models)
           (chatgpt-shell-ollama-models)
-          (chatgpt-shell-perplexity-models)))
+          (chatgpt-shell-perplexity-models)
+          (chatgpt-shell-openrouter-models)))
 
 (defcustom chatgpt-shell-models
   (chatgpt-shell--make-default-models)
@@ -426,6 +428,12 @@ Or nil if none."
           (push key duplicates)
         (push key seen)))
     duplicates))
+
+(defun chatgpt-shell-validate-no-system-prompt (command model settings)
+    (or (chatgpt-shell-openai--validate-command command model settings)
+        (when (map-elt settings :system-prompt)
+          (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
+                  (map-elt model :version)))))
 
 ;;;###autoload
 (defun chatgpt-shell-swap-system-prompt ()
@@ -1940,7 +1948,8 @@ ON-FAILURE: (lambda (output)) for completion event."
             :system-prompt system-prompt
             :version (map-elt model :version)
             :temperature (or temperature 1)
-            :streaming streaming)
+            :streaming streaming
+            :other-params (map-elt model :other-params))
      :headers headers
      :filter #'chatgpt-shell-openai--filter-output
      :on-output
