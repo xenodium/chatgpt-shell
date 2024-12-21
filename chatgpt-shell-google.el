@@ -90,9 +90,9 @@ VALIDATE-COMMAND handler."
                                          :path "/v1beta/models/gemini-1.5-pro-latest"
                                          :token-width 4
                                          :context-window 2097152)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-flash"
-                                         :short-version "1.5-flash"
-                                         :path "/v1beta/models/gemini-1.5-flash"
+        (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
+                                         :short-version "1.5-flash-latest"
+                                         :path "/v1beta/models/gemini-1.5-flash-latest"
                                          :token-width 4
                                          :context-window 1048576)))
 
