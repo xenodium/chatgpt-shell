@@ -90,6 +90,11 @@ VALIDATE-COMMAND handler."
                                          :path "/v1beta/models/gemini-1.5-pro-latest"
                                          :token-width 4
                                          :context-window 2097152)
+        (chatgpt-shell-google-make-model :version "gemini-exp-1206"
+                                         :short-version "exp-1206"
+                                         :path "/v1beta/models/gemini-exp-1206"
+                                         :token-width 4
+                                         :context-window 2097152)
         (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
                                          :short-version "1.5-flash-latest"
                                          :path "/v1beta/models/gemini-1.5-flash-latest"
@@ -99,7 +104,12 @@ VALIDATE-COMMAND handler."
                                          :short-version "2.0-flash-exp"
                                          :path "/v1beta/models/gemini-2.0-flash-exp"
                                          :token-width 4
-                                         :context-window 1048576)))
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-1219"
+                                         :short-version "2.0-flash-thinking-exp"
+                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-1219"
+                                         :token-width 4
+                                         :context-window 32767)))
 
 (defun chatgpt-shell-google--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
