@@ -34,7 +34,7 @@
 ;; M-x `chatgpt-shell-describe-image'
 ;; M-x `chatgpt-shell-japanese-lookup'
 ;;
-;; You must set an API key for most cloud services. Check out:
+;; You must set an API key for most cloud services.  Check out:
 ;;
 ;;   `chatgpt-shell-openai-key'.
 ;;   `chatgpt-shell-anthropic-key'.
@@ -561,7 +561,7 @@ See `chatgpt-shell-streaming'
 (defcustom chatgpt-shell-render-latex t
   "Whether or not to render LaTeX blocks (experimental).
 
-Experimental. Please report issues."
+Experimental.  Please report issues."
   :type 'boolean
   :group 'chatgpt-shell)
 
