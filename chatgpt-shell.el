@@ -2583,13 +2583,31 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
        (cdr (map-elt inline-code 'body))))
     (when chatgpt-shell-render-latex
       (require 'org)
-      (let ((major-mode 'org-mode)) ;; Silence org-element warnings.
+      ;; Silence org-element warnings.
+      (let ((major-mode 'org-mode))
         (save-excursion
-          (org-format-latex
-           (concat org-preview-latex-image-directory "chatgpt-shell")
-           (point-min) (point-max)
-           temporary-file-directory
-           'overlays nil 'forbuffer org-preview-latex-default-process))))))
+          (dolist (range (chatgpt-shell--invert-ranges
+                          avoid-ranges
+                          (point-min)
+                          (point-max)))
+            (org-format-latex
+             (concat org-preview-latex-image-directory "chatgpt-shell")
+             (car range) (cdr range)
+             temporary-file-directory
+             'overlays nil 'forbuffer org-preview-latex-default-process)))))))
+
+(defun chatgpt-shell--invert-ranges (ranges min max)
+  "Invert a list of RANGES within the interval [MIN, MAX].
+Each range is a cons of start and end integers."
+  (let ((result nil)
+        (start min))
+    (dolist (range ranges)
+      (when (< start (car range))
+        (push (cons start (car range)) result))
+      (setq start (cdr range)))
+    (when (< start max)
+      (push (cons start max) result))
+    result))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--unpaired-length (length)
