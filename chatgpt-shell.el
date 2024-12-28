@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.10.1
+;; Version: 2.10.2
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.76.2"))
-(defconst chatgpt-shell--version "2.10.1")
+(defconst chatgpt-shell--version "2.10.2")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -2816,31 +2816,32 @@ ARGS:
                  " to Save. "
                  (propertize "C-c C-k" 'face 'help-key-binding)
                  " to Cancel and Discard."))
-          (local-set-key (kbd "C-c '")
-                         (lambda ()
-                           (interactive)
-                           (let ((result (buffer-string)))
-                             (with-current-buffer block-buffer
-                               (funcall on-finished result))
-                             (set-buffer-modified-p nil)
-                             (kill-buffer edit-buffer))))
-          (local-set-key (kbd "C-c C-k")
-                         (lambda ()
-                           (interactive)
-                           (with-current-buffer block-buffer
-                             (funcall on-finished nil))
-                           (set-buffer-modified-p nil)
-                           (kill-buffer edit-buffer))))
+          (let ((local-map (make-sparse-keymap)))
+            (define-key local-map (kbd "C-c '") (lambda ()
+                                                  (interactive)
+                                                  (let ((result (buffer-string)))
+                                                    (with-current-buffer block-buffer
+                                                      (funcall on-finished result))
+                                                    (set-buffer-modified-p nil)
+                                                    (kill-buffer edit-buffer))))
+            (define-key local-map (kbd "C-c C-k") (lambda ()
+                                                    (interactive)
+                                                    (with-current-buffer block-buffer
+                                                      (funcall on-finished nil))
+                                                    (set-buffer-modified-p nil)
+                                                    (kill-buffer edit-buffer)))
+            (use-local-map local-map)))
       (setq header-line-format
             (concat
              " Press "
              (propertize "q" 'face 'help-key-binding)
              " to exit"))
-      (local-set-key (kbd "q")
-                     (lambda ()
-                       (interactive)
-                       (quit-restore-window
-                        (get-buffer-window edit-buffer) 'kill)))
+      (let ((local-map (make-sparse-keymap)))
+        (define-key local-map (kbd "q") (lambda ()
+                                          (interactive)
+                                          (quit-restore-window
+                                           (get-buffer-window edit-buffer) 'kill)))
+        (use-local-map local-map))
       (setq buffer-read-only t))
     (goto-char (point-min))))
 
