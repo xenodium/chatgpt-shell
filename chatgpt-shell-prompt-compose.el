@@ -49,6 +49,7 @@
 (declare-function chatgpt-shell--region "chatgpt-shell")
 (declare-function chatgpt-shell--pretty-smerge-insert "chatgpt-shell")
 (declare-function chatgpt-shell-markdown-block-at-point "chatgpt-shell")
+(declare-function chatgpt-shell-view-block-at-point "chatgpt-shell")
 
 (defvar-local chatgpt-shell-prompt-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
