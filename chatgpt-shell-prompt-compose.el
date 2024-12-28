@@ -236,6 +236,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                            (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                              chatgpt-shell-prompt-compose-view-mode))))
     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+      (unless transient-frame-p
+        (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer))))
       (chatgpt-shell-prompt-compose-mode)
       (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
       (setq-local chatgpt-shell-prompt-compose--transient-frame-p transient-frame-p)
@@ -263,8 +265,6 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                      (lambda () buffer-read-only)))
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
-    (unless transient-frame-p
-      (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer))))
     (chatgpt-shell-prompt-compose-buffer)))
 
 (defun chatgpt-shell-prompt-compose-search-history ()
