@@ -2749,6 +2749,101 @@ For example \"elisp\" -> \"emacs-lisp\"."
           (user-error "No primary action for %s blocks" (map-elt block 'language))))
     (user-error "No block at point")))
 
+(defun chatgpt-shell-edit-block-at-point ()
+  "Execute block at point."
+  (interactive)
+  (error "Not yet supported")
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (chatgpt-shell--view-code :language (map-elt block 'language)
+                                :code (buffer-substring-no-properties
+                                       (map-elt block 'start)
+                                       (map-elt block 'end))
+                                :on-finished (lambda (code)
+                                               (when-let ((inhibit-read-only t)
+                                                          (success code))
+                                                 (deactivate-mark)
+                                                 (delete-region (map-elt block 'start)
+                                                                (map-elt block 'end))
+                                                 (insert "\n"
+                                                         (string-trim code)
+                                                         "\n")
+                                                 (chatgpt-shell--put-source-block-overlays))))
+    (user-error "No block at point")))
+
+(defun chatgpt-shell-view-block-at-point ()
+  "View code block at point (using language's major mode)."
+  (interactive)
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (chatgpt-shell--view-code :language (map-elt block 'language)
+                                :code (buffer-substring-no-properties
+                                       (map-elt block 'start)
+                                       (map-elt block 'end))
+                                :on-finished #'identity)
+    (user-error "No block at point")))
+
+(cl-defun chatgpt-shell--view-code (&key edit language code on-finished)
+  "Open a temporary buffer for editing CODE in LANGUAGE major mode.
+When done, invoke the FINISHED function with the resulting code.
+
+ARGS:
+- EDIT: To enable editing CODE in own buffer.
+- LANGUAGE: A string with the language name.
+- CODE: A string with the initial content of the buffer.
+- ON-FINISHED: Invoked with saved changes, nil if cancelled."
+  (let* ((block-buffer (current-buffer))
+         (edit-buffer (generate-new-buffer (format "*%s code block*"
+                                                   (if edit "edit" "view"))))
+         (buffer-name (buffer-name edit-buffer))
+         (language-mode (intern (concat (or
+                                         (chatgpt-shell--resolve-internal-language language)
+                                         (downcase (string-trim language)))
+                                        "-mode"))))
+    (switch-to-buffer edit-buffer)
+    (set-visited-file-name (make-temp-file "chatgpt-shell-edit-block"))
+    (rename-buffer buffer-name)
+    (add-hook 'after-change-functions
+              (lambda (_beg _end _len)
+                (set-buffer-modified-p nil)) nil t)
+    (funcall language-mode)
+    (insert (or code ""))
+    (set-buffer-modified-p nil)
+    (if edit
+        (progn
+          (setq header-line-format
+                (concat
+                 " "
+                 (propertize "C-c '" 'face 'help-key-binding)
+                 " to Save. "
+                 (propertize "C-c C-k" 'face 'help-key-binding)
+                 " to Cancel and Discard."))
+          (local-set-key (kbd "C-c '")
+                         (lambda ()
+                           (interactive)
+                           (let ((result (buffer-string)))
+                             (with-current-buffer block-buffer
+                               (funcall on-finished result))
+                             (set-buffer-modified-p nil)
+                             (kill-buffer edit-buffer))))
+          (local-set-key (kbd "C-c C-k")
+                         (lambda ()
+                           (interactive)
+                           (with-current-buffer block-buffer
+                             (funcall on-finished nil))
+                           (set-buffer-modified-p nil)
+                           (kill-buffer edit-buffer))))
+      (setq header-line-format
+            (concat
+             " Press "
+             (propertize "q" 'face 'help-key-binding)
+             " to exit"))
+      (local-set-key (kbd "q")
+                     (lambda ()
+                       (interactive)
+                       (quit-restore-window
+                        (get-buffer-window edit-buffer) 'kill)))
+      (setq buffer-read-only t))
+    (goto-char (point-min))))
+
 (defun chatgpt-shell--override-language-params (language params)
   "Override PARAMS for LANGUAGE if found in `chatgpt-shell-babel-headers'."
   (if-let* ((overrides (map-elt chatgpt-shell-babel-headers
