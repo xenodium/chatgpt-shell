@@ -263,7 +263,7 @@ or
 
 (cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
-  (apply
+  (funcall
    #'chatgpt-shell-openai-make-chatgpt-request-data
    :system-prompt (map-elt settings :system-prompt)
    :context context
