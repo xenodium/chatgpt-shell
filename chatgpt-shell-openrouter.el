@@ -2,6 +2,7 @@
 
 (cl-defun chatgpt-shell-openrouter-make-model (&rest args &key label version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
+         :validate-command chatgpt-shell-openrouter--validate-command
          :url-base 'chatgpt-shell-openrouter-api-url-base
          :path "/v1/chat/completions"
          :provider "OpenRouter"
@@ -99,6 +100,7 @@ If you use OpenRouter through a proxy service, change the URL base."
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
          :key #'chatgpt-shell-openrouter-key
          :filter #'chatgpt-shell-openrouter--filter-output
+         :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"
          args))
 
 (defun chatgpt-shell-openrouter--filter-output (raw-response)
@@ -109,6 +111,17 @@ If you use OpenRouter through a proxy service, change the URL base."
   (apply #'chatgpt-shell-openai--make-headers
          :key #'chatgpt-shell-openrouter-key
          args))
+
+(defun chatgpt-shell-openrouter--validate-command (_command _model _settings)
+  "Return error string if command/setup isn't valid."
+  (unless chatgpt-shell-openrouter-key
+    "Variable `chatgpt-shell-openrouter-key' needs to be set to your key.
+
+Try M-x set-variable chatgpt-shell-openrouter-key
+
+or
+
+(setq chatgpt-shell-openrouter-key \"my-key\")"))
 
 (provide 'chatgpt-shell-openrouter)
 ;;; chatgpt-shell-openrouter.el ends here
