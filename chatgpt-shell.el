@@ -858,7 +858,7 @@ This is used for sending a prompt to in the background."
 
 (defun chatgpt-shell--make-buffer-name ()
   "Generate a buffer name using current shell config info."
-  (format "*%s llm (%s*)"
+  (format "*%s llm (%s)*"
           (downcase (chatgpt-shell--model-label))
           (chatgpt-shell--shell-info)))
 
