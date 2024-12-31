@@ -1,6 +1,30 @@
 ;;; chatgpt-shell-openrouter.el --- OpenRouter-specific logic -*- lexical-binding: t; -*-
 
-(cl-defun chatgpt-shell-openrouter-make-model (&rest args &key label version short-version token-width context-window validate-command other-params)
+;; Author: Alvaro Ramirez https://xenodium.com
+;; URL: https://github.com/xenodium/chatgpt-shell
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.72.1"))
+
+;; This package is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This package is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;;; Commentary:
+
+;; Adds OpenRouter specifics for `chatgpt-shell'.
+
+;;; Code:
+
+(cl-defun chatgpt-shell-openrouter-make-model (&rest args)
+  "Create an OpenRouter model.
+
+The ARGS are the same as for
+`chatgpt-shell-openai-make-model'."
   (apply #'chatgpt-shell-openai-make-model
          :validate-command #'chatgpt-shell-openrouter--validate-command
          :url-base 'chatgpt-shell-openrouter-api-url-base
@@ -97,6 +121,7 @@ If you use OpenRouter through a proxy service, change the URL base."
          nil)))
 
 (defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
+  "Handle ChatGPT COMMAND (prompt) using ARGS, MODEL, CONTEXT, SHELL, and SETTINGS."
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
          :key #'chatgpt-shell-openrouter-key
          :filter #'chatgpt-shell-openrouter--filter-output
@@ -104,10 +129,16 @@ If you use OpenRouter through a proxy service, change the URL base."
          args))
 
 (defun chatgpt-shell-openrouter--filter-output (raw-response)
+  "Filter RAW-RESPONSE when processing responses are sent.
+
+This occurs for example with OpenAI's o1 model through OpenRouter."
   (unless (string= (string-trim raw-response) ": OPENROUTER PROCESSING")
     (chatgpt-shell-openai--filter-output raw-response)))
 
 (defun chatgpt-shell-openrouter--make-headers (&rest args)
+  "Create the API headers.
+
+ARGS are the same as for `chatgpt-shell-openai--make-headers'."
   (apply #'chatgpt-shell-openai--make-headers
          :key #'chatgpt-shell-openrouter-key
          args))

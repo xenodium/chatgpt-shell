@@ -430,6 +430,9 @@ Or nil if none."
     duplicates))
 
 (defun chatgpt-shell-validate-no-system-prompt (command model settings)
+  "Perform validation for COMMAND with MODEL and SETTINGS.
+Then enforce that there is no system prompt. This is useful for models like
+OpenAI's o1 that do not allow one."
     (or (chatgpt-shell-openai--validate-command command model settings)
         (when (map-elt settings :system-prompt)
           (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
