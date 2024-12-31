@@ -1,6 +1,6 @@
 ;;; chatgpt-shell-openrouter.el --- OpenRouter-specific logic -*- lexical-binding: t; -*-
 
-;; Author: Alvaro Ramirez https://xenodium.com
+;; Author: David J. Rosenbaum <djr7c4@gmail.com>
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.72.1"))
 
