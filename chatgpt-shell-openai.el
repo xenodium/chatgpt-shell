@@ -272,10 +272,10 @@ or
    :streaming (map-elt settings :streaming)
    :other-params (map-elt model :other-params)))
 
-(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key) (filter #'chatgpt-shell-openai--filter-output))
+(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key) (filter #'chatgpt-shell-openai--filter-output) (missing-key-msg "Your chatgpt-shell-openai-key is missing"))
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
   (unless (funcall key)
-    (funcall (map-elt shell :write-output) "Your chatgpt-shell-openai-key is missing")
+    (funcall (map-elt shell :write-output) missing-key-msg)
     (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
