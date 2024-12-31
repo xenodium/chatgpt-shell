@@ -33,7 +33,7 @@
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -50,19 +50,20 @@ VALIDATE-COMMAND handler."
     (error ":context-window must be an integer"))
   `((:version . ,version)
     (:short-version . ,short-version)
-    (:label . "ChatGPT")
-    (:provider . "OpenAI")
+    (:label . ,label)
+    (:provider . ,provider)
     (:path . "/v1/chat/completions")
     (:token-width . ,token-width)
     (:context-window . ,context-window)
-    (:handler . chatgpt-shell-openai--handle-chatgpt-command)
-    (:filter . chatgpt-shell-openai--filter-output)
+    (:handler . ,handler)
+    (:filter . ,filter)
     (:payload . chatgpt-shell-openai--make-payload)
-    (:headers . chatgpt-shell-openai--make-headers)
+    (:headers . ,headers)
     (:url . chatgpt-shell-openai--make-url)
-    (:key . chatgpt-shell-openai-key)
-    (:url-base . chatgpt-shell-api-url-base)
-    (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))))
+    (:key . ,key)
+    (:url-base . ,url-base)
+    (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
+    (:other-params . ,other-params)))
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
@@ -77,13 +78,7 @@ VALIDATE-COMMAND handler."
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
@@ -250,10 +245,10 @@ Otherwise:
           (or (map-elt model :path)
               (error "Model :path not found"))))
 
-(cl-defun chatgpt-shell-openai--make-headers (&key _model _settings)
+(cl-defun chatgpt-shell-openai--make-headers (&key _model _settings (key #'chatgpt-shell-openai-key))
   "Create the API headers."
   (list "Content-Type: application/json; charset=utf-8"
-        (format "Authorization: Bearer %s" (chatgpt-shell-openai-key))))
+        (format "Authorization: Bearer %s" (funcall key))))
 
 (defun chatgpt-shell-openai--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
@@ -268,23 +263,23 @@ or
 
 (cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
-  (chatgpt-shell-openai-make-chatgpt-request-data
+  (funcall
+   #'chatgpt-shell-openai-make-chatgpt-request-data
    :system-prompt (map-elt settings :system-prompt)
    :context context
    :version (map-elt model :version)
    :temperature (map-elt settings :temperature)
-   :streaming (map-elt settings :streaming)))
+   :streaming (map-elt settings :streaming)
+   :other-params (map-elt model :other-params)))
 
-(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings)
+(cl-defun chatgpt-shell-openai--handle-chatgpt-command (&key model command context shell settings (key #'chatgpt-shell-openai-key) (filter #'chatgpt-shell-openai--filter-output) (missing-key-msg "Your chatgpt-shell-openai-key is missing"))
   "Handle ChatGPT COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
-  (unless (chatgpt-shell-openai-key)
-    (funcall (map-elt shell :write-output) "Your chatgpt-shell-openai-key is missing")
+  (unless (funcall key)
+    (funcall (map-elt shell :write-output) missing-key-msg)
     (funcall (map-elt shell :finish-output) nil))
   (shell-maker-make-http-request
    :async t
-   :url (concat chatgpt-shell-api-url-base
-                (or (map-elt model :path)
-                    (error "Model :path not found")))
+   :url (chatgpt-shell-openai--make-url :model model)
    :proxy chatgpt-shell-proxy
    :data (chatgpt-shell-openai-make-chatgpt-request-data
           :prompt command
@@ -292,10 +287,11 @@ or
           :context context
           :version (map-elt model :version)
           :temperature (map-elt settings :temperature)
-          :streaming (map-elt settings :streaming))
+          :streaming (map-elt settings :streaming)
+          :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
-                  (format "Authorization: Bearer %s" (chatgpt-shell-openai-key)))
-   :filter #'chatgpt-shell-openai--filter-output
+                  (format "Authorization: Bearer %s" (funcall key)))
+   :filter filter
    :shell shell))
 
 (defun chatgpt-shell-openai--user-assistant-messages (history)
