@@ -2,7 +2,7 @@
 
 (cl-defun chatgpt-shell-openrouter-make-model (&rest args &key label version short-version token-width context-window validate-command other-params)
   (apply #'chatgpt-shell-openai-make-model
-         :validate-command chatgpt-shell-openrouter--validate-command
+         :validate-command #'chatgpt-shell-openrouter--validate-command
          :url-base 'chatgpt-shell-openrouter-api-url-base
          :path "/v1/chat/completions"
          :provider "OpenRouter"
