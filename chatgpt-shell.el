@@ -1563,6 +1563,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
             (interactive)
             (load ,(find-library-name "shell-maker") nil t)
             (load ,(find-library-name "chatgpt-shell-openai") nil t)
+            (load ,(find-library-name "chatgpt-shell-openrouter") nil t)
             (load ,(find-library-name "chatgpt-shell-google") nil t)
             (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
             (load ,(find-library-name "chatgpt-shell-ollama") nil t)
