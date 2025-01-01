@@ -32,12 +32,14 @@
 
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
+(declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) other-params)
   "Create an OpenAI model.
 
-Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW and
-VALIDATE-COMMAND handler."
+Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
+VALIDATE-COMMAND, HEADERS, KEY, URL-BASE, PATH, PROVIDER, LABEL,
+HANDLER, FILTER and OTHER-PARAMS."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
@@ -52,7 +54,7 @@ VALIDATE-COMMAND handler."
     (:short-version . ,short-version)
     (:label . ,label)
     (:provider . ,provider)
-    (:path . "/v1/chat/completions")
+    (:path . ,path)
     (:token-width . ,token-width)
     (:context-window . ,context-window)
     (:handler . ,handler)
@@ -246,7 +248,7 @@ Otherwise:
               (error "Model :path not found"))))
 
 (cl-defun chatgpt-shell-openai--make-headers (&key _model _settings (key #'chatgpt-shell-openai-key))
-  "Create the API headers."
+  "Create the API headers using KEY as the API KEY."
   (list "Content-Type: application/json; charset=utf-8"
         (format "Authorization: Bearer %s" (funcall key))))
 
