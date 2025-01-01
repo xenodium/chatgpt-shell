@@ -2999,7 +2999,7 @@ compiling source blocks."
   "Save variables across Emacs sessions."
   (setq-default chatgpt-shell-system-prompt
                 chatgpt-shell-system-prompt)
-  (with-temp-file (concat user-emacs-directory ".chatgpt-shell.el")
+  (with-temp-file (expand-file-name ".chatgpt-shell.el" chatgpt-shell-root-path)
     (prin1 (list
             (cons 'chatgpt-shell-system-prompt chatgpt-shell-system-prompt)
             (cons 'chatgpt-shell-system-prompt-resolved
@@ -3015,7 +3015,7 @@ compiling source blocks."
   (with-temp-buffer
     (condition-case nil
       ;; Try to insert the contents of .chatgpt-shell.el
-      (insert-file-contents (concat user-emacs-directory ".chatgpt-shell.el"))
+      (insert-file-contents (expand-file-name ".chatgpt-shell.el" chatgpt-shell-root-path))
       (error
         ;; If an error happens, execute chatgpt-shell--save-variables
         (chatgpt-shell--save-variables)))
