@@ -120,7 +120,7 @@ If you use OpenRouter through a proxy service, change the URL base."
         (t
          nil)))
 
-(defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
+(cl-defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using ARGS, MODEL, CONTEXT, SHELL, and SETTINGS."
   (apply #'chatgpt-shell-openai--handle-chatgpt-command
          :key #'chatgpt-shell-openrouter-key
