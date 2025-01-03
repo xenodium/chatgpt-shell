@@ -20,21 +20,29 @@
 
 ;;; Code:
 
-(cl-defun chatgpt-shell-openrouter-make-model (&rest args)
+(declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
+
+(cl-defun chatgpt-shell-openrouter-make-model (&key label version short-version token-width context-window validate-command other-params)
   "Create an OpenRouter model.
 
-The ARGS are the same as for
-`chatgpt-shell-openai-make-model'."
-  (apply #'chatgpt-shell-openai-make-model
-         :validate-command #'chatgpt-shell-openrouter--validate-command
-         :url-base 'chatgpt-shell-openrouter-api-url-base
-         :path "/v1/chat/completions"
-         :provider "OpenRouter"
-         :key #'chatgpt-shell-openrouter-key
-         :headers #'chatgpt-shell-openrouter--make-headers
-         :handler #'chatgpt-shell-openrouter--handle-chatgpt-command
-         :filter #'chatgpt-shell-openrouter--filter-output
-         args))
+Set LABEL, VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
+VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
+  (chatgpt-shell-openai-make-model
+   :label label
+   :version version
+   :short-version short-version
+   :token-width token-width
+   :context-window context-window
+   :other-params other-params
+   :validate-command #'chatgpt-shell-openrouter--validate-command
+   :url-base 'chatgpt-shell-openrouter-api-url-base
+   :path "/v1/chat/completions"
+   :provider "OpenRouter"
+   :validate-command validate-command
+   :key #'chatgpt-shell-openrouter-key
+   :headers #'chatgpt-shell-openrouter--make-headers
+   :handler #'chatgpt-shell-openrouter--handle-command
+   :filter #'chatgpt-shell-openrouter--filter-output))
 
 (defun chatgpt-shell-openrouter-models ()
   "Build a list of OpenRouter LLM models."
@@ -120,13 +128,17 @@ If you use OpenRouter through a proxy service, change the URL base."
         (t
          nil)))
 
-(cl-defun chatgpt-shell-openrouter--handle-chatgpt-command (&rest args &key model command context shell settings)
+(cl-defun chatgpt-shell-openrouter--handle-command (&key model command context shell settings)
   "Handle ChatGPT COMMAND (prompt) using ARGS, MODEL, CONTEXT, SHELL, and SETTINGS."
-  (apply #'chatgpt-shell-openai--handle-chatgpt-command
-         :key #'chatgpt-shell-openrouter-key
-         :filter #'chatgpt-shell-openrouter--filter-output
-         :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"
-         args))
+  (chatgpt-shell-openai--handle-chatgpt-command
+   :model model
+   :command command
+   :context context
+   :shell shell
+   :settings settings
+   :key #'chatgpt-shell-openrouter-key
+   :filter #'chatgpt-shell-openrouter--filter-output
+   :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"))
 
 (defun chatgpt-shell-openrouter--filter-output (raw-response)
   "Filter RAW-RESPONSE when processing responses are sent.
