@@ -569,7 +569,7 @@ See `chatgpt-shell-streaming'
   :type 'boolean
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-render-latex t
+(defcustom chatgpt-shell-render-latex nil
   "Whether or not to render LaTeX blocks (experimental).
 
 Experimental.  Please report issues."
