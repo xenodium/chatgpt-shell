@@ -207,7 +207,7 @@ Otherwise:
                                          (let-alist choice
                                            (or .delta.content
                                                .message.content)))
-                                       .choices)))))
+                                       .choices "")))))
       response
     (when-let ((chunks (shell-maker--split-text raw-response)))
       (let ((response)
@@ -227,7 +227,7 @@ Otherwise:
                                                 (let-alist choice
                                                   (or .delta.content
                                                       .message.content)))
-                                              .choices)))))
+                                              .choices "")))))
                     (unless (string-empty-p text)
                       (setq response (concat response text)))
                   (setq pending (concat pending

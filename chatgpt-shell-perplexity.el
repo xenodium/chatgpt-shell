@@ -158,7 +158,7 @@ Otherwise:
                                                   .message.content)
                                                  (t
                                                   ""))))
-                                       .choices)))))
+                                       .choices "")))))
       (let ((citations (let-alist whole
                          .citations)))
         (chatgpt-shell-perplexity--expand-citations
@@ -183,7 +183,7 @@ Otherwise:
                                                   (let-alist choice
                                                     (or .delta.content
                                                         .message.content)))
-                                                .choices)))))
+                                                .choices "")))))
                       (progn
                         (setq citations (let-alist obj
                                           .citations))

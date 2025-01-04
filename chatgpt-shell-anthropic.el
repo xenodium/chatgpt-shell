@@ -195,7 +195,7 @@ or
                             (mapconcat (lambda (content)
                                          (let-alist content
                                            .text))
-                                       .content)))))
+                                       .content "")))))
       response
     (if-let ((chunks (shell-maker--split-text raw-response)))
       (let ((response)
