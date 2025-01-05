@@ -115,53 +115,6 @@ t if invoked from a transient frame (quitting closes the frame).")
   :keymap chatgpt-shell-prompt-compose-view-mode-map
   (setq buffer-read-only chatgpt-shell-prompt-compose-view-mode))
 
-;;;###autoload
-(defun chatgpt-shell-prompt-compose (prefix)
-  "Compose and send prompt from a dedicated buffer.
-
-With PREFIX, clear existing history (wipe asociated shell history).
-
-Whenever `chatgpt-shell-prompt-compose' is invoked, appends any active
-region (or flymake issue at point) to compose buffer.
-
-Additionally, if point is at an error/warning raised by flymake,
-automatically add context (error/warning + code) to expedite ChatGPT
-for help to fix the issue.
-
-The compose buffer always shows the latest interaction, but it's
-backed by the shell history.  You can always switch to the shell buffer
-to view the history.
-
-Editing: While compose buffer is in in edit mode, it offers a couple
-of magit-like commit buffer bindings.
-
- `\\[chatgpt-shell-prompt-compose-send-buffer]` to send the buffer query.
- `\\[chatgpt-shell-prompt-compose-cancel]` to cancel compose buffer.
- `\\[chatgpt-shell-prompt-compose-search-history]` search through history.
- `\\[chatgpt-shell-prompt-compose-previous-history]` cycle through previous
-item in history.
- `\\[chatgpt-shell-prompt-compose-next-history]` cycle through next item in
-history.
-
-Read-only: After sending a query, the buffer becomes read-only and
-enables additional key bindings.
-
- `\\[chatgpt-shell-prompt-compose-send-buffer]` After sending offers to abort
-query in-progress.
- `\\[View-quit]` Exits the read-only buffer.
- `\\[chatgpt-shell-prompt-compose-retry]` Refresh (re-send the query).  Useful
-to retry on disconnects.
- `\\[chatgpt-shell-prompt-compose-next-item]` Jump to next source block.
- `\\[chatgpt-shell-prompt-compose-previous-item]` Jump to next previous block.
- `\\[chatgpt-shell-prompt-compose-reply]` Reply to follow-up with additional questions.
- `\\[chatgpt-shell-prompt-compose-request-entire-snippet]` Send \"Show entire snippet\" query.
- `\\[chatgpt-shell-prompt-compose-insert-block-at-point]` Insert block at point at last known location.
- `\\[chatgpt-shell-prompt-compose-request-more]` Send \"Show me more\" query.
- `\\[chatgpt-shell-prompt-compose-other-buffer]` Jump to other buffer (ie. the shell itself).
- `\\[chatgpt-shell-mark-block]` Mark block at point."
-  (interactive "P")
-  (chatgpt-shell-prompt-compose-show-buffer :clear-history prefix))
-
 (defvar-local chatgpt-shell--ring-index nil)
 
 (cl-defun chatgpt-shell-prompt-compose-show-buffer (&key content clear-history transient-frame-p)
