@@ -120,6 +120,20 @@ Via [[https://github.com/jwiegley/use-package][use-package]], you can install wi
         (auth-source-pass-get 'secret "openai-key")))))
 #+end_src
 
+** Straight
+
+#+begin_src emacs-lisp :lexical no
+  (use-package shell-maker
+    :straight (:type git :host github :repo "xenodium/shell-maker" :files ("shell-maker*.el")))
+
+  (use-package chatgpt-shell
+    :straight (:type git :host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell*.el"))
+    :custom
+    ((chatgpt-shell-openai-key
+      (lambda ()
+        (auth-source-pass-get 'secret "openai-key")))))
+#+end_src
+
 * Swap models
 ** M-x chatgpt-shell-model-version
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swap-models.png" width="80%" />
