@@ -1302,7 +1302,10 @@ Could be a prompt or a source block."
 (defun chatgpt-shell--minibuffer-prompt ()
   "Construct a prompt for the minibuffer."
   (if (chatgpt-shell--primary-buffer)
-      (concat (buffer-name (chatgpt-shell--primary-buffer)) "> ")
+      (concat (string-trim
+               (replace-regexp-in-string
+                "\\*" ""
+                (buffer-name (chatgpt-shell--primary-buffer)))) "> ")
     (shell-maker-prompt
      chatgpt-shell--config)))
 

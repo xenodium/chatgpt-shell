@@ -455,7 +455,9 @@ If BACKWARDS is non-nil, go to previous interaction."
 
 (defun chatgpt-shell-prompt-compose-buffer-name ()
   "Generate compose buffer name."
-  (concat (chatgpt-shell--minibuffer-prompt) "compose"))
+  (concat "*"
+          (chatgpt-shell--minibuffer-prompt) "compose"
+          "*"))
 
 (defun chatgpt-shell-prompt-compose-swap-system-prompt ()
   "Swap the compose buffer's system prompt."
