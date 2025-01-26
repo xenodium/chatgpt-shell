@@ -203,19 +203,6 @@ If you use ChatGPT through a HTTP proxy (for example you are in a corporate netw
 For this, use =chatgpt-shell-proxy=.
 
 For example, if you want curl =-x= and =http://your_proxy=, set =chatgpt-shell-proxy= to "=http://your_proxy=".
-
-* Using ChatGPT through Azure OpenAI Service
-
-Endpoint: =https://{your-resource-name}.openai.azure.com/openai/deployments/{deployment-id}/chat/completions?api-version={api-version}=
-
-Configure the following variables:
-
-#+begin_src emacs-lisp
-(setq chatgpt-shell-api-url-base "https://{your-resource-name}.openai.azure.com")
-(setq chatgpt-shell-api-url-path "/openai/deployments/{deployment-id}/chat/completions?api-version={api-version}")
-(setq chatgpt-shell-auth-header (lambda () (format "api-key: %s" (chatgpt-shell-openai-key))))
-#+end_src
-
 * Launch
 
 Launch with =M-x chatgpt-shell=.
