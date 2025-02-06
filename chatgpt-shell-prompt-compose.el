@@ -387,6 +387,21 @@ If BACKWARDS is non-nil, go to previous interaction."
     (text-property-search-forward 'prompt t)
     next))
 
+(defun chatgpt-shell-prompt-compose-refresh ()
+  "Refresh compose buffer content with curernt item from shell."
+  (interactive)
+  (unless (eq (current-buffer) (chatgpt-shell-prompt-compose-buffer))
+    (error "Not in a compose buffer"))
+  (when-let ((shell-buffer (chatgpt-shell--primary-buffer))
+             (compose-buffer (chatgpt-shell-prompt-compose-buffer))
+             (current (with-current-buffer (chatgpt-shell--primary-buffer)
+                        (or (shell-maker--command-and-response-at-point)
+                            (shell-maker-next-command-and-response t)))))
+    (chatgpt-shell-prompt-compose-replace-interaction
+     (car current) (cdr current))
+    (text-property-search-forward 'prompt t)
+    current))
+
 (defun chatgpt-shell-prompt-compose-previous-interaction ()
   "Show previous interaction (request / response)."
   (interactive)
