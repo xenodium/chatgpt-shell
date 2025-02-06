@@ -311,6 +311,7 @@ Optionally set its PROMPT."
       (insert (propertize (concat prompt "\n\n")
                           'rear-nonsticky t
                           'prompt t
+                          'request t
                           'face font-lock-doc-face)))))
 
 (defun chatgpt-shell-prompt-compose-send-buffer ()
