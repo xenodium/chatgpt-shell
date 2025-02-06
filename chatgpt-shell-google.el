@@ -53,8 +53,8 @@ If you use Gemini through a proxy service, change the URL base."
 (cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search)
   "Create a Google model.
 
-Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW and
-VALIDATE-COMMAND handler."
+Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
+VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
   (unless version
     (error "Missing mandatory :version param"))
   (unless short-version
@@ -178,7 +178,7 @@ or
 (cl-defun chatgpt-shell-google--make-gemini-payload (&key prompt context settings model)
   "Create the request payload.
 
- Compose using PROMPT, CONTEXT, SYSTEM-PROMPT and TEMPERATURE."
+ Compose using PROMPT, CONTEXT, SETTINGS and MODEL."
   (append
    (when (map-elt settings :system-prompt)
      `((system_instruction . ((parts . ((text . ,(map-elt settings :system-prompt))))))))
