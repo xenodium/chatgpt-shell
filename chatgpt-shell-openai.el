@@ -76,6 +76,17 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-4o
          :context-window 128000)
         (chatgpt-shell-openai-make-model
+         :version "o3-mini"
+         :token-width 3
+         :context-window 200000
+         :validate-command
+         ;; TODO: Standardize whether or not a model supports system prompts.
+         (lambda (command model settings)
+           (or (chatgpt-shell-openai--validate-command command model settings)
+               (when (map-elt settings :system-prompt)
+                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
+                         (map-elt model :version))))))
+        (chatgpt-shell-openai-make-model
          :version "o1-preview"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
