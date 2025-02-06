@@ -55,7 +55,7 @@ If you use Gemini through a proxy service, change the URL base."
 
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW and
@@ -77,6 +77,7 @@ VALIDATE-COMMAND handler."
     (:path . ,path)
     (:token-width . ,token-width)
     (:context-window . ,context-window)
+    (:grounding-search . ,grounding-search)
     (:url-base . chatgpt-shell-google-api-url-base)
     (:handler . chatgpt-shell-google--handle-gemini-command)
     (:filter . chatgpt-shell-google--extract-gemini-response)
@@ -93,6 +94,7 @@ VALIDATE-COMMAND handler."
   (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
                                          :short-version "2.0-flash"
                                          :path "/v1beta/models/gemini-2.0-flash"
+                                         :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
@@ -155,12 +157,12 @@ or
   "Create the API headers."
   (list "Content-Type: application/json; charset=utf-8"))
 
-(cl-defun chatgpt-shell-google--make-payload (&key _model context settings)
+(cl-defun chatgpt-shell-google--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
   (chatgpt-shell-google--make-gemini-payload
    :context context
-   :temperature (map-elt settings :temperature)
-   :system-prompt (map-elt settings :system-prompt)))
+   :model model
+   :settings settings))
 
 (cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
   "Handle Gemini COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
@@ -172,27 +174,27 @@ or
    :data (chatgpt-shell-google--make-gemini-payload
           :prompt command
           :context context
-          :temperature (map-elt settings :temperature)
-          :system-prompt (map-elt settings :system-prompt))
+          :model model
+          :settings settings)
    :headers (list "Content-Type: application/json; charset=utf-8")
    :filter #'chatgpt-shell-google--extract-gemini-response
    :shell shell))
 
-(cl-defun chatgpt-shell-google--make-gemini-payload (&key prompt context system-prompt temperature)
+(cl-defun chatgpt-shell-google--make-gemini-payload (&key prompt context settings model)
   "Create the request payload.
 
  Compose using PROMPT, CONTEXT, SYSTEM-PROMPT and TEMPERATURE."
   (append
-   (when system-prompt
-     `((system_instruction . ((parts . ((text . ,system-prompt)))))))
+   (when (map-elt settings :system-prompt)
+     `((system_instruction . ((parts . ((text . ,(map-elt settings :system-prompt))))))))
    `((contents . ,(vconcat
                    (chatgpt-shell-google--gemini-user-model-messages
                     (append context
                             (when prompt
                               (list (cons prompt nil))))))))
-   (when chatgpt-shell-google-enable-grounding-search
+   (when (map-elt model :grounding-search)
      '((tools . ((google_search . ())))))
-   `((generation_config . ((temperature . ,(or temperature 1))
+   `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
 
