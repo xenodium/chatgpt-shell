@@ -85,14 +85,14 @@ VALIDATE-COMMAND handler."
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
+  (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
+                                         :short-version "2.0-flash"
+                                         :path "/v1beta/models/gemini-2.0-flash"
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
                                          :short-version "1.5-pro-latest"
                                          :path "/v1beta/models/gemini-1.5-pro-latest"
-                                         :token-width 4
-                                         :context-window 2097152)
-        (chatgpt-shell-google-make-model :version "gemini-exp-1206"
-                                         :short-version "exp-1206"
-                                         :path "/v1beta/models/gemini-exp-1206"
                                          :token-width 4
                                          :context-window 2097152)
         (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
@@ -100,14 +100,9 @@ VALIDATE-COMMAND handler."
                                          :path "/v1beta/models/gemini-1.5-flash-latest"
                                          :token-width 4
                                          :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-exp"
-                                         :short-version "2.0-flash-exp"
-                                         :path "/v1beta/models/gemini-2.0-flash-exp"
-                                         :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-1219"
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
                                          :short-version "2.0-flash-thinking-exp"
-                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-1219"
+                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
                                          :token-width 4
                                          :context-window 32767)))
 
