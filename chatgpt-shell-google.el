@@ -48,6 +48,11 @@ If you use Gemini through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-google-enable-grounding-search nil
+  "Enable the grounding google search tool for gemini models."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
 (cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window)
@@ -184,8 +189,10 @@ or
                    (chatgpt-shell-google--gemini-user-model-messages
                     (append context
                             (when prompt
-                              (list (cons prompt nil)))))))
-     (generation_config . ((temperature . ,(or temperature 1))
+                              (list (cons prompt nil))))))))
+   (when chatgpt-shell-google-enable-grounding-search
+     '((tools . ((google_search . ())))))
+   `((generation_config . ((temperature . ,(or temperature 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
 
