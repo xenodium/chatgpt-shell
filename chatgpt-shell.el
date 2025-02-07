@@ -119,7 +119,11 @@
   :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-prompt-header-proofread-region
-  "Please help me proofread the following English text and only reply with fixed text:"
+  "Please help me proofread the following English text and only reply with fixed text.
+Output just the proofread text without any intro, comments, or explanations.
+If the original text was indented on the left, preserve the same amount of spacing in your response:
+
+"
   "Prompt header used by `chatgpt-shell-proofread-region`."
   :type 'string
   :group 'chatgpt-shell)
