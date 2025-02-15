@@ -29,6 +29,7 @@
   (require 'cl-lib))
 (require 'shell-maker)
 (require 'map)
+(require 'json)
 
 (defvar chatgpt-shell-proxy)
 
@@ -82,31 +83,80 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:key . chatgpt-shell-google-key)
     (:validate-command . chatgpt-shell-google--validate-command)))
 
+
+(defun chatgpt-shell--google-current-generative-model-p (model)
+  "a predicate that looks at a model description returned from Google and
+returns non-nil if the model is current and supports \"generateContent\"."
+  (let ((description (gethash "description" model))
+        (supported-methods
+         (gethash "supportedGenerationMethods" model)))
+    (and
+     (not (string-match-p (rx (or "discontinued" "deprecated")) description))
+     (seq-contains-p supported-methods "generateContent"))))
+
+(defun chatgpt-shell--google-get-generative-models ()
+  "Retrieves the list of Generative models from
+generativelanguage.googleapis.com"
+  (let ((url (concat chatgpt-shell-google-api-url-base "/v1beta/models?key=" (chatgpt-shell-google-key))))
+    (with-current-buffer (url-retrieve-synchronously url)
+      (goto-char (if (boundp 'url-http-end-of-headers)
+                     url-http-end-of-headers
+                   (error "`url-http-end-of-headers' marker is not defined")))
+      ;;(forward-line 2)
+      (let ((json-object-type 'hash-table)
+            (json-array-type 'list)
+            (json-key-type 'string))
+        (let ((parsed-response
+               (json-read-from-string
+                (buffer-substring-no-properties (point) (point-max)))))
+          (seq-filter #'chatgpt-shell--google-current-generative-model-p
+                      (gethash "models" parsed-response)))))))
+
+(defun chatgpt-shell--google-convert-model (model)
+  "converts between the model returned by Gemini, and
+the model description needed by chatgpt-shell ."
+  (let ((model-name (gethash "name" model))
+        (model-cwindow (gethash "inputTokenLimit" model)))
+    (let ((model-version (string-remove-prefix "models/" model-name)))
+      (let ((model-shortversion (string-remove-prefix "gemini-" model-version))
+            (model-urlpath (concat "/v1beta/" model-name)))
+        (chatgpt-shell-google-make-model :version model-version
+                                         :short-version model-shortversion
+                                         :path model-urlpath
+                                         :token-width 4
+                                         :context-window model-cwindow)))))
+
 (defun chatgpt-shell-google-models ()
-  "Build a list of Google LLM models available."
-  ;; Context windows have been verified as of 11/26/2024. See
-  ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
-                                         :short-version "2.0-flash"
-                                         :path "/v1beta/models/gemini-2.0-flash"
-                                         :grounding-search t
-                                         :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
-                                         :short-version "1.5-pro-latest"
-                                         :path "/v1beta/models/gemini-1.5-pro-latest"
-                                         :token-width 4
-                                         :context-window 2097152)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
-                                         :short-version "1.5-flash-latest"
-                                         :path "/v1beta/models/gemini-1.5-flash-latest"
-                                         :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
-                                         :short-version "2.0-flash-thinking-exp"
-                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
-                                         :token-width 4
-                                         :context-window 32767)))
+  "Dynamically build a list of Google LLM models available. See
+https://ai.google.dev/gemini-api/docs/models/gemini. "
+  (mapcar #'chatgpt-shell--google-convert-model (chatgpt-shell--google-get-generative-models)))
+
+
+;; (defun chatgpt-shell-google-models ()
+;;   "Build a list of Google LLM models available."
+;;   ;; Context windows have been verified as of 11/26/2024. See
+;;   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
+;;   (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
+;;                                          :short-version "2.0-flash"
+;;                                          :path "/v1beta/models/gemini-2.0-flash"
+;;                                          :grounding-search t
+;;                                          :token-width 4
+;;                                          :context-window 1048576)
+;;         (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
+;;                                          :short-version "1.5-pro-latest"
+;;                                          :path "/v1beta/models/gemini-1.5-pro-latest"
+;;                                          :token-width 4
+;;                                          :context-window 2097152)
+;;         (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
+;;                                          :short-version "1.5-flash-latest"
+;;                                          :path "/v1beta/models/gemini-1.5-flash-latest"
+;;                                          :token-width 4
+;;                                          :context-window 1048576)
+;;         (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
+;;                                          :short-version "2.0-flash-thinking-exp"
+;;                                          :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
+;;                                          :token-width 4
+;;                                          :context-window 32767)))
 
 (defun chatgpt-shell-google--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
