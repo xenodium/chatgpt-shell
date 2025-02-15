@@ -119,9 +119,15 @@ the model description needed by chatgpt-shell ."
         (model-cwindow (gethash "inputTokenLimit" model)))
     (let ((model-version (string-remove-prefix "models/" model-name)))
       (let ((model-shortversion (string-remove-prefix "gemini-" model-version))
-            (model-urlpath (concat "/v1beta/" model-name)))
+            (model-urlpath (concat "/v1beta/" model-name))
+            ;; The model descriptor does not stipulate whether grounding is supported.
+            ;; So this logic just checks the name.
+            (model-supports-grounding (or
+                                       (string-prefix-p "gemini-1.5" model-version)
+                                       (string-prefix-p "gemini-2.0" model-version))))
         (chatgpt-shell-google-make-model :version model-version
                                          :short-version model-shortversion
+                                         :grounding-search model-supports-grounding
                                          :path model-urlpath
                                          :token-width 4
                                          :context-window model-cwindow)))))
