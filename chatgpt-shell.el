@@ -3179,11 +3179,12 @@ Of the form
                    (line-beginning-position)))
           (end (region-end)))
       ;; Barf trailing space from selection.
-      (when (string-match "[ \n\t]+$"
-                          (buffer-substring-no-properties
-                           start
-                           end))
-        (setq end (- end (length (match-string 0)))))
+      (let ((text (buffer-substring-no-properties
+                   start
+                   end)))
+        (when (string-match "[ \n\t]+$"
+                            text)
+          (setq end (- end (length (match-string 0 text))))))
       (list (cons :start start)
             (cons :end end)
             (cons :buffer (current-buffer))
