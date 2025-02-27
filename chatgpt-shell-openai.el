@@ -105,6 +105,11 @@ HANDLER, FILTER and OTHER-PARAMS."
                  (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
                          (map-elt model :version))))))
         (chatgpt-shell-openai-make-model
+         :version "gpt-4.5-preview"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models#gpt-4-5
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
          :version "gpt-4o"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-40
