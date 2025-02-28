@@ -92,23 +92,23 @@ VALIDATE-COMMAND handler."
   (list
    ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
    ;; A token is equivalent to _about_ 4 characters.
-   (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-20250219"
-                                        :short-version "3-7-sonnet-20250219"
+   (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
+                                        :short-version "3.7-sonnet"
                                         :token-width  4
                                         :max-tokens 8192
                                         :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-20241022"
-                                        :short-version "3-5-sonnet-20241022"
+   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
+                                        :short-version "3.5-sonnet"
                                         :token-width  4
                                         :max-tokens 8192
                                         :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-5-haiku-20241022"
-                                        :short-version "3-5-haiku-20241022"
+   (chatgpt-shell-anthropic--make-model :version "claude-3-5-haiku-latest"
+                                        :short-version "3.5-haiku"
                                         :token-width  4
                                         :max-tokens 8192
                                         :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-opus-20240229"
-                                        :short-version "3-opus-20240229"
+   (chatgpt-shell-anthropic--make-model :version "claude-3-opus-latest"
+                                        :short-version "3-opus"
                                         :token-width  4
                                         :max-tokens 4096
                                         :context-window 200000)))
