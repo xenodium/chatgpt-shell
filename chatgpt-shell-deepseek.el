@@ -46,6 +46,14 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
 (defun chatgpt-shell-deepseek-models ()
   "Build a list of DeepSeek LLM models."
   (list (chatgpt-shell-deepseek-make-model
+         :version "deepseek-reasoner"
+         :short-version "reasoner"
+         :label "DeepSeek"
+         ;; See https://api-docs.deepseek.com/quick_start/token_usage
+         :token-width 3
+         ;; See https://api-docs.deepseek.com/quick_start/pricing.
+         :context-window 65536)
+        (chatgpt-shell-deepseek-make-model
          :version "deepseek-chat"
          :short-version "chat"
          :label "DeepSeek"
