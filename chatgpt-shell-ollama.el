@@ -33,6 +33,8 @@
 (require 'seq)
 (require 'subr-x)
 
+(require 'chatgpt-shell)
+
 ;; Muffle warning about free variable.
 (defvar chatgpt-shell-models)
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
@@ -179,6 +181,7 @@ replace all models with locally installed ollama models."
                                                   (list (cons command nil)))
                                                 :settings settings)
    :filter #'chatgpt-shell-ollama--extract-ollama-response
+   :timeout chatgpt-shell-request-timeout
    :shell shell))
 
 (cl-defun chatgpt-shell-ollama--make-url (&key _command _model _settings)
