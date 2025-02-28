@@ -77,6 +77,22 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"]))))
         (chatgpt-shell-openrouter-make-model
+         :version "openai/o3-mini-high"
+         :short-version "o3-mini-high"
+         :label "ChatGPT"
+         :token-width 3
+         ;; See https://openrouter.ai/openai/o3-mini-high
+         :context-window 200000
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openrouter-make-model
+         :version "openai/o3-mini"
+         :short-version "o3-mini"
+         :label "ChatGPT"
+         :token-width 3
+         ;; See https://openrouter.ai/openai/o1-2024-12-17
+         :context-window 200000
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openrouter-make-model
          :version "openai/o1"
          :short-version "o1"
          :label "ChatGPT"
