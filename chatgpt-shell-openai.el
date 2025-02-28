@@ -34,7 +34,18 @@
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) other-params)
+;; See https://platform.openai.com/docs/guides/reasoning
+(defcustom chatgpt-shell-openai-reasoning-effort "medium"
+  "The amount of reasoning effort to use for OpenAI reasoning
+models. It can be 'low, 'medium or 'high. Lower values are faster
+and cheaper but higher values may work better for more difficult
+problems."
+  :type 'string
+  :safe #'stringp
+  :options '("low" "medium" "high")
+  :group 'chatgpt-shell)
+
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -63,6 +74,7 @@ HANDLER, FILTER and OTHER-PARAMS."
     (:headers . ,headers)
     (:url . chatgpt-shell-openai--make-url)
     (:key . ,key)
+    (:reasoning-effort . ,chatgpt-shell-openai-reasoning-effort)
     (:url-base . ,url-base)
     (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
     (:other-params . ,other-params)))
@@ -80,12 +92,14 @@ HANDLER, FILTER and OTHER-PARAMS."
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01-mini
          :context-window 128000
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command
          ;; TODO: Standardize whether or not a model supports system prompts.
          (lambda (command model settings)
@@ -173,7 +187,7 @@ CONTEXT: Excludes PROMPT."
         (t
          nil)))
 
-(cl-defun chatgpt-shell-openai-make-chatgpt-request-data (&key system-prompt prompt prompt-url context version temperature streaming other-params)
+(cl-defun chatgpt-shell-openai-make-chatgpt-request-data (&key system-prompt prompt prompt-url context version temperature reasoning-effort streaming other-params)
   "Make request data with MESSAGES.
 
 Optionally set PROMPT, VERSION, TEMPERATURE, STREAMING, SYSTEM-PROMPT,
@@ -189,6 +203,8 @@ and OTHER-PARAMS (list)."
                             :context context))))
    (when temperature
      `((temperature . ,temperature)))
+   (when reasoning-effort
+     `((reasoning_effort . ,reasoning-effort)))
    (when streaming
      `((stream . t)))
    other-params))
@@ -276,6 +292,7 @@ or
    :context context
    :version (map-elt model :version)
    :temperature (map-elt settings :temperature)
+   :reasoning-effort (map-elt model :reasoning-effort)
    :streaming (map-elt settings :streaming)
    :other-params (map-elt model :other-params)))
 
@@ -294,6 +311,7 @@ or
           :context context
           :version (map-elt model :version)
           :temperature (map-elt settings :temperature)
+          :reasoning-effort (map-elt model :reasoning-effort)
           :streaming (map-elt settings :streaming)
           :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
