@@ -67,14 +67,15 @@
 (require 'ob-core)
 (require 'color)
 
-(require 'chatgpt-shell-prompt-compose)
 (require 'chatgpt-shell-anthropic)
+(require 'chatgpt-shell-deepseek)
 (require 'chatgpt-shell-google)
 (require 'chatgpt-shell-kagi)
 (require 'chatgpt-shell-ollama)
 (require 'chatgpt-shell-openai)
-(require 'chatgpt-shell-perplexity)
 (require 'chatgpt-shell-openrouter)
+(require 'chatgpt-shell-perplexity)
+(require 'chatgpt-shell-prompt-compose)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -233,13 +234,14 @@ Can be used compile or run source block at point."
 
 This function aggregates models from OpenAI, Anthropic, Google, and Ollama.
 It returns a list containing all available models from these providers."
-  (append (chatgpt-shell-openai-models)
-          (chatgpt-shell-anthropic-models)
+  (append (chatgpt-shell-anthropic-models)
+          (chatgpt-shell-deepseek-models)
           (chatgpt-shell-google-models)
           (chatgpt-shell-kagi-models)
           (chatgpt-shell-ollama-models)
-          (chatgpt-shell-perplexity-models)
-          (chatgpt-shell-openrouter-models)))
+          (chatgpt-shell-openai-models)
+          (chatgpt-shell-openrouter-models)
+          (chatgpt-shell-perplexity-models)))
 
 (defcustom chatgpt-shell-models
   (chatgpt-shell--make-default-models)
@@ -1571,16 +1573,17 @@ With prefix REVIEW prompt before sending to ChatGPT."
         (prin1-to-string
          `(progn
             (interactive)
-            (load ,(find-library-name "shell-maker") nil t)
+            (load ,(find-library-name "chatgpt-shell") nil t)
+            (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
+            (load ,(find-library-name "chatgpt-shell-deepseek") nil t)
+            (load ,(find-library-name "chatgpt-shell-google") nil t)
+            (load ,(find-library-name "chatgpt-shell-kagi") nil t)
+            (load ,(find-library-name "chatgpt-shell-ollama") nil t)
             (load ,(find-library-name "chatgpt-shell-openai") nil t)
             (load ,(find-library-name "chatgpt-shell-openrouter") nil t)
-            (load ,(find-library-name "chatgpt-shell-google") nil t)
-            (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
-            (load ,(find-library-name "chatgpt-shell-ollama") nil t)
-            (load ,(find-library-name "chatgpt-shell-kagi") nil t)
             (load ,(find-library-name "chatgpt-shell-perplexity") nil t)
             (load ,(find-library-name "chatgpt-shell-prompt-compose") nil t)
-            (load ,(find-library-name "chatgpt-shell") nil t)
+            (load ,(find-library-name "shell-maker") nil t)
             (setq chatgpt-shell-model-temperature 0)
             (setq chatgpt-shell-openai-key ,(chatgpt-shell-openai-key))
             (chatgpt-shell-command-line-from-prompt-file ,prompt-file)))
