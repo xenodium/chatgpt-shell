@@ -33,10 +33,9 @@
 (require 'seq)
 (require 'subr-x)
 
-(require 'chatgpt-shell)
-
 ;; Muffle warning about free variable.
 (defvar chatgpt-shell-models)
+(defvar chatgpt-shell-request-timeout)
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-openai--user-assistant-messages "chatgpt-shell-openai")
