@@ -103,9 +103,7 @@ If you use DeepSeek through a proxy service, change the URL base."
    :missing-key-msg "Your chatgpt-shell-deepseek-key is missing"))
 
 (defun chatgpt-shell-deepseek--filter-output (raw-response)
-  "Filter RAW-RESPONSE when processing responses are sent.
-
-This occurs for example with OpenAI's o1 model through DeepSeek."
+  "Filter RAW-RESPONSE when processing responses are sent."
   (chatgpt-shell-openai--filter-output raw-response))
 
 (defun chatgpt-shell-deepseek--make-headers (&rest args)
