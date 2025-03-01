@@ -92,14 +92,16 @@ HANDLER, FILTER and OTHER-PARAMS."
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
-         :reasoning-effort chatgpt-shell-openai-reasoning-effort
+         ;; Reasoning effort is only supported for o1 and o3-mini.
+         ;; :reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-01-mini
          :context-window 128000
-         :reasoning-effort chatgpt-shell-openai-reasoning-effort
+         ;; Reasoning effort is only supported for o1 and o3-mini.
+         ;; :reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command
          ;; TODO: Standardize whether or not a model supports system prompts.
          (lambda (command model settings)
