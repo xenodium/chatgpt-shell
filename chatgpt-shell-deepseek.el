@@ -46,6 +46,14 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
 (defun chatgpt-shell-deepseek-models ()
   "Build a list of DeepSeek LLM models."
   (list (chatgpt-shell-deepseek-make-model
+         :version "deepseek-reasoner"
+         :short-version "reasoner"
+         :label "DeepSeek"
+         ;; See https://api-docs.deepseek.com/quick_start/token_usage
+         :token-width 3
+         ;; See https://api-docs.deepseek.com/quick_start/pricing.
+         :context-window 65536)
+        (chatgpt-shell-deepseek-make-model
          :version "deepseek-chat"
          :short-version "chat"
          :label "DeepSeek"
@@ -95,9 +103,7 @@ If you use DeepSeek through a proxy service, change the URL base."
    :missing-key-msg "Your chatgpt-shell-deepseek-key is missing"))
 
 (defun chatgpt-shell-deepseek--filter-output (raw-response)
-  "Filter RAW-RESPONSE when processing responses are sent.
-
-This occurs for example with OpenAI's o1 model through DeepSeek."
+  "Filter RAW-RESPONSE when processing responses are sent."
   (chatgpt-shell-openai--filter-output raw-response))
 
 (defun chatgpt-shell-deepseek--make-headers (&rest args)

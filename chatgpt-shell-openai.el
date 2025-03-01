@@ -241,8 +241,10 @@ Otherwise:
                                  (let-alist obj
                                    (mapconcat (lambda (choice)
                                                 (let-alist choice
-                                                  (or .delta.content
-                                                      .message.content)))
+                                                  (or (and (not (eq .delta.content :null))
+                                                           .delta.content)
+                                                      .message.content
+                                                      "")))
                                               .choices "")))))
                     (unless (string-empty-p text)
                       (setq response (concat response text)))
