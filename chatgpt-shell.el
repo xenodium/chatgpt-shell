@@ -521,6 +521,30 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
+(defcustom chatgpt-shell-model-filter nil
+  "A function that is applied `chatgpt-shell-models' to determine
+which models should be shown in `chatgpt-shell-swap-model'."
+  :type 'function
+  :group 'chatgpt-shell)
+
+(defun chatgpt-shell-allow-model-versions (versions)
+  "Return a predicate that accepts models only if their version
+appears in versions. This is intended for use with
+`chatgpt-shell-model-filter'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (member (map-elt model :version) versions))
+                models)))
+
+(defun chatgpt-shell-ignore-model-versions (versions)
+  "A predicate intended for use with `chatgpt-shell-model-filter' to
+allow model versions specified in
+`chatgpt-shell-ignored-model-versions'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (not (member (map-elt model :version) versions)))
+                models)))
+
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
@@ -539,7 +563,9 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             chatgpt-shell-models))
+                             (if chatgpt-shell-model-filter
+                                 (funcall chatgpt-shell-model-filter chatgpt-shell-models)
+                               chatgpt-shell-models)))
             (selection (nth 1 (split-string (completing-read "Model version: "
                                                              models nil t)))))
       (progn
