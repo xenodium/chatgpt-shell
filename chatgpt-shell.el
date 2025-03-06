@@ -521,6 +521,11 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
+(defcustom chatgpt-shell-ignored-model-versions nil
+  "The list of model versions to ignore when swapping the model."
+  :type '(repeat string)
+  :group 'chatgpt-shell)
+
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
@@ -539,7 +544,10 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             chatgpt-shell-models))
+                             (seq-filter (lambda (model)
+                                           (not (member (map-elt model :version)
+                                                        chatgpt-shell-ignored-model-versions)))
+                                         chatgpt-shell-models)))
             (selection (nth 1 (split-string (completing-read "Model version: "
                                                              models nil t)))))
       (progn
