@@ -521,10 +521,25 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
-(defcustom chatgpt-shell-ignored-model-versions nil
-  "The list of model versions to ignore when swapping the model."
-  :type '(repeat string)
+(defcustom chatgpt-shell-model-filter (lambda (_model) t)
+  "A predicate used to determine which models should be shown in
+`chatgpt-shell-swap-model'."
+  :type 'function
   :group 'chatgpt-shell)
+
+(defun chatgpt-shell-allow-model-versions (versions)
+  "Return a predicate that accepts models only if their version
+appears in versions. This is intended for use with
+`chatgpt-shell-model-filter'."
+  (lambda (model)
+    (member (map-elt model :version) versions)))
+
+(defun chatgpt-shell-ignore-model-versions (versions)
+  "A predicate intended for use with `chatgpt-shell-model-filter' to
+allow model versions specified in
+`chatgpt-shell-ignored-model-versions'."
+  (lambda (model)
+    (not (member (map-elt model :version) versions))))
 
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
@@ -544,10 +559,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             (seq-filter (lambda (model)
-                                           (not (member (map-elt model :version)
-                                                        chatgpt-shell-ignored-model-versions)))
-                                         chatgpt-shell-models)))
+                             (seq-filter chatgpt-shell-model-filter chatgpt-shell-models)))
             (selection (nth 1 (split-string (completing-read "Model version: "
                                                              models nil t)))))
       (progn
