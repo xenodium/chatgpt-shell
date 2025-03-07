@@ -439,7 +439,7 @@ Or nil if none."
 
 (defun chatgpt-shell-validate-no-system-prompt (command model settings)
   "Perform validation for COMMAND with MODEL and SETTINGS.
-Then enforce that there is no system prompt. This is useful for models like
+Then enforce that there is no system prompt.  This is useful for models like
 OpenAI's o1 that do not allow one."
     (or (chatgpt-shell-openai--validate-command command model settings)
         (when (map-elt settings :system-prompt)
@@ -522,24 +522,26 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
 (defcustom chatgpt-shell-model-filter nil
-  "A function that is applied `chatgpt-shell-models' to determine
-which models should be shown in `chatgpt-shell-swap-model'."
+  "Filter models to swap from using this function as a filter.
+
+See `chatgpt-shell-allow-model-versions' and
+`chatgpt-shell-ignore-model-versions' as examples."
   :type 'function
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-allow-model-versions (versions)
-  "Return a predicate that accepts models only if their version
-appears in versions. This is intended for use with
-`chatgpt-shell-model-filter'."
+  "Return a filter function to keep known model VERSIONS only.
+
+Use with `chatgpt-shell-model-filter'."
   (lambda (models)
     (seq-filter (lambda (model)
                   (member (map-elt model :version) versions))
                 models)))
 
 (defun chatgpt-shell-ignore-model-versions (versions)
-  "A predicate intended for use with `chatgpt-shell-model-filter' to
-allow model versions specified in
-`chatgpt-shell-ignored-model-versions'."
+  "Return a filter function to drop model VERSIONS.
+
+Use with `chatgpt-shell-model-filter'."
   (lambda (models)
     (seq-filter (lambda (model)
                   (not (member (map-elt model :version) versions)))
