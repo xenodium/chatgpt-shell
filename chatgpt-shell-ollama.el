@@ -35,6 +35,7 @@
 
 ;; Muffle warning about free variable.
 (defvar chatgpt-shell-models)
+(defvar chatgpt-shell-request-timeout)
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-openai--user-assistant-messages "chatgpt-shell-openai")
@@ -179,6 +180,7 @@ replace all models with locally installed ollama models."
                                                   (list (cons command nil)))
                                                 :settings settings)
    :filter #'chatgpt-shell-ollama--extract-ollama-response
+   :timeout chatgpt-shell-request-timeout
    :shell shell))
 
 (cl-defun chatgpt-shell-ollama--make-url (&key _command _model _settings)
