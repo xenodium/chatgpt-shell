@@ -83,10 +83,11 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:key . chatgpt-shell-google-key)
     (:validate-command . chatgpt-shell-google--validate-command)))
 
-
 (defun chatgpt-shell--google-current-generative-model-p (model)
   "a predicate that looks at a model description returned from Google and
-returns non-nil if the model is current and supports \"generateContent\"."
+returns non-nil if the model is current and supports \"generateContent\".
+This is used to filter the list of models returned from
+https://generativelanguage.googleapis.com"
   (let ((description (gethash "description" model))
         (supported-methods
          (gethash "supportedGenerationMethods" model)))
@@ -102,7 +103,6 @@ generativelanguage.googleapis.com"
       (goto-char (if (boundp 'url-http-end-of-headers)
                      url-http-end-of-headers
                    (error "`url-http-end-of-headers' marker is not defined")))
-      ;;(forward-line 2)
       (let ((json-object-type 'hash-table)
             (json-array-type 'list)
             (json-key-type 'string))
@@ -132,37 +132,86 @@ the model description needed by chatgpt-shell ."
                                          :token-width 4
                                          :context-window model-cwindow)))))
 
+(cl-defun chatgpt-shell-google-load-models (&key override)
+  "Query Google for the list of Gemini LLM models available (see
+https://ai.google.dev/gemini-api/docs/models/gemini) and add them to
+`chatgpt-shell-models' unless a model with the same name is already
+present. By default, replace the existing Google models in
+`chatgpt-shell-models' with the newly retrieved models. When OVERRIDE is
+non-nil (interactively with a prefix argument), replace all the Google
+models with those retrieved."
+  (interactive (list :override current-prefix-arg))
+  (let* ((goog-predicate (lambda (model)
+                           (string= (map-elt model :provider) "Google")))
+         (goog-index (or (cl-position-if goog-predicate chatgpt-shell-models)
+                         (length chatgpt-shell-models))))
+    (setq chatgpt-shell-models (and (not override)
+                                    (cl-remove-if goog-predicate chatgpt-shell-models)))
+    (let* ((existing-gemini-models (mapcar (lambda (model)
+                                             (map-elt model :version))
+                                           (cl-remove-if-not goog-predicate
+                                                             chatgpt-shell-models)))
+           (new-gemini-models
+            (mapcar #'chatgpt-shell--google-convert-model (chatgpt-shell--google-get-generative-models))))
+      (setq chatgpt-shell-models
+            (append (seq-take chatgpt-shell-models goog-index)
+                    new-gemini-models
+                    (seq-drop chatgpt-shell-models goog-index)))
+      (message "Added %d Gemini model(s); kept %d existing Gemini model(s)"
+               (length new-gemini-models)
+               (length existing-gemini-models)))))
+
+(defun chatgpt-shell-google-toggle-grounding ()
+  "Toggles the :grounding for the currently-selected model. Google's
+documentation states that All Gemini 1.5 and 2.0 models support
+grounding, some of the experimental or short-lived models do not.  If
+chatgpt-shell tries to use a model that does nto support grounding, the
+API returns an error. In that case, the user can toggle grounding on the
+model, using this function."
+  (interactive)
+  (let ((current-model (chatgpt-shell--resolved-model)))
+    (when (and current-model
+               (string= (map-elt current-model :provider) "Google"))
+      (let ((current-grounding-cons
+             (assq :grounding-search current-model)))
+        (when current-grounding
+          (setf (cdr current-grounding-cons) (not (cdr current-grounding-cons))))))))
+
+(defun chatgpt-shell-google-get-grounding-tool-keyword ()
+  "retrieves the keyword for the grounding tool. This gets set
+once for each model, based on a heuristic."
+  (let ((current-model (chatgpt-shell--resolved-model)))
+    (when (and current-model
+               (string= (map-elt current-model :provider) "Google"))
+       (save-match-data
+         (let ((version (map-elt current-model :version)))
+           (if (string-match "1\\.5" version) "google_search_retrieval" "google_search"))))))
+
 (defun chatgpt-shell-google-models ()
-  "Dynamically build a list of Google LLM models available. See
-https://ai.google.dev/gemini-api/docs/models/gemini. "
-  (mapcar #'chatgpt-shell--google-convert-model (chatgpt-shell--google-get-generative-models)))
-
-
-;; (defun chatgpt-shell-google-models ()
-;;   "Build a list of Google LLM models available."
-;;   ;; Context windows have been verified as of 11/26/2024. See
-;;   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-;;   (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
-;;                                          :short-version "2.0-flash"
-;;                                          :path "/v1beta/models/gemini-2.0-flash"
-;;                                          :grounding-search t
-;;                                          :token-width 4
-;;                                          :context-window 1048576)
-;;         (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
-;;                                          :short-version "1.5-pro-latest"
-;;                                          :path "/v1beta/models/gemini-1.5-pro-latest"
-;;                                          :token-width 4
-;;                                          :context-window 2097152)
-;;         (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
-;;                                          :short-version "1.5-flash-latest"
-;;                                          :path "/v1beta/models/gemini-1.5-flash-latest"
-;;                                          :token-width 4
-;;                                          :context-window 1048576)
-;;         (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
-;;                                          :short-version "2.0-flash-thinking-exp"
-;;                                          :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
-;;                                          :token-width 4
-;;                                          :context-window 32767)))
+  "Build a list of Google LLM models available."
+  ;; Context windows have been verified as of 11/26/2024. See
+  ;; https://ai.google.dev/gemini-api/docs/models/gemini.
+  (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
+                                         :short-version "2.0-flash"
+                                         :path "/v1beta/models/gemini-2.0-flash"
+                                         :grounding-search t
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
+                                         :short-version "1.5-pro-latest"
+                                         :path "/v1beta/models/gemini-1.5-pro-latest"
+                                         :token-width 4
+                                         :context-window 2097152)
+        (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
+                                         :short-version "1.5-flash-latest"
+                                         :path "/v1beta/models/gemini-1.5-flash-latest"
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
+                                         :short-version "2.0-flash-thinking-exp"
+                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
+                                         :token-width 4
+                                         :context-window 32767)))
 
 (defun chatgpt-shell-google--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
@@ -244,7 +293,9 @@ or
                             (when prompt
                               (list (cons prompt nil))))))))
    (when (map-elt model :grounding-search)
-     '((tools . ((google_search . ())))))
+     ;; Google's docs say that grounding is supported for all Gemini 1.5 and 2.0 models.
+     ;; But the API is slightly different between them. This uses the correct tool name.
+     `((tools . ((,(intern (chatgpt-shell-google-get-grounding-tool-keyword)) . ())))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
@@ -287,58 +338,58 @@ For example:
                                        .choices "")))))
       response
     (if-let ((chunks (shell-maker--split-text raw-response)))
-      (let ((response)
-            (pending)
-            (result))
-        (mapc (lambda (chunk)
-                ;; Response chunks come in the form:
-                ;;   data: {...}
-                ;;   data: {...}
-                (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
-                          (obj (shell-maker--json-parse-string (map-elt chunk :value)))
-                          (text (let-alist obj
-                                  (or (let-alist (seq-first .candidates)
-                                        (cond ((seq-first .content.parts)
-                                               (let-alist (seq-first .content.parts)
-                                                 .text))
-                                              ((equal .finishReason "RECITATION")
-                                               "")
-                                              ((equal .finishReason "STOP")
-                                               "")
-                                              ((equal .finishReason "CANCELLED")
-                                               "Error: Request cancellled.")
-                                              ((equal .finishReason "CRASHED")
-                                               "Error: An error occurred. Try again.")
-                                              ((equal .finishReason "END_OF_PROMPT")
-                                               "Error: Couldn't generate a response. Try rephrasing.")
-                                              ((equal .finishReason "LENGTH")
-                                               "Error: Response is too big. Try rephrasing.")
-                                              ((equal .finishReason "TIME")
-                                               "Error: Timed out.")
-                                              ((equal .finishReason "SAFETY")
-                                               "Error: Flagged for safety.")
-                                              ((equal .finishReason "LANGUAGE")
-                                               "Error: Flagged for language.")
-                                              ((equal .finishReason "BLOCKLIST")
-                                               "Error: Flagged for forbidden terms.")
-                                              ((equal .finishReason "PROHIBITED_CONTENT")
-                                               "Error: Flagged for prohibited content.")
-                                              ((equal .finishReason "SPII")
-                                               "Error: Flagged for sensitive personally identifiable information.")
-                                              (.finishReason
-                                               (format "\n\nError: Something's up (%s)" .finishReason))))
-                                      .error.message))))
-                    (unless (string-empty-p text)
-                      (setq response (concat response text)))
-                  (setq pending (concat pending
-                                        (or (map-elt chunk :key) "")
-                                        (map-elt chunk :value)))))
-              chunks)
-        (setq result
-              (list (cons :filtered (unless (string-empty-p response)
-                                      response))
-                    (cons :pending pending)))
-        result)
+        (let ((response)
+              (pending)
+              (result))
+          (mapc (lambda (chunk)
+                  ;; Response chunks come in the form:
+                  ;;   data: {...}
+                  ;;   data: {...}
+                  (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
+                            (obj (shell-maker--json-parse-string (map-elt chunk :value)))
+                            (text (let-alist obj
+                                    (or (let-alist (seq-first .candidates)
+                                          (cond ((seq-first .content.parts)
+                                                 (let-alist (seq-first .content.parts)
+                                                   .text))
+                                                ((equal .finishReason "RECITATION")
+                                                 "")
+                                                ((equal .finishReason "STOP")
+                                                 "")
+                                                ((equal .finishReason "CANCELLED")
+                                                 "Error: Request cancellled.")
+                                                ((equal .finishReason "CRASHED")
+                                                 "Error: An error occurred. Try again.")
+                                                ((equal .finishReason "END_OF_PROMPT")
+                                                 "Error: Couldn't generate a response. Try rephrasing.")
+                                                ((equal .finishReason "LENGTH")
+                                                 "Error: Response is too big. Try rephrasing.")
+                                                ((equal .finishReason "TIME")
+                                                 "Error: Timed out.")
+                                                ((equal .finishReason "SAFETY")
+                                                 "Error: Flagged for safety.")
+                                                ((equal .finishReason "LANGUAGE")
+                                                 "Error: Flagged for language.")
+                                                ((equal .finishReason "BLOCKLIST")
+                                                 "Error: Flagged for forbidden terms.")
+                                                ((equal .finishReason "PROHIBITED_CONTENT")
+                                                 "Error: Flagged for prohibited content.")
+                                                ((equal .finishReason "SPII")
+                                                 "Error: Flagged for sensitive personally identifiable information.")
+                                                (.finishReason
+                                                 (format "\n\nError: Something's up (%s)" .finishReason))))
+                                        .error.message))))
+                      (unless (string-empty-p text)
+                        (setq response (concat response text)))
+                    (setq pending (concat pending
+                                          (or (map-elt chunk :key) "")
+                                          (map-elt chunk :value)))))
+                chunks)
+          (setq result
+                (list (cons :filtered (unless (string-empty-p response)
+                                        response))
+                      (cons :pending pending)))
+          result)
       (list (cons :filtered nil)
             (cons :pending raw-response)))))
 
