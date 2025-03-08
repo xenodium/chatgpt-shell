@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.12.2
+;; Version: 2.16.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.76.2"))
-(defconst chatgpt-shell--version "2.12.2")
+(defconst chatgpt-shell--version "2.16.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -36,10 +36,12 @@
 ;;
 ;; You must set an API key for most cloud services.  Check out:
 ;;
-;;   `chatgpt-shell-openai-key'.
 ;;   `chatgpt-shell-anthropic-key'.
+;;   `chatgpt-shell-deepseek-key'
 ;;   `chatgpt-shell-google-key'.
 ;;   `chatgpt-shell-kagi-key'.
+;;   `chatgpt-shell-openai-key'.
+;;   `chatgpt-shell-openrouter-key'
 ;;   `chatgpt-shell-perplexity-key'.
 ;;
 ;; Alternatively, local services like Ollama do not require an API key.
@@ -67,14 +69,15 @@
 (require 'ob-core)
 (require 'color)
 
-(require 'chatgpt-shell-prompt-compose)
 (require 'chatgpt-shell-anthropic)
+(require 'chatgpt-shell-deepseek)
 (require 'chatgpt-shell-google)
 (require 'chatgpt-shell-kagi)
 (require 'chatgpt-shell-ollama)
 (require 'chatgpt-shell-openai)
-(require 'chatgpt-shell-perplexity)
 (require 'chatgpt-shell-openrouter)
+(require 'chatgpt-shell-perplexity)
+(require 'chatgpt-shell-prompt-compose)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -233,13 +236,14 @@ Can be used compile or run source block at point."
 
 This function aggregates models from OpenAI, Anthropic, Google, and Ollama.
 It returns a list containing all available models from these providers."
-  (append (chatgpt-shell-openai-models)
-          (chatgpt-shell-anthropic-models)
+  (append (chatgpt-shell-anthropic-models)
+          (chatgpt-shell-deepseek-models)
           (chatgpt-shell-google-models)
           (chatgpt-shell-kagi-models)
           (chatgpt-shell-ollama-models)
-          (chatgpt-shell-perplexity-models)
-          (chatgpt-shell-openrouter-models)))
+          (chatgpt-shell-openai-models)
+          (chatgpt-shell-openrouter-models)
+          (chatgpt-shell-perplexity-models)))
 
 (defcustom chatgpt-shell-models
   (chatgpt-shell--make-default-models)
@@ -435,7 +439,7 @@ Or nil if none."
 
 (defun chatgpt-shell-validate-no-system-prompt (command model settings)
   "Perform validation for COMMAND with MODEL and SETTINGS.
-Then enforce that there is no system prompt. This is useful for models like
+Then enforce that there is no system prompt.  This is useful for models like
 OpenAI's o1 that do not allow one."
     (or (chatgpt-shell-openai--validate-command command model settings)
         (when (map-elt settings :system-prompt)
@@ -517,6 +521,32 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
+(defcustom chatgpt-shell-model-filter nil
+  "Filter models to swap from using this function as a filter.
+
+See `chatgpt-shell-allow-model-versions' and
+`chatgpt-shell-ignore-model-versions' as examples."
+  :type 'function
+  :group 'chatgpt-shell)
+
+(defun chatgpt-shell-allow-model-versions (versions)
+  "Return a filter function to keep known model VERSIONS only.
+
+Use with `chatgpt-shell-model-filter'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (member (map-elt model :version) versions))
+                models)))
+
+(defun chatgpt-shell-ignore-model-versions (versions)
+  "Return a filter function to drop model VERSIONS.
+
+Use with `chatgpt-shell-model-filter'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (not (member (map-elt model :version) versions)))
+                models)))
+
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
@@ -535,7 +565,9 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             chatgpt-shell-models))
+                             (if chatgpt-shell-model-filter
+                                 (funcall chatgpt-shell-model-filter chatgpt-shell-models)
+                               chatgpt-shell-models)))
             (selection (nth 1 (split-string (completing-read "Model version: "
                                                              models nil t)))))
       (progn
@@ -1571,16 +1603,17 @@ With prefix REVIEW prompt before sending to ChatGPT."
         (prin1-to-string
          `(progn
             (interactive)
-            (load ,(find-library-name "shell-maker") nil t)
+            (load ,(find-library-name "chatgpt-shell") nil t)
+            (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
+            (load ,(find-library-name "chatgpt-shell-deepseek") nil t)
+            (load ,(find-library-name "chatgpt-shell-google") nil t)
+            (load ,(find-library-name "chatgpt-shell-kagi") nil t)
+            (load ,(find-library-name "chatgpt-shell-ollama") nil t)
             (load ,(find-library-name "chatgpt-shell-openai") nil t)
             (load ,(find-library-name "chatgpt-shell-openrouter") nil t)
-            (load ,(find-library-name "chatgpt-shell-google") nil t)
-            (load ,(find-library-name "chatgpt-shell-anthropic") nil t)
-            (load ,(find-library-name "chatgpt-shell-ollama") nil t)
-            (load ,(find-library-name "chatgpt-shell-kagi") nil t)
             (load ,(find-library-name "chatgpt-shell-perplexity") nil t)
             (load ,(find-library-name "chatgpt-shell-prompt-compose") nil t)
-            (load ,(find-library-name "chatgpt-shell") nil t)
+            (load ,(find-library-name "shell-maker") nil t)
             (setq chatgpt-shell-model-temperature 0)
             (setq chatgpt-shell-openai-key ,(chatgpt-shell-openai-key))
             (chatgpt-shell-command-line-from-prompt-file ,prompt-file)))
@@ -3179,11 +3212,12 @@ Of the form
                    (line-beginning-position)))
           (end (region-end)))
       ;; Barf trailing space from selection.
-      (when (string-match "[ \n\t]+$"
-                          (buffer-substring-no-properties
-                           start
-                           end))
-        (setq end (- end (length (match-string 0)))))
+      (let ((text (buffer-substring-no-properties
+                   start
+                   end)))
+        (when (string-match "[ \n\t]+$"
+                            text)
+          (setq end (- end (length (match-string 0 text))))))
       (list (cons :start start)
             (cons :end end)
             (cons :buffer (current-buffer))
