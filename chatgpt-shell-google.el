@@ -1,6 +1,6 @@
 ;;; chatgpt-shell-google.el --- Google-specific logic  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2023 Alvaro Ramirez
+;; Copyright (C) 2023-2025 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
@@ -27,8 +27,10 @@
 
 (eval-when-compile
   (require 'cl-lib))
+(require 'let-alist)
 (require 'shell-maker)
 (require 'map)
+(require 'rx)
 (require 'json)
 
 (defvar chatgpt-shell-proxy)
@@ -92,60 +94,60 @@ supports \"generateContent\".
 
 This is used to filter the list of models returned from
 https://generativelanguage.googleapis.com"
-  (when-let* ((description (gethash "description" api-response))
-              ((not (string-match-p (rx (or "discontinued" "deprecated")) description)))
-              (supported-methods (gethash "supportedGenerationMethods" api-response)))
-    (seq-contains-p supported-methods "generateContent")))
+  (let-alist api-response
+    (if (not (string-match-p (rx (or "discontinued" "deprecated")) .description))
+        (seq-contains-p .supportedGenerationMethods "generateContent"))))
 
 (defun chatgpt-shell-google--fetch-model-versions ()
   "Retrieves the list of generative models from the Google API."
-  (let ((url (concat chatgpt-shell-google-api-url-base "/v1beta/models?key="
-                     (chatgpt-shell-google-key))))
-    (with-current-buffer (url-retrieve-synchronously url)
-      (goto-char (if (boundp 'url-http-end-of-headers)
-                     url-http-end-of-headers
-                   (error "`url-http-end-of-headers' marker is not defined")))
-      (let ((json-object-type 'hash-table)
-            (json-array-type 'list)
-            (json-key-type 'string))
-        (let ((parsed-response
-               (json-read-from-string
-                (buffer-substring-no-properties (point) (point-max)))))
-          (seq-filter #'chatgpt-shell-google--current-generative-model-p
-                      (gethash "models" parsed-response)))))))
+  (if-let* ((api-key (chatgpt-shell-google-key)))
+      (let ((url (concat chatgpt-shell-google-api-url-base "/v1beta/models?key=" api-key)))
+        (with-current-buffer (url-retrieve-synchronously url)
+          (goto-char (if (boundp 'url-http-end-of-headers)
+                         url-http-end-of-headers
+                       (error "`url-http-end-of-headers' marker is not defined")))
+          (if-let* ((parsed-response
+                     (shell-maker--json-parse-string
+                      (buffer-substring-no-properties (point) (point-max)))))
+              (let-alist parsed-response
+                (seq-filter #'chatgpt-shell-google--current-generative-model-p .models)))))
+    (error "Set your Google API Key.")))
 
-(defun chatgpt-shell-google--convert-model (api-response)
+(defun chatgpt-shell-google--parse-model (api-response)
   "Convert the API-RESPONSE returned by Gemini into a
 the model description needed by `chatgpt-shell'."
-  (let ((model-name (gethash "name" model))
-        (model-cwindow (gethash "inputTokenLimit" model)))
-    (let ((model-version (string-remove-prefix "models/" model-name)))
-      (let ((model-shortversion (string-remove-prefix "gemini-" model-version))
-            (model-urlpath (concat "/v1beta/" model-name))
-            ;; The model descriptor does not stipulate whether grounding is supported.
-            ;; So this logic just checks the name.
-            (model-supports-grounding (or
-                                       (string-prefix-p "gemini-1.5" model-version)
-                                       (string-prefix-p "gemini-2.0" model-version))))
-        (chatgpt-shell-google-make-model :version model-version
-                                         :short-version model-shortversion
-                                         :grounding-search model-supports-grounding
-                                         :path model-urlpath
-                                         :token-width 4
-                                         :context-window model-cwindow)))))
+  (let-alist api-response
+    (let* ((model-version (string-remove-prefix "models/" .name))
+           (model-shortversion (string-remove-prefix "gemini-" model-version))
+           (model-urlpath (concat "/v1beta/" .name))
+           ;; The api-response descriptor does not stipulate whether grounding is supported.
+           ;; This logic applies a heuristic based on the model name (aka version).
+           (model-supports-grounding
+            (if (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0")) model-version) t nil)))
+      (chatgpt-shell-google-make-model :version model-version
+                                       :short-version model-shortversion
+                                       :grounding-search model-supports-grounding
+                                       :path model-urlpath
+                                       :token-width 4
+                                       :context-window .inputTokenLimit))))
 
 (cl-defun chatgpt-shell-google-load-models (&key override)
   "Query Google for the list of Gemini LLM models available.
 
-The data is retrieved from
-https://ai.google.dev/gemini-api/docs/models/gemini.  This fn then the
-models retrieved to `chatgpt-shell-models' unless a model with the same
-name is already present.
+By default, this package uses a static list of models as returned from
+`chatgpt-shell-google-models'. But some users may want to choose from
+a fresher set of available models.
+
+This function retrieves data from
+https://ai.google.dev/gemini-api/docs/models/gemini.  This fn then
+appends the models retrieved to the `chatgpt-shell-models' list, unless
+a model with the same name is already present.
 
 By default, replace the existing Google models in `chatgpt-shell-models'
-with the newly retrieved models.  When OVERRIDE is non-nil (interactively
-with a prefix argument), replace all the Google models with those
-retrieved."
+with the newly retrieved models.  When OVERRIDE is non-nil, which
+happens when the function is invoked interactively with a prefix
+argument, replace all the Google models with those retrieved."
+
   (interactive (list :override current-prefix-arg))
   (let* ((goog-predicate (lambda (model)
                            (string= (map-elt model :provider) "Google")))
@@ -153,12 +155,11 @@ retrieved."
                          (length chatgpt-shell-models))))
     (setq chatgpt-shell-models (and (not override)
                                     (cl-remove-if goog-predicate chatgpt-shell-models)))
-    (let* ((existing-gemini-models (mapcar (lambda (model)
-                                             (map-elt model :version))
-                                           (cl-remove-if-not goog-predicate
-                                                             chatgpt-shell-models)))
+    (let* ((existing-gemini-models
+            (mapcar (lambda (model) (map-elt model :version))
+                    (cl-remove-if-not goog-predicate chatgpt-shell-models)))
            (new-gemini-models
-            (mapcar #'chatgpt-shell-google--convert-model (chatgpt-shell-google--fetch-model-versions))))
+            (mapcar #'chatgpt-shell-google--parse-model (chatgpt-shell-google--fetch-model-versions))))
       (setq chatgpt-shell-models
             (append (seq-take chatgpt-shell-models goog-index)
                     new-gemini-models
@@ -167,12 +168,13 @@ retrieved."
                (length new-gemini-models)
                (length existing-gemini-models)))))
 
-(defun chatgpt-shell-google-toggle-grounding ()
+(defun chatgpt-shell-google-toggle-grounding-with-google-search ()
   "Toggle the `:grounding-search' boolean for the currently-selected model.
 
 Google's documentation states that All Gemini 1.5 and 2.0 models support
-grounding, and `:grounding-search' will be `t' for those models. For
-models that support grounding, this package will include a
+grounding with Google search, and `:grounding-search' will be `t' for
+those models. For models that support grounding, this package will
+include a
 
   (tools .((google_search . ())))
 
@@ -182,29 +184,36 @@ in the request payload for 2.0+ models, or
 
 for 1.5-era models.
 
-But some of the experimental models may not support grounding.  If
-`chatgpt-shell' tries to send a tools parameter as above to a model that
-does not support grounding, the API returns an error.  In that case, the
-user can use this function to toggle grounding on the model, so that
-this package does not send the tools parameter in subsequent outbound
-requests to that model.
+But some of the experimental models of those versions may not support
+grounding.  If `chatgpt-shell' tries to send a tools parameter as above
+to a model that does not support grounding, the API returns an error.
 
-Returns the newly toggled value of `:grounding-search'."
+And in some cases users may wish to not _use_ grounding in Search, even
+though it is available.
+
+In either case, the user can invoke this function to toggle
+grounding-in-google-search on the model. This package will send the
+tools parameter in subsequent outbound requests to that model, when
+grounding is enabled.
+
+Returns the new boolean value of `:grounding-search'."
   (interactive)
   (when-let* ((current-model (chatgpt-shell--resolved-model))
               (is-google (string= (map-elt current-model :provider) "Google"))
               (current-grounding-cons (assq :grounding-search current-model)))
-    (setf (cdr current-grounding-cons) (not (cdr current-grounding-cons)))))
+    (let ((toggled (not (cdr current-grounding-cons))))
+      (setf (cdr current-grounding-cons) toggled)
+      (message "Grounding in Google search: %s" (if toggled "ON" "OFF"))
+      toggled)))
 
-(defun chatgpt-shell-google--get-grounding-tool-keyword (model)
+(defun chatgpt-shell-google--get-grounding-in-search-tool-keyword (model)
   "Retrieves the keyword for the grounding tool.
 
 This gets set once for each model, based on a heuristic."
   (when-let* ((current-model model)
               (is-google (string= (map-elt current-model :provider) "Google"))
               (version (map-elt current-model :version)))
-    (save-match-data
-      (if (string-match "1\\.5" version) "google_search_retrieval" "google_search"))))
+    (if (string-match "1\\.5" version) "google_search_retrieval" "google_search")))
 
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
@@ -312,9 +321,9 @@ or
                             (when prompt
                               (list (cons prompt nil))))))))
    (when (map-elt model :grounding-search)
-     ;; Google's docs say that grounding is supported for all Gemini 1.5 and 2.0 models.
+     ;; Grounding in Google Search is supported for both Gemini 1.5 and 2.0 models.
      ;; But the API is slightly different between them. This uses the correct tool name.
-     `((tools . ((,(intern (chatgpt-shell-google--get-grounding-tool-keyword model)) . ())))))
+     `((tools . ((,(intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) . ())))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
