@@ -105,8 +105,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :short-version "qwen-2.5-coder-32b"
          :label "Qwen"
          :token-width 16
-         ;; See
-         :context-window 32768
+         ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
+         :context-window 33000
          ;; Multiple quantizations are offered for this model by different
          ;; providers so we restrict to one for consistency. Note that the sense
          ;; in which provider is used here means the providers available through
@@ -115,14 +115,13 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          ;;
          ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
          :other-params '((provider (quantizations . ["bf16"]))))
-	(chatgpt-shell-openrouter-make-model
+        (chatgpt-shell-openrouter-make-model
          :version "anthropic/claude-3.7-sonnet"
          :short-version "claude-3.7-sonnet"
-         :label "Claude3.7Sonnet"
-         :token-width 16
-         ;; See
-         :context-window 200000
-	)))
+         :label "Claude"
+         :token-width 4
+         ;; See https://openrouter.ai/anthropic/claude-3.7-sonnet
+         :context-window 200000)))
 
 (defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai/api"
   "OpenRouter API's base URL.
