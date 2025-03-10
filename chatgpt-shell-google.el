@@ -86,8 +86,7 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:validate-command . chatgpt-shell-google--validate-command)))
 
 (defun chatgpt-shell-google--current-generative-model-p (api-response)
-  "This is a predicate that looks at a model description within
-API-RESPONSE.
+  "Determine if model in API-RESPONSE is generative.
 
 It returns non-nil if the model described in API-RESPONSE is current and
 supports \"generateContent\".
@@ -95,35 +94,35 @@ supports \"generateContent\".
 This is used to filter the list of models returned from
 https://generativelanguage.googleapis.com"
   (let-alist api-response
-    (if (not (string-match-p (rx (or "discontinued" "deprecated")) .description))
-        (seq-contains-p .supportedGenerationMethods "generateContent"))))
+    (unless (string-match-p (rx (or "discontinued" "deprecated")) .description)
+      (seq-contains-p .supportedGenerationMethods "generateContent"))))
 
 (defun chatgpt-shell-google--fetch-model-versions ()
   "Retrieves the list of generative models from the Google API."
-  (if-let* ((api-key (chatgpt-shell-google-key)))
-      (let ((url (concat chatgpt-shell-google-api-url-base "/v1beta/models?key=" api-key)))
-        (with-current-buffer (url-retrieve-synchronously url)
-          (goto-char (if (boundp 'url-http-end-of-headers)
-                         url-http-end-of-headers
-                       (error "`url-http-end-of-headers' marker is not defined")))
-          (if-let* ((parsed-response
-                     (shell-maker--json-parse-string
-                      (buffer-substring-no-properties (point) (point-max)))))
-              (let-alist parsed-response
-                (seq-filter #'chatgpt-shell-google--current-generative-model-p .models)))))
-    (error "Set your Google API Key.")))
+  (unless (chatgpt-shell-google-key)
+    (user-error "Please set your `chatgpt-shell-google-key'"))
+  (with-current-buffer (url-retrieve-synchronously
+                        (concat chatgpt-shell-google-api-url-base "/v1beta/models?key="
+                                (chatgpt-shell-google-key)))
+    (goto-char (if (boundp 'url-http-end-of-headers)
+                   url-http-end-of-headers
+                 (error "`url-http-end-of-headers' marker is not defined")))
+    (if-let* ((parsed-response
+               (shell-maker--json-parse-string
+                (buffer-substring-no-properties (point) (point-max)))))
+        (let-alist parsed-response
+          (seq-filter #'chatgpt-shell-google--current-generative-model-p .models))
+      (error "No response from Google"))))
 
 (defun chatgpt-shell-google--parse-model (api-response)
-  "Convert the API-RESPONSE returned by Gemini into a
-the model description needed by `chatgpt-shell'."
+  "Parse Google API-RESPONSE and return a `chatgpt-shell' model."
   (let-alist api-response
     (let* ((model-version (string-remove-prefix "models/" .name))
            (model-shortversion (string-remove-prefix "gemini-" model-version))
            (model-urlpath (concat "/v1beta/" .name))
            ;; The api-response descriptor does not stipulate whether grounding is supported.
            ;; This logic applies a heuristic based on the model name (aka version).
-           (model-supports-grounding
-            (if (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0")) model-version) t nil)))
+           (model-supports-grounding (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0")) model-version)))
       (chatgpt-shell-google-make-model :version model-version
                                        :short-version model-shortversion
                                        :grounding-search model-supports-grounding
@@ -135,7 +134,7 @@ the model description needed by `chatgpt-shell'."
   "Query Google for the list of Gemini LLM models available.
 
 By default, this package uses a static list of models as returned from
-`chatgpt-shell-google-models'. But some users may want to choose from
+`chatgpt-shell-google-models'.  But some users may want to choose from
 a fresher set of available models.
 
 This function retrieves data from
@@ -172,8 +171,8 @@ argument, replace all the Google models with those retrieved."
   "Toggle the `:grounding-search' boolean for the currently-selected model.
 
 Google's documentation states that All Gemini 1.5 and 2.0 models support
-grounding with Google search, and `:grounding-search' will be `t' for
-those models. For models that support grounding, this package will
+grounding with Google search, and `:grounding-search' will be t for
+those models.  For models that support grounding, this package will
 include a
 
   (tools .((google_search . ())))
@@ -192,7 +191,7 @@ And in some cases users may wish to not _use_ grounding in Search, even
 though it is available.
 
 In either case, the user can invoke this function to toggle
-grounding-in-google-search on the model. This package will send the
+grounding-in-google-search on the model.  This package will send the
 tools parameter in subsequent outbound requests to that model, when
 grounding is enabled.
 
@@ -209,11 +208,13 @@ Returns the new boolean value of `:grounding-search'."
 (defun chatgpt-shell-google--get-grounding-in-search-tool-keyword (model)
   "Retrieves the keyword for the grounding tool.
 
-This gets set once for each model, based on a heuristic."
+This gets set once for each MODEL, based on a heuristic."
   (when-let* ((current-model model)
               (is-google (string= (map-elt current-model :provider) "Google"))
               (version (map-elt current-model :version)))
-    (if (string-match "1\\.5" version) "google_search_retrieval" "google_search")))
+    (if (string-match "1\\.5" version)
+        "google_search_retrieval"
+      "google_search")))
 
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
@@ -366,58 +367,58 @@ For example:
                                        .choices "")))))
       response
     (if-let ((chunks (shell-maker--split-text raw-response)))
-      (let ((response)
-            (pending)
-            (result))
-        (mapc (lambda (chunk)
-                ;; Response chunks come in the form:
-                ;;   data: {...}
-                ;;   data: {...}
-                (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
-                          (obj (shell-maker--json-parse-string (map-elt chunk :value)))
-                          (text (let-alist obj
-                                  (or (let-alist (seq-first .candidates)
-                                        (cond ((seq-first .content.parts)
-                                               (let-alist (seq-first .content.parts)
-                                                 .text))
-                                              ((equal .finishReason "RECITATION")
-                                               "")
-                                              ((equal .finishReason "STOP")
-                                               "")
-                                              ((equal .finishReason "CANCELLED")
-                                               "Error: Request cancellled.")
-                                              ((equal .finishReason "CRASHED")
-                                               "Error: An error occurred. Try again.")
-                                              ((equal .finishReason "END_OF_PROMPT")
-                                               "Error: Couldn't generate a response. Try rephrasing.")
-                                              ((equal .finishReason "LENGTH")
-                                               "Error: Response is too big. Try rephrasing.")
-                                              ((equal .finishReason "TIME")
-                                               "Error: Timed out.")
-                                              ((equal .finishReason "SAFETY")
-                                               "Error: Flagged for safety.")
-                                              ((equal .finishReason "LANGUAGE")
-                                               "Error: Flagged for language.")
-                                              ((equal .finishReason "BLOCKLIST")
-                                               "Error: Flagged for forbidden terms.")
-                                              ((equal .finishReason "PROHIBITED_CONTENT")
-                                               "Error: Flagged for prohibited content.")
-                                              ((equal .finishReason "SPII")
-                                               "Error: Flagged for sensitive personally identifiable information.")
-                                              (.finishReason
-                                               (format "\n\nError: Something's up (%s)" .finishReason))))
-                                      .error.message))))
-                    (unless (string-empty-p text)
-                      (setq response (concat response text)))
-                  (setq pending (concat pending
-                                        (or (map-elt chunk :key) "")
-                                        (map-elt chunk :value)))))
-              chunks)
-        (setq result
-              (list (cons :filtered (unless (string-empty-p response)
-                                      response))
-                    (cons :pending pending)))
-        result)
+        (let ((response)
+              (pending)
+              (result))
+          (mapc (lambda (chunk)
+                  ;; Response chunks come in the form:
+                  ;;   data: {...}
+                  ;;   data: {...}
+                  (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
+                            (obj (shell-maker--json-parse-string (map-elt chunk :value)))
+                            (text (let-alist obj
+                                    (or (let-alist (seq-first .candidates)
+                                          (cond ((seq-first .content.parts)
+                                                 (let-alist (seq-first .content.parts)
+                                                   .text))
+                                                ((equal .finishReason "RECITATION")
+                                                 "")
+                                                ((equal .finishReason "STOP")
+                                                 "")
+                                                ((equal .finishReason "CANCELLED")
+                                                 "Error: Request cancellled.")
+                                                ((equal .finishReason "CRASHED")
+                                                 "Error: An error occurred. Try again.")
+                                                ((equal .finishReason "END_OF_PROMPT")
+                                                 "Error: Couldn't generate a response. Try rephrasing.")
+                                                ((equal .finishReason "LENGTH")
+                                                 "Error: Response is too big. Try rephrasing.")
+                                                ((equal .finishReason "TIME")
+                                                 "Error: Timed out.")
+                                                ((equal .finishReason "SAFETY")
+                                                 "Error: Flagged for safety.")
+                                                ((equal .finishReason "LANGUAGE")
+                                                 "Error: Flagged for language.")
+                                                ((equal .finishReason "BLOCKLIST")
+                                                 "Error: Flagged for forbidden terms.")
+                                                ((equal .finishReason "PROHIBITED_CONTENT")
+                                                 "Error: Flagged for prohibited content.")
+                                                ((equal .finishReason "SPII")
+                                                 "Error: Flagged for sensitive personally identifiable information.")
+                                                (.finishReason
+                                                 (format "\n\nError: Something's up (%s)" .finishReason))))
+                                        .error.message))))
+                      (unless (string-empty-p text)
+                        (setq response (concat response text)))
+                    (setq pending (concat pending
+                                          (or (map-elt chunk :key) "")
+                                          (map-elt chunk :value)))))
+                chunks)
+          (setq result
+                (list (cons :filtered (unless (string-empty-p response)
+                                        response))
+                      (cons :pending pending)))
+          result)
       (list (cons :filtered nil)
             (cons :pending raw-response)))))
 
