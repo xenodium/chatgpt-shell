@@ -547,6 +547,36 @@ Use with `chatgpt-shell-model-filter'."
                   (not (member (map-elt model :version) versions)))
                 models)))
 
+(defun chatgpt-shell--model-swap-sorter (candidates)
+   "Sorts model CANDIDATES alphabetically."
+   (sort candidates :lessp #'string<))
+
+(defun chatgpt-shell--model-completion-table (candidates)
+   "Returns a function to be used as the COMPLETIONS parameter in
+`completing-read'.
+
+The returned function must return metadata, when `completing-read' asks
+for it.  The metadata tells `completing-read' to use a different sorter
+than the built-in default sorter in `completion-all-sorted-completions',
+which is 'sort first by length and then alphabetically.' That is an
+inappropriate sort order with the list of models.
+
+Different emacs completion plugins can alter this sort behavior, but
+using icomplete or icomplete-vertical, uses get the default minibuffer
+sorting order.  This corrects that to sort alphabetically, which
+effectively sorts the models first by provider name, and then by model
+name."
+   (lexical-let ((candidates candidates))
+     (lambda (string pred action)
+       (if (eq action 'metadata)
+           (cons 'metadata
+                 (list
+                  (cons 'cycle-sort-function
+                        #'chatgpt-shell--model-swap-sorter)
+                  (cons 'display-sort-function
+                        #'chatgpt-shell--model-swap-sorter)))
+         (complete-with-action action candidates string pred)))))
+
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
   (interactive)
@@ -568,8 +598,10 @@ Use with `chatgpt-shell-model-filter'."
                              (if chatgpt-shell-model-filter
                                  (funcall chatgpt-shell-model-filter chatgpt-shell-models)
                                chatgpt-shell-models)))
-            (selection (nth 1 (split-string (completing-read "Model version: "
-                                                             models nil t)))))
+            (selection (nth 1 (split-string
+                               (completing-read
+                                "Model version: "
+                                (chatgpt-shell--model-completion-table models) nil t)))))
       (progn
         (when (derived-mode-p 'chatgpt-shell-mode)
           (setq-local chatgpt-shell-model-version selection)
