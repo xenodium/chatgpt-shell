@@ -529,6 +529,11 @@ See `chatgpt-shell-allow-model-versions' and
   :type 'function
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-model-sort nil
+  "A function that sorts the list of models to choose when swapping."
+  :type 'function
+  :group 'chatgpt-shell)
+
 (defun chatgpt-shell-allow-model-versions (versions)
   "Return a filter function to keep known model VERSIONS only.
 
@@ -547,35 +552,33 @@ Use with `chatgpt-shell-model-filter'."
                   (not (member (map-elt model :version) versions)))
                 models)))
 
-(defun chatgpt-shell--model-swap-sorter (candidates)
-   "Sorts model CANDIDATES alphabetically."
-   (sort candidates :lessp #'string<))
-
 (defun chatgpt-shell--model-completion-table (candidates)
-   "Returns a function to be used as the COMPLETIONS parameter in
+  "Returns a function to be used as the COMPLETIONS parameter in
 `completing-read'.
 
-The returned function must return metadata, when `completing-read' asks
-for it.  The metadata tells `completing-read' to use a different sorter
-than the built-in default sorter in `completion-all-sorted-completions',
-which is 'sort first by length and then alphabetically.' That is an
-inappropriate sort order with the list of models.
+This is a closure around CANDIDATES.
 
-Different emacs completion plugins can alter this sort behavior, but
-using icomplete or icomplete-vertical, uses get the default minibuffer
-sorting order.  This corrects that to sort alphabetically, which
-effectively sorts the models first by provider name, and then by model
-name."
-   (lexical-let ((candidates candidates))
-     (lambda (string pred action)
-       (if (eq action 'metadata)
-           (cons 'metadata
-                 (list
-                  (cons 'cycle-sort-function
-                        #'chatgpt-shell--model-swap-sorter)
-                  (cons 'display-sort-function
-                        #'chatgpt-shell--model-swap-sorter)))
-         (complete-with-action action candidates string pred)))))
+When using icomplete or icomplete-vertical, `completing-read' uses a
+default of 'sort first by length and then alphabetically.' That is
+inappropriate when presenting the list of models.
+
+With  the function returned here as the COMPLETIONS parameter in
+`completing-read', packages can override that sort to use
+`chatgpt-shell-model-sort', which see.
+
+For example, to get alphabetically sorted models,
+
+  (setq chatgpt-shell-model-sort
+        (lambda (candidates)
+          (sort candidates :lessp #'string<)))"
+  (lambda (string pred action)
+    (if (eq action 'metadata)
+        (if (functionp chatgpt-shell-model-sort)
+            `(metadata
+              (cycle-sort-function . ,chatgpt-shell-model-sort)
+              (display-sort-function . ,chatgpt-shell-model-sort))
+          `(metadata ()))
+      (complete-with-action action candidates string pred))))
 
 (defun chatgpt-shell-swap-model ()
   "Swap model version from `chatgpt-shell-models'."
