@@ -529,6 +529,21 @@ See `chatgpt-shell-allow-model-versions' and
   :type 'function
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-swap-model-selector nil
+  "Custom function to select a model during swap.
+
+This would allow a user to sort, group, filter, present a different selection
+user experience, attach affixations, and so on. An example:
+
+  (setq chatgpt-shell-swap-model-selector
+        (lambda (candidates)
+          (completing-read \"New model: \"
+                           (my-custom-model-completion-table candidates) nil t)))
+
+See also `chatgpt-shell-swap-model'."
+  :type 'function
+  :group 'chatgpt-shell)
+
 (defun chatgpt-shell-allow-model-versions (versions)
   "Return a filter function to keep known model VERSIONS only.
 
@@ -548,7 +563,10 @@ Use with `chatgpt-shell-model-filter'."
                 models)))
 
 (defun chatgpt-shell-swap-model ()
-  "Swap model version from `chatgpt-shell-models'."
+  "Swap model version from `chatgpt-shell-models'.
+
+To select a model, it uses `chatgpt-shell-swap-model-selector' if
+non-nil; otherwise `completing-read'."
   (interactive)
   (if-let* ((last-label (chatgpt-shell--model-label))
             (width (let ((width))
@@ -568,8 +586,10 @@ Use with `chatgpt-shell-model-filter'."
                              (if chatgpt-shell-model-filter
                                  (funcall chatgpt-shell-model-filter chatgpt-shell-models)
                                chatgpt-shell-models)))
-            (selection (nth 1 (split-string (completing-read "Model version: "
-                                                             models nil t)))))
+            (selection (nth 1 (split-string (if chatgpt-shell-swap-model-selector
+                                                (funcall chatgpt-shell-swap-model-selector models)
+                                              (completing-read "Model version: "
+                                                               models nil t))))))
       (progn
         (when (derived-mode-p 'chatgpt-shell-mode)
           (setq-local chatgpt-shell-model-version selection)
