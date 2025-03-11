@@ -521,7 +521,7 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
-(defcustom chatgpt-shell-model-filter nil
+(defcustom chatgpt-shell-swap-model-filter nil
   "Filter models to swap from using this function as a filter.
 
 See `chatgpt-shell-allow-model-versions' and
@@ -547,7 +547,7 @@ See also `chatgpt-shell-swap-model'."
 (defun chatgpt-shell-allow-model-versions (versions)
   "Return a filter function to keep known model VERSIONS only.
 
-Use with `chatgpt-shell-model-filter'."
+Use with `chatgpt-shell-swap-model-filter'."
   (lambda (models)
     (seq-filter (lambda (model)
                   (member (map-elt model :version) versions))
@@ -556,7 +556,7 @@ Use with `chatgpt-shell-model-filter'."
 (defun chatgpt-shell-ignore-model-versions (versions)
   "Return a filter function to drop model VERSIONS.
 
-Use with `chatgpt-shell-model-filter'."
+Use with `chatgpt-shell-swap-model-filter'."
   (lambda (models)
     (seq-filter (lambda (model)
                   (not (member (map-elt model :version) versions)))
@@ -568,6 +568,9 @@ Use with `chatgpt-shell-model-filter'."
 To select a model, it uses `chatgpt-shell-swap-model-selector' if
 non-nil; otherwise `completing-read'."
   (interactive)
+  (when (and (boundp 'chatgpt-shell-model-filter)
+             chatgpt-shell-model-filter)
+    (user-error "chatgpt-shell-model-filter is now retired.  Please use chatgpt-shell-swap-model-filter"))
   (if-let* ((last-label (chatgpt-shell--model-label))
             (width (let ((width))
                      (mapc (lambda (model)
@@ -583,8 +586,8 @@ non-nil; otherwise `completing-read'."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             (if chatgpt-shell-model-filter
-                                 (funcall chatgpt-shell-model-filter chatgpt-shell-models)
+                             (if chatgpt-shell-swap-model-filter
+                                 (funcall chatgpt-shell-swap-model-filter chatgpt-shell-models)
                                chatgpt-shell-models)))
             (selection (nth 1 (split-string (if chatgpt-shell-swap-model-selector
                                                 (funcall chatgpt-shell-swap-model-selector models)
