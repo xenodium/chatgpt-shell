@@ -533,7 +533,7 @@ See `chatgpt-shell-allow-model-versions' and
   "Custom function to select a model during swap.
 
 This would allow a user to sort, group, filter, present a different selection
-user experience, attach affixations, and so on. An example:
+user experience, attach affixations, and so on.  An example:
 
   (setq chatgpt-shell-swap-model-selector
         (lambda (candidates)
@@ -570,7 +570,7 @@ non-nil; otherwise `completing-read'."
   (interactive)
   (when (and (boundp 'chatgpt-shell-model-filter)
              chatgpt-shell-model-filter)
-    (user-error "chatgpt-shell-model-filter is now retired.  Please use chatgpt-shell-swap-model-filter"))
+    (user-error "Variable chatgpt-shell-model-filter is retired.  Please use chatgpt-shell-swap-model-filter"))
   (if-let* ((last-label (chatgpt-shell--model-label))
             (width (let ((width))
                      (mapc (lambda (model)
