@@ -220,7 +220,17 @@ This gets set once for each MODEL, based on a heuristic."
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
+  (list (chatgpt-shell-google-make-model :version "gemini-2.0-pro-exp"
+                                         :short-version "2.0-pro-exp"
+                                         :path "/v1beta/models/gemini-2.0-pro-exp"
+                                         :token-width 4
+                                         :context-window 2048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp"
+                                         :short-version "2.0-flash-thinking-exp"
+                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp"
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
                                          :short-version "2.0-flash"
                                          :path "/v1beta/models/gemini-2.0-flash"
                                          :grounding-search t
@@ -235,12 +245,7 @@ This gets set once for each MODEL, based on a heuristic."
                                          :short-version "1.5-flash-latest"
                                          :path "/v1beta/models/gemini-1.5-flash-latest"
                                          :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp-01-21"
-                                         :short-version "2.0-flash-thinking-exp"
-                                         :path "/v1beta/models/gemini-2.0-flash-thinking-exp-01-21"
-                                         :token-width 4
-                                         :context-window 32767)))
+                                         :context-window 1048576)))
 
 (defun chatgpt-shell-google--validate-command (_command _model _settings)
   "Return error string if command/setup isn't valid."
