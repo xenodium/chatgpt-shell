@@ -1,4 +1,4 @@
-;;; chatgpt-shell.el --- A multi-LLM shell (ChatGPT, Claude, Gemini, Kagi, Ollama, Perplexity) + editing integrations  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- A family of utilities to interact with LLMs (ChatGPT, Claude, DeepSeek, Gemini, Kagi, Ollama, Perplexity)  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
@@ -23,14 +23,20 @@
 
 ;;; Commentary:
 
-;; `chatgpt-shell' is a comint-based shell for multiple cloud or local
+;; `chatgpt-shell' provides utilities to interact with LLMS.
+;;
+;; At its core, it provides a comint-based shell for multiple cloud or local
 ;; LLM services (ChatGPT, Claude, Gemini, Kagi, Ollama, Perplexity).
+;;
+;; M-x `chatgpt-shell-prompt-compose'
+;;
+;; Compose offers a shell-hybrid interface enabling more efficient
+;; LLM interactions.
 ;;
 ;; This package also provides integrations like the following (amongst others):
 ;;
 ;; M-x `chatgpt-shell-quick-insert'
 ;; M-x `chatgpt-shell-proofread-region'
-;; M-x `chatgpt-shell-prompt-compose'
 ;; M-x `chatgpt-shell-describe-image'
 ;; M-x `chatgpt-shell-japanese-lookup'
 ;;
