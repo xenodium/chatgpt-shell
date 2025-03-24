@@ -1,12 +1,12 @@
-;;; chatgpt-shell.el --- A multi-LLM shell (ChatGPT, Claude, Gemini, Kagi, Ollama, Perplexity) + editing integrations  -*- lexical-binding: t -*-
+;;; chatgpt-shell.el --- A family of utilities to interact with LLMs (ChatGPT, Claude, DeepSeek, Gemini, Kagi, Ollama, Perplexity)  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Alvaro Ramirez
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.14.1
+;; Version: 2.16.2
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.76.2"))
-(defconst chatgpt-shell--version "2.14.1")
+(defconst chatgpt-shell--version "2.16.2")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,23 +23,31 @@
 
 ;;; Commentary:
 
-;; `chatgpt-shell' is a comint-based shell for multiple cloud or local
+;; `chatgpt-shell' provides utilities to interact with LLMS.
+;;
+;; At its core, it provides a comint-based shell for multiple cloud or local
 ;; LLM services (ChatGPT, Claude, Gemini, Kagi, Ollama, Perplexity).
+;;
+;; M-x `chatgpt-shell-prompt-compose'
+;;
+;; Compose offers a shell-hybrid interface enabling more efficient
+;; LLM interactions.
 ;;
 ;; This package also provides integrations like the following (amongst others):
 ;;
 ;; M-x `chatgpt-shell-quick-insert'
 ;; M-x `chatgpt-shell-proofread-region'
-;; M-x `chatgpt-shell-prompt-compose'
 ;; M-x `chatgpt-shell-describe-image'
 ;; M-x `chatgpt-shell-japanese-lookup'
 ;;
 ;; You must set an API key for most cloud services.  Check out:
 ;;
-;;   `chatgpt-shell-openai-key'.
 ;;   `chatgpt-shell-anthropic-key'.
+;;   `chatgpt-shell-deepseek-key'
 ;;   `chatgpt-shell-google-key'.
 ;;   `chatgpt-shell-kagi-key'.
+;;   `chatgpt-shell-openai-key'.
+;;   `chatgpt-shell-openrouter-key'
 ;;   `chatgpt-shell-perplexity-key'.
 ;;
 ;; Alternatively, local services like Ollama do not require an API key.
@@ -437,7 +445,7 @@ Or nil if none."
 
 (defun chatgpt-shell-validate-no-system-prompt (command model settings)
   "Perform validation for COMMAND with MODEL and SETTINGS.
-Then enforce that there is no system prompt. This is useful for models like
+Then enforce that there is no system prompt.  This is useful for models like
 OpenAI's o1 that do not allow one."
     (or (chatgpt-shell-openai--validate-command command model settings)
         (when (map-elt settings :system-prompt)
@@ -519,9 +527,56 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
   (setq chatgpt-shell-models (chatgpt-shell--make-default-models))
   (message "Reloaded %d models" (length chatgpt-shell-models)))
 
+(defcustom chatgpt-shell-swap-model-filter nil
+  "Filter models to swap from using this function as a filter.
+
+See `chatgpt-shell-allow-model-versions' and
+`chatgpt-shell-ignore-model-versions' as examples."
+  :type 'function
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-swap-model-selector nil
+  "Custom function to select a model during swap.
+
+This would allow a user to sort, group, filter, present a different selection
+user experience, attach affixations, and so on.  An example:
+
+  (setq chatgpt-shell-swap-model-selector
+        (lambda (candidates)
+          (completing-read \"New model: \"
+                           (my-custom-model-completion-table candidates) nil t)))
+
+See also `chatgpt-shell-swap-model'."
+  :type 'function
+  :group 'chatgpt-shell)
+
+(defun chatgpt-shell-allow-model-versions (versions)
+  "Return a filter function to keep known model VERSIONS only.
+
+Use with `chatgpt-shell-swap-model-filter'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (member (map-elt model :version) versions))
+                models)))
+
+(defun chatgpt-shell-ignore-model-versions (versions)
+  "Return a filter function to drop model VERSIONS.
+
+Use with `chatgpt-shell-swap-model-filter'."
+  (lambda (models)
+    (seq-filter (lambda (model)
+                  (not (member (map-elt model :version) versions)))
+                models)))
+
 (defun chatgpt-shell-swap-model ()
-  "Swap model version from `chatgpt-shell-models'."
+  "Swap model version from `chatgpt-shell-models'.
+
+To select a model, it uses `chatgpt-shell-swap-model-selector' if
+non-nil; otherwise `completing-read'."
   (interactive)
+  (when (and (boundp 'chatgpt-shell-model-filter)
+             chatgpt-shell-model-filter)
+    (user-error "Variable chatgpt-shell-model-filter is retired.  Please use chatgpt-shell-swap-model-filter"))
   (if-let* ((last-label (chatgpt-shell--model-label))
             (width (let ((width))
                      (mapc (lambda (model)
@@ -537,9 +592,13 @@ Downloaded from https://github.com/f/awesome-chatgpt-prompts."
                                (format (format "%%-%ds   %%s" width)
                                        (map-elt model :provider)
                                        (map-elt model :version)))
-                             chatgpt-shell-models))
-            (selection (nth 1 (split-string (completing-read "Model version: "
-                                                             models nil t)))))
+                             (if chatgpt-shell-swap-model-filter
+                                 (funcall chatgpt-shell-swap-model-filter chatgpt-shell-models)
+                               chatgpt-shell-models)))
+            (selection (nth 1 (split-string (if chatgpt-shell-swap-model-selector
+                                                (funcall chatgpt-shell-swap-model-selector models)
+                                              (completing-read "Model version: "
+                                                               models nil t))))))
       (progn
         (when (derived-mode-p 'chatgpt-shell-mode)
           (setq-local chatgpt-shell-model-version selection)

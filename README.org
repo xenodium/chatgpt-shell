@@ -17,18 +17,18 @@ A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Sh
 
 chatgpt-shell goes multi model 🎉
 
-It's been quite a bit of work, and I still have plenty of pending work. Please sponsor the project to make development + support sustainable.
+Please sponsor the project to make development + support sustainable.
 
-| Provider   | Model       | Supported | Setup                            |
-|------------+-------------+-----------+----------------------------------|
-| Anthropic  | Claude      | Yes       | Set =chatgpt-shell-anthropic-key=  |
-| Deepseek   | Chat        | New 💫   | Set =chatgpt-shell-deepseek-key=   |
-| Google     | Gemini      | Yes       | Set =chatgpt-shell-google-key=     |
-| Kagi       | Summarizer  | Yes       | Set =chatgpt-shell-kagi-key=       |
-| Ollama     | Llama       | Yes       | Install [[https://ollama.com/][Ollama]]                   |
-| OpenAI     | ChatGPT     | Yes       | Set =chatgpt-shell-openai-key=     |
-| OpenRouter | Various     | Yes       | Set =chatgpt-shell-openrouter-key= |
-| Perplexity | Llama Sonar | Yes       | Set =chatgpt-shell-perplexity-key= |
+| Provider   | Model         | Supported | Setup                            |
+|------------+---------------+-----------+----------------------------------|
+| Anthropic  | Claude        | Yes       | Set =chatgpt-shell-anthropic-key=  |
+| Deepseek   | Chat/Reasoner | New 💫   | Set =chatgpt-shell-deepseek-key=   |
+| Google     | Gemini        | Yes       | Set =chatgpt-shell-google-key=     |
+| Kagi       | Summarizer    | Yes       | Set =chatgpt-shell-kagi-key=       |
+| Ollama     | Llama         | Yes       | Install [[https://ollama.com/][Ollama]]                   |
+| OpenAI     | ChatGPT       | Yes       | Set =chatgpt-shell-openai-key=     |
+| OpenRouter | Various       | Yes       | Set =chatgpt-shell-openrouter-key= |
+| Perplexity | Llama Sonar   | Yes       | Set =chatgpt-shell-perplexity-key= |
 
 Note: With the exception of [[https://ollama.com/][Ollama]], you typically have to pay the cloud services for API access. Please check with each respective LLM service.
 
@@ -280,6 +280,7 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-openrouter-key                                     | OpenRouter key as a string or a function that loads and returns it.          |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                                |
 | chatgpt-shell--pretty-smerge-mode-hook                           | Hook run after entering or leaving ‘chatgpt-shell--pretty-smerge-mode’.      |
+| chatgpt-shell-model-filter                                       | A function that is applied ‘chatgpt-shell-models’ to determine               |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                           |
 | chatgpt-shell-default-prompts                                    | List of default prompts to choose from.                                      |
 | chatgpt-shell-anthropic-key                                      | Anthropic API key as a string or a function that loads and returns it.       |
