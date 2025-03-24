@@ -224,8 +224,6 @@ and OTHER-PARAMS (list)."
                             :context context))))
    (when temperature
      `((temperature . ,temperature)))
-   ;; Unfortunately, while it is documented by OpenAI, the reasoning_effort
-   ;; parameter does not seem to actually be accepted.
    (when reasoning-effort
      `((reasoning_effort . ,reasoning-effort)))
    (when streaming
