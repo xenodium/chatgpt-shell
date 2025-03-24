@@ -74,7 +74,7 @@ HANDLER, FILTER and OTHER-PARAMS."
     (:headers . ,headers)
     (:url . chatgpt-shell-openai--make-url)
     (:key . ,key)
-    (:reasoning-effort . ,chatgpt-shell-openai-default-reasoning-effort)
+    (:reasoning-effort . ,reasoning-effort)
     (:url-base . ,url-base)
     (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
     (:other-params . ,other-params)))
