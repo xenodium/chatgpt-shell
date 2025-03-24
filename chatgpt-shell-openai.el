@@ -37,9 +37,9 @@
 ;; See https://platform.openai.com/docs/guides/reasoning
 (defcustom chatgpt-shell-openai-reasoning-effort "medium"
   "The amount of reasoning effort to use for OpenAI reasoning
-models. It can be 'low, 'medium or 'high. Lower values are faster
-and cheaper but higher values may work better for more difficult
-problems."
+models. It can be \"low\", \"medium\" or \"high\". Lower values
+are faster and cheaper but higher values may work better for more
+difficult problems."
   :type 'string
   :safe #'stringp
   :options '("low" "medium" "high")
