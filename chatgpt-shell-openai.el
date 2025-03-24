@@ -73,7 +73,27 @@ HANDLER, FILTER and OTHER-PARAMS."
   (list (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
          :token-width 3
+         ;; https://platform.openai.com/docs/models/chatgpt-4o-latest
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4o"
+         :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-4o
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4o-search-preview"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4o-search-preview
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4o-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4o-mini
+         :context-window 128000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4o-mini-search-preview"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4o-mini-search-preview
          :context-window 128000)
         (chatgpt-shell-openai-make-model
          :version "o3-mini"
@@ -114,11 +134,6 @@ HANDLER, FILTER and OTHER-PARAMS."
          :version "gpt-4.5-preview"
          :token-width 3
          ;; https://platform.openai.com/docs/models#gpt-4-5
-         :context-window 128000)
-        (chatgpt-shell-openai-make-model
-         :version "gpt-4o"
-         :token-width 3
-         ;; https://platform.openai.com/docs/models/gpt-40
          :context-window 128000)
         (chatgpt-shell-openai-make-model
          :version "gpt-3.5-turbo"
