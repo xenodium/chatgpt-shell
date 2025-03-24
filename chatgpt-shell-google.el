@@ -94,8 +94,9 @@ supports \"generateContent\".
 This is used to filter the list of models returned from
 https://generativelanguage.googleapis.com"
   (let-alist api-response
-    (unless (string-match-p (rx (or "discontinued" "deprecated")) .description)
-      (seq-contains-p .supportedGenerationMethods "generateContent"))))
+    (and .supportedGenerationMethods
+         (not (and .description (string-match-p (rx (or "discontinued" "deprecated")) .description)))
+         (seq-contains-p .supportedGenerationMethods "generateContent"))))
 
 (defun chatgpt-shell-google--fetch-model-versions ()
   "Retrieves the list of generative models from the Google API."
