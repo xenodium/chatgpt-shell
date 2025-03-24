@@ -94,7 +94,7 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
          :context-window 200000
-         :reasoning-effort chatgpt-shell-openai-default-reasoning-effort
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command #'chatgpt-shell-validate-no-system-prompt
          :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
@@ -104,7 +104,7 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
          :context-window 200000
-         ;;:reasoning-effort chatgpt-shell-openai-default-reasoning-effort
+         ;;:reasoning-effort chatgpt-shell-openai-reasoning-effort
          :validate-command #'chatgpt-shell-validate-no-system-prompt
          :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model

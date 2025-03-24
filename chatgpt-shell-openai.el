@@ -35,7 +35,7 @@
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
 
 ;; See https://platform.openai.com/docs/guides/reasoning
-(defcustom chatgpt-shell-openai-default-reasoning-effort "medium"
+(defcustom chatgpt-shell-openai-reasoning-effort "medium"
   "The amount of reasoning effort to use for OpenAI reasoning
 models. It can be 'low, 'medium or 'high. Lower values are faster
 and cheaper but higher values may work better for more difficult
@@ -73,9 +73,9 @@ HANDLER, FILTER and OTHER-PARAMS."
             (:payload . chatgpt-shell-openai--make-payload)
             (:headers . ,headers)
             (:url . chatgpt-shell-openai--make-url)
-            (:key . ,key))
-          (and reasoning-effort `((:reasoning-effort . ,reasoning-effort)))
-          `((:url-base . ,url-base)
+            (:key . ,key)
+            (:reasoning-effort . ,reasoning-effort)
+            (:url-base . ,url-base)
             (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
             (:other-params . ,other-params))))
 
@@ -91,7 +91,7 @@ HANDLER, FILTER and OTHER-PARAMS."
          :version "o3-mini"
          :token-width 3
          :context-window 200000
-         :reasoning-effort chatgpt-shell-openai-default-reasoning-effort
+         :reasoning-effort t
          :validate-command
          ;; TODO: Standardize whether or not a model supports system prompts.
          (lambda (command model settings)
@@ -104,7 +104,7 @@ HANDLER, FILTER and OTHER-PARAMS."
          :token-width 3
          ;; https://platform.openai.com/docs/models/o1
          :context-window 200000
-         :reasoning-effort chatgpt-shell-openai-default-reasoning-effort
+         :reasoning-effort t
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-preview"
@@ -112,7 +112,6 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
          ;; Reasoning effort is only supported for o1-pro, o1 and o3-mini.
-         ;; :reasoning-effort chatgpt-shell-openai-default-reasoning-effort
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-mini"
@@ -120,7 +119,6 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-01-mini
          :context-window 128000
          ;; Reasoning effort is only supported for o1 and o3-mini.
-         ;; :reasoning-effort chatgpt-shell-openai-default-reasoning-effort
          :validate-command
          ;; TODO: Standardize whether or not a model supports system prompts.
          (lambda (command model settings)
@@ -315,7 +313,8 @@ or
    :context context
    :version (map-elt model :version)
    :temperature (map-elt settings :temperature)
-   :reasoning-effort (map-elt model :reasoning-effort)
+   :reasoning-effort (and (map-elt model :reasoning-effort)
+                          chatgpt-shell-openai-reasoning-effort)
    :streaming (map-elt settings :streaming)
    :other-params (map-elt model :other-params)))
 
@@ -334,7 +333,8 @@ or
           :context context
           :version (map-elt model :version)
           :temperature (map-elt settings :temperature)
-          :reasoning-effort (map-elt model :reasoning-effort)
+          :reasoning-effort (and (map-elt model :reasoning-effort)
+                                 chatgpt-shell-openai-reasoning-effort)
           :streaming (map-elt settings :streaming)
           :other-params (map-elt model :other-params))
    :headers (list "Content-Type: application/json; charset=utf-8"
