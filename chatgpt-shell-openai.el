@@ -191,7 +191,7 @@ CONTEXT: Excludes PROMPT."
                            (text . ,prompt))))
                       (when prompt-url
                         `(((type . "image_url")
-                           (image_url . ,prompt-url))))))))))))
+                           (image_url . ((url . ,prompt-url))))))))))))))
 
 (defun chatgpt-shell-openai-key ()
   "Get the ChatGPT key."
