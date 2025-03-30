@@ -185,24 +185,20 @@ following example is for Open AI; use a similar approach for other services.
 
 ** Set the appropriate variable Manually/Interactively
 
-=M-x set-variable chatgpt-shell-anthropic-key=
-=M-x set-variable chatgpt-shell-deepseek-key=
-=M-x set-variable chatgpt-shell-google-key=
-=M-x set-variable chatgpt-shell-kagi-key=
-=M-x set-variable chatgpt-shell-openai-key=
+=M-x set-variable chatgpt-shell-anthropic-key=  
+=M-x set-variable chatgpt-shell-deepseek-key=  
+=M-x set-variable chatgpt-shell-google-key=  
+=M-x set-variable chatgpt-shell-kagi-key=  
+=M-x set-variable chatgpt-shell-openai-key=  
 ...
 
 ** Set the appropriate variable programatically, in your emacs init file
 #+begin_src emacs-lisp
+  ;; set anthropic key from a string
   (setq chatgpt-shell-anthropic-key "my anthropic key")
-  (setq chatgpt-shell-deepseek-key "my deepseek key")
-  (setq chatgpt-shell-openai-key "my openai key")
-   ...
-#+end_src
+  ;; set OpenAI key from the environment
+  (setq chatgpt-shell-openai-key (getenv "OPENAI_API_KEY"))
 
-** Set the appropriate variable programatically, in your emacs init file, from the environment
-#+begin_src emacs-lisp
-(setq chatgpt-shell-openai-key (getenv "OPENAI_API_KEY"))
 #+end_src
 
 * ChatGPT through proxy service
