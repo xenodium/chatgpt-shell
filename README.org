@@ -146,7 +146,7 @@ Via [[https://github.com/jwiegley/use-package][use-package]], you can install wi
 
 * Set API Keys
 
-You will need to get an API key for each of the various public LLM endpoints you
+You will first need to get an API key for each of the various public LLM endpoints you
 want to interact with.
 
 | Service    | Model(s)      | Link: get an API Key                                                                      |
@@ -185,11 +185,12 @@ following example is for Open AI; use a similar approach for other services.
 
 ** Set the appropriate variable Manually/Interactively
 
-=M-x set-variable chatgpt-shell-anthropic-key=  
-=M-x set-variable chatgpt-shell-deepseek-key=  
-=M-x set-variable chatgpt-shell-google-key=  
-=M-x set-variable chatgpt-shell-kagi-key=  
-=M-x set-variable chatgpt-shell-openai-key=  
+=M-x set-variable chatgpt-shell-anthropic-key=
+
+=M-x set-variable chatgpt-shell-deepseek-key=
+
+=M-x set-variable chatgpt-shell-google-key=
+
 ...
 
 ** Set the appropriate variable programatically, in your emacs init file
