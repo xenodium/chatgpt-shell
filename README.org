@@ -136,7 +136,7 @@ Via [[https://github.com/jwiegley/use-package][use-package]], you can install wi
 #+end_src
 
 * Swap models
-** M-x chatgpt-shell-model-version
+** M-x chatgpt-shell-swap-model
 #+HTML: <img src="https://raw.githubusercontent.com/xenodium/chatgpt-shell/main/demos/swap-models.png" width="80%" />
 
 * Set default model
@@ -144,11 +144,27 @@ Via [[https://github.com/jwiegley/use-package][use-package]], you can install wi
   (setq chatgpt-shell-model-version "llama3.2")
 #+end_src
 
-* Set OpenAI key
+* Set API Keys
 
-You'll first need to get a [[https://platform.openai.com/account/api-keys][key from OpenAI]].
+You will need to get an API key for each of the various public LLM endpoints you
+want to interact with.
 
-** As function
+| Service    | Model(s)      | Link: get an API Key                                                                      |
+|------------|---------------|-------------------------------------------------------------------------------------------|
+| OpenAI     | ChatGPT       | [[https://platform.openai.com/account/api-keys][Get an API Key]]                          |
+| Anthropic  | Claude        | [[https://console.anthropic.com/dashboard][Visit the Dashboard]]                          |
+| Deepseek   | Chat/Reasoner | [[https://platform.deepseek.com/api_keys][Get an API Key]]                                |
+| Google     | Gemini        | [[https://aistudio.google.com/app/apikey][Get an API Key]]                                |
+| Kagi       | Summarizer    | [[https://kagi.com/settings?p=api][Get an API Key]]                                       |
+| OpenRouter | Various       | [[https://openrouter.ai/settings/keys][Manage your API keys]]                             |
+| Perplexity | Llama Sonar   | [[https://docs.perplexity.ai/guides/getting-started#generate-an-api-key][Get an API Key]] |
+
+
+** Provide the API Key to ChatGPT via a function
+
+You can define a function that chatgpt-shell invokes to get the API Key. The
+following example is for Open AI; use a similar approach for other services.
+ 
 #+begin_src emacs-lisp
   ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
@@ -167,18 +183,28 @@ You'll first need to get a [[https://platform.openai.com/account/api-keys][key f
           (auth-source-pick-first-password :host "api.openai.com")))
 #+end_src
 
-** Manually
-=M-x set-variable chatgpt-shell-openai-key=
+** Set the appropriate variable Manually/Interactively
 
-** As variable
+=M-x set-variable chatgpt-shell-anthropic-key=
+=M-x set-variable chatgpt-shell-deepseek-key=
+=M-x set-variable chatgpt-shell-google-key=
+=M-x set-variable chatgpt-shell-kagi-key=
+=M-x set-variable chatgpt-shell-openai-key=
+...
+
+** Set the appropriate variable programatically, in your emacs init file
 #+begin_src emacs-lisp
-  (setq chatgpt-shell-openai-key "my key")
+  (setq chatgpt-shell-anthropic-key "my anthropic key")
+  (setq chatgpt-shell-deepseek-key "my deepseek key")
+  (setq chatgpt-shell-openai-key "my openai key")
+   ...
 #+end_src
 
-** As an ENV variable
+** Set the appropriate variable programatically, in your emacs init file, from the environment
 #+begin_src emacs-lisp
 (setq chatgpt-shell-openai-key (getenv "OPENAI_API_KEY"))
 #+end_src
+
 * ChatGPT through proxy service
 
 If you use ChatGPT through proxy service "https://api.chatgpt.domain.com", set options like the following:
