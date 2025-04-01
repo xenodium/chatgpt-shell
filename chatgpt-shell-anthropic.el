@@ -49,6 +49,18 @@ If you use Claude through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-anthropic-thinking nil
+  "When non-nil enable model thinking if available."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-anthropic-thinking-budget-tokens 32000
+  "The token budget allocated for Anthropic model thinking.
+
+Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to non-nil."
+  :type 'integer
+  :group 'chatgpt-shell)
+
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
                                                     token-width
@@ -86,6 +98,15 @@ VALIDATE-COMMAND handler."
     (:url-base . chatgpt-shell-anthropic-api-url-base)
     (:key . chatgpt-shell-anthropic-key)
     (:validate-command . chatgpt-shell-anthropic--validate-command)))
+
+(defun chatgpt-shell-anthropic-toggle-thinking ()
+  "Toggle Anthropic model, as per `chatgpt-shell-anthropic-thinking'."
+  (interactive)
+  (setq chatgpt-shell-anthropic-thinking (not chatgpt-shell-anthropic-thinking))
+  (message "Anthropic thinking %s"
+           (if chatgpt-shell-anthropic-thinking
+               "enabled"
+             "disabled")))
 
 (defun chatgpt-shell-anthropic-models ()
   "Build a list of Anthropic LLM models available."
@@ -166,13 +187,16 @@ or
     (append
      (when (map-elt settings :system-prompt)
        `((system . ,(map-elt settings :system-prompt))))
+     (when chatgpt-shell-anthropic-thinking
+       (when (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens))
+         (error "chatgpt-shell-anthropic-thinking-budget-tokens must be smaller than %d"
+                (map-elt model :max-tokens)))
+       `((thinking . ((type . "enabled")
+                      (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens)))))
      `((max_tokens . ,(or (map-elt model :max-tokens)
                           (error "Missing %s :max-tokens" (map-elt model :name))))
        (model . ,(map-elt model :version))
        (stream . ,(if (map-elt settings :streaming) 't :false))
-       (thinking
-         . ((type . "enabled")
-            (budget_tokens . 32000)))
        (messages . ,(vconcat
                      (append
                       context
