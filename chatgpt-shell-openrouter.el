@@ -79,14 +79,6 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
          :other-params '((provider (quantizations . ["bf16"])
                                    (require_parameters . t))))
-        ;; (chatgpt-shell-openrouter-make-model
-        ;;  :version "openai/o3-mini-high"
-        ;;  :short-version "o3-mini-high"
-        ;;  :label "ChatGPT"
-        ;;  :token-width 3
-        ;;  ;; See https://openrouter.ai/openai/o3-mini-high
-        ;;  :context-window 200000
-        ;;  :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openrouter-make-model
          :version "openai/o3-mini"
          :short-version "o3-mini"
@@ -104,7 +96,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
          :context-window 200000
-         ;;:reasoning-effort chatgpt-shell-openai-reasoning-effort
+         ;; Do not enable :reasoning-effort. Not supported by this model.
+         :reasoning-effort nil
          :validate-command #'chatgpt-shell-validate-no-system-prompt
          :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
