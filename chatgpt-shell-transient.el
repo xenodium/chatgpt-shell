@@ -8,7 +8,6 @@
 (require 'transient)
 (require 'chatgpt-shell) ;; Ensure the main functions are loaded
 
-;; Helper predicate to check if we are in a chatgpt-shell buffer
 (defun chatgpt-shell-transient--in-shell-p ()
   "Return non-nil if the current buffer is in chatgpt-shell-mode."
   (derived-mode-p 'chatgpt-shell-mode))
@@ -22,15 +21,11 @@
    ["Core Shell & Compose"
     ("s" "Focus/Start Shell" chatgpt-shell)
     ("N" "Start New Shell" (lambda () (interactive) (chatgpt-shell t)))
-    ;; Removed C and K from here - they are conditional below
     ("e" "Compose Prompt" chatgpt-shell-prompt-compose)
     ("p" "Prompt (minibuffer)"
      (lambda ()
        (interactive)
-       ;; Quit transient first
        (transient-quit-one)
-       ;; Schedule the actual prompt function to run shortly after,
-       ;; allowing this lambda to return immediately.
        (run-with-idle-timer 0 nil #'chatgpt-shell-prompt)))
     ("P" "Prompt (append kill)"
      (lambda ()
@@ -58,7 +53,6 @@
    "Shell Context Actions"
    ["Shell Buffer Management"
     ("C" "Clear Shell Buffer" chatgpt-shell-clear-buffer :if chatgpt-shell-transient--in-shell-p)
-    ;; Changed K to I to avoid conflict and keep K for Previous Source Block
     ("I" "Interrupt Request" chatgpt-shell-interrupt :if chatgpt-shell-transient--in-shell-p)]
 
    ["Shell Navigation"
@@ -92,12 +86,10 @@
     ("L" "Reload Default Models" chatgpt-shell-reload-default-models)]
 
    ["Other"
-    ;; Restore doesn't depend on the *current* buffer being a shell
     ("v" "Show Version" chatgpt-shell-version)]
    ]
   )
 
-;; Define the suffix command (optional, but keeps the main definition cleaner)
 (transient-define-suffix chatgpt-shell-transient--popup--suffix ()
   :description "ChatGPT Shell Transient Suffix"
   :class 'transient-suffix)
@@ -107,7 +99,6 @@
 (defun chatgpt-shell-transient ()
   "Invoke the main transient menu for chatgpt-shell."
   (interactive)
-  ;; Call the correctly named transient prefix command
   (chatgpt-shell-transient--popup))
 
 (provide 'chatgpt-shell-transient)
