@@ -6,7 +6,6 @@
 ;;; Code:
 
 (require 'transient)
-(require 'chatgpt-shell) ;; Ensure the main functions are loaded
 
 (defun chatgpt-shell-transient--in-shell-p ()
   "Return non-nil if the current buffer is in chatgpt-shell-mode."
