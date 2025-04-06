@@ -76,6 +76,60 @@ I'm a big fan of quickly disposing of Emacs buffers with the =q= binding. chatgp
 
 LLM being lazy and returning partial code? Press =e= to request entire snippet.
 
+*** Quick Actions with Transient Menu
+
+   For quick access to common actions, =chatgpt-shell= provides a transient menu,
+   powered by the excellent [[https://github.com/magit/transient][transient]] package. Think of it as a temporary keymap
+   overlay that pops up, shows you available commands with their keybindings,
+   and disappears after you select one.
+
+   Invoke it with =C-c C-t= while inside a =chatgpt-shell= buffer.
+
+   #+BEGIN_SRC text :exports code
+     ┌──────────────────────────────────────────────────────────────────────────────┐
+     │ ChatGPT Shell actions           Shell Context Actions                        │
+     │ Core Shell & Compose            Shell Buffer Management                      │
+     │ s: Focus/Start Shell            C: Clear Shell Buffer                        │
+     │ N: Start New Shell              I: Interrupt Request                         │
+     │ e: Compose Prompt               Shell Navigation                             │
+     │ p: Prompt (minibuffer)          h: Search History                            │
+     │ P: Prompt (append kill)         j: Next Item                                 │
+     │ q: Quick Insert                 k: Previous Item                             │
+     │ Region Actions                  J: Next Source Block                         │
+     │ r: Send Region                  K: Previous Source Block                     │
+     │ R: Send & Review Region         Block Actions                                │
+     │ d: Describe Code                x: Execute Block                             │
+     │ f: Refactor Code                E: Edit Block                                │
+     │ g: Write Git Commit             V: View Block                                │
+     │ t: Generate Unit Test           Shell Configuration                          │
+     │ w: Proofread Region             m: Swap Model                                │
+     │                                 y: Swap System Prompt                        │
+     │                                 Shell Session                                │
+     │                                 S: Save Transcript                           │
+     │                                 O: Restore Transcript                        │
+     │ Configuration & Utilities                                                    │
+     │ Model & Configuration                                                        │
+     │ L: Reload Default Models                                                     │
+     │ Other                                                                        │
+     │ i: Describe Image                                                            │
+     │ v: Show Version                                                              │
+     └──────────────────────────────────────────────────────────────────────────────┘
+   #+END_SRC
+
+   (Note: The exact commands shown depend on context, like whether a region is active
+   or if you are inside a =chatgpt-shell= buffer.)
+
+   If you prefer a global keybinding (available everywhere in Emacs), you can add
+   something like this to your personal Emacs configuration:
+
+   #+begin_src emacs-lisp :lexical no
+     ;; In your init.el or equivalent
+     (global-set-key (kbd "C-c C-g") 'chatgpt-shell-transient)
+   #+end_src
+
+   This menu helps with discovering available commands and executing them quickly
+   without needing to remember every single keybinding or =M-x= command name.
+
 ** Confirm inline mods (via diffs)
 
 Request inline modifications, with explicit confirmation before accepting.
