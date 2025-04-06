@@ -49,6 +49,18 @@ If you use Claude through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-anthropic-thinking nil
+  "When non-nil enable model thinking if available."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-anthropic-thinking-budget-tokens 32000
+  "The token budget allocated for Anthropic model thinking.
+
+Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to non-nil."
+  :type 'integer
+  :group 'chatgpt-shell)
+
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
                                                     token-width
@@ -87,6 +99,15 @@ VALIDATE-COMMAND handler."
     (:key . chatgpt-shell-anthropic-key)
     (:validate-command . chatgpt-shell-anthropic--validate-command)))
 
+(defun chatgpt-shell-anthropic-toggle-thinking ()
+  "Toggle Anthropic model, as per `chatgpt-shell-anthropic-thinking'."
+  (interactive)
+  (setq chatgpt-shell-anthropic-thinking (not chatgpt-shell-anthropic-thinking))
+  (message "Anthropic thinking %s"
+           (if chatgpt-shell-anthropic-thinking
+               "enabled"
+             "disabled")))
+
 (defun chatgpt-shell-anthropic-models ()
   "Build a list of Anthropic LLM models available."
   (list
@@ -95,7 +116,7 @@ VALIDATE-COMMAND handler."
    (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
                                         :short-version "3.7-sonnet"
                                         :token-width  4
-                                        :max-tokens 8192
+                                        :max-tokens 128000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
                                         :short-version "3.5-sonnet"
@@ -149,7 +170,8 @@ or
     (error "Your chatgpt-shell-anthropic-key is missing"))
   (list "Content-Type: application/json; charset=utf-8"
         (concat "x-api-key: " (chatgpt-shell-anthropic-key))
-        "anthropic-version: 2023-06-01"))
+        "anthropic-version: 2023-06-01"
+        "anthropic-beta: output-128k-2025-02-19"))
 
 (cl-defun chatgpt-shell-anthropic--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
@@ -165,6 +187,12 @@ or
     (append
      (when (map-elt settings :system-prompt)
        `((system . ,(map-elt settings :system-prompt))))
+     (when chatgpt-shell-anthropic-thinking
+       (when (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens))
+         (error "chatgpt-shell-anthropic-thinking-budget-tokens must be smaller than %d"
+                (map-elt model :max-tokens)))
+       `((thinking . ((type . "enabled")
+                      (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens)))))
      `((max_tokens . ,(or (map-elt model :max-tokens)
                           (error "Missing %s :max-tokens" (map-elt model :name))))
        (model . ,(map-elt model :version))

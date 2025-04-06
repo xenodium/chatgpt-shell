@@ -22,7 +22,7 @@
 
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
 
-(cl-defun chatgpt-shell-openrouter-make-model (&key label version short-version token-width context-window validate-command other-params)
+(cl-defun chatgpt-shell-openrouter-make-model (&key label version short-version token-width context-window reasoning-effort validate-command other-params)
   "Create an OpenRouter model.
 
 Set LABEL, VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -38,6 +38,7 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
    :url-base 'chatgpt-shell-openrouter-api-url-base
    :path "/v1/chat/completions"
    :provider "OpenRouter"
+   :reasoning-effort reasoning-effort
    :validate-command validate-command
    :key #'chatgpt-shell-openrouter-key
    :headers #'chatgpt-shell-openrouter--make-headers
@@ -60,7 +61,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          ;; argument.
          ;;
          ;; See https://openrouter.ai/docs/provider-routing#quantization
-         :other-params '((provider (quantizations . ["bf16"]))))
+         :other-params '((provider (quantizations . ["bf16"])
+                                   (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwq-32b-preview"
          :short-version "qwq-32b-preview"
@@ -75,15 +77,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          ;; argument.
          ;;
          ;; See https://openrouter.ai/qwen/qwq-32b-preview
-         :other-params '((provider (quantizations . ["bf16"]))))
-        (chatgpt-shell-openrouter-make-model
-         :version "openai/o3-mini-high"
-         :short-version "o3-mini-high"
-         :label "ChatGPT"
-         :token-width 3
-         ;; See https://openrouter.ai/openai/o3-mini-high
-         :context-window 200000
-         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+         :other-params '((provider (quantizations . ["bf16"])
+                                   (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
          :version "openai/o3-mini"
          :short-version "o3-mini"
@@ -91,7 +86,9 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
          :context-window 200000
-         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
+         :validate-command #'chatgpt-shell-validate-no-system-prompt
+         :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
          :version "openai/o1"
          :short-version "o1"
@@ -99,7 +96,10 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :token-width 3
          ;; See https://openrouter.ai/openai/o1-2024-12-17
          :context-window 200000
-         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+         ;; Do not enable :reasoning-effort. Not supported by this model.
+         :reasoning-effort nil
+         :validate-command #'chatgpt-shell-validate-no-system-prompt
+         :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
          :version "qwen/qwen-2.5-coder-32b-instruct"
          :short-version "qwen-2.5-coder-32b"
