@@ -55,7 +55,11 @@
     ("I" "Interrupt Request" chatgpt-shell-interrupt :if chatgpt-shell-transient--in-shell-p)]
 
    ["Shell Navigation"
-    ("h" "Search History" chatgpt-shell-search-history :if chatgpt-shell-transient--in-shell-p)
+    ("h" "Search History"
+     (lambda ()
+       (interactive)
+       (transient-quit-one)
+       (run-with-idle-timer 0 nil #'chatgpt-shell-search-history)) :if chatgpt-shell-transient--in-shell-p)
     ("j" "Next Item" chatgpt-shell-next-item :if chatgpt-shell-transient--in-shell-p)
     ("k" "Previous Item" chatgpt-shell-previous-item :if chatgpt-shell-transient--in-shell-p)
     ("J" "Next Source Block" chatgpt-shell-next-source-block :if chatgpt-shell-transient--in-shell-p)
