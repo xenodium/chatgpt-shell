@@ -3569,8 +3569,8 @@ NEW-LABEL (optional): To display for new text."
 
 (defun chatgpt-shell--fader-palette ()
   "Generate a gradient palette from the `region' face to the `default' face."
-  (let* ((start-color (face-background 'region))
-         (end-color (face-background 'default))
+  (let* ((start-color (or (face-background 'region) "#808080"))
+         (end-color (or (face-background 'default) "#1a1a1a"))
          (start-rgb (color-name-to-rgb start-color))
          (end-rgb (color-name-to-rgb end-color))
          (steps 50))
