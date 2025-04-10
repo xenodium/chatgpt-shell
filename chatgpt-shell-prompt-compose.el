@@ -368,9 +368,9 @@ Optionally set its PROMPT."
                                             (let ((inhibit-read-only t))
                                               (chatgpt-shell--put-source-block-overlays))))
                                         'inline))
-        ;; Point should go to beginning of prompt after submission.
+        ;; Point should go to beginning of response after submission.
         (goto-char (point-min))
-        (text-property-search-forward 'prompt t)))))
+        (text-property-search-forward 'request nil)))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
