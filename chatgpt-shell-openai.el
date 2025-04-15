@@ -83,6 +83,21 @@ HANDLER, FILTER and OTHER-PARAMS."
   "Build a list of all OpenAI LLM models available."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
+         :version "gpt-4.1"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4.1-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1-mini
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4.1-nano"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1-nano
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
          :token-width 3
          ;; https://platform.openai.com/docs/models/chatgpt-4o-latest
