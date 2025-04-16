@@ -247,6 +247,12 @@ This gets set once for each MODEL, based on a heuristic."
                                          :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.0-flash-lite"
+                                         :short-version "2.0-flash-lite"
+                                         :path "/v1beta/models/gemini-2.0-flash-lite"
+                                         :grounding-search t
+                                         :token-width 4
+                                         :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
                                          :short-version "1.5-pro-latest"
                                          :path "/v1beta/models/gemini-1.5-pro-latest"
