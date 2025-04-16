@@ -123,6 +123,18 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-4o-mini-search-preview
          :context-window 128000)
         (chatgpt-shell-openai-make-model
+         :version "o4-mini"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
+         :version "o3"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
          :version "o3-mini"
          :token-width 3
          :context-window 200000
