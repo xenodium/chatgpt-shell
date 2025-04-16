@@ -123,17 +123,23 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-4o-mini-search-preview
          :context-window 128000)
         (chatgpt-shell-openai-make-model
+         :version "o4-mini"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
+         :version "o3"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
          :version "o3-mini"
          :token-width 3
          :context-window 200000
          :reasoning-effort t
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1"
          :token-width 3
@@ -154,13 +160,7 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-01-mini
          :context-window 128000
          ;; Reasoning effort is only supported for o1 and o3-mini.
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "gpt-4.5-preview"
          :token-width 3
