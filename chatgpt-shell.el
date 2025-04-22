@@ -2911,6 +2911,17 @@ For example \"elisp\" -> \"emacs-lisp\"."
                                 :on-finished #'identity)
     (user-error "No block at point")))
 
+(defun chatgpt-shell-copy-block-at-point ()
+  "Copy code block at point to the kill ring."
+  (interactive)
+  (if-let ((block (chatgpt-shell-markdown-block-at-point)))
+      (let ((code (buffer-substring-no-properties
+                   (map-elt block 'start)
+                   (map-elt block 'end))))
+        (kill-new code)
+        (message "Copied block to kill ring"))
+    (user-error "No block at point")))
+
 (cl-defun chatgpt-shell--view-code (&key edit language code on-finished)
   "Open a temporary buffer for editing CODE in LANGUAGE major mode.
 When done, invoke the FINISHED function with the resulting code.
