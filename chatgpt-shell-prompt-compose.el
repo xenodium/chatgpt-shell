@@ -123,18 +123,21 @@ t if invoked from a transient frame (quitting closes the frame).")
     ("p" "Previous item" chatgpt-shell-prompt-compose-previous-item :transient t)
     ("f" "Next interaction" chatgpt-shell-prompt-compose-next-interaction :transient t)
     ("b" "Previous interaction" chatgpt-shell-prompt-compose-previous-interaction :transient t)
-    ("o" "View other shell buffer" chatgpt-shell-prompt-compose-other-buffer)]
+    ("o" "View other (related) shell" chatgpt-shell-prompt-compose-other-buffer)]
    ["Prompts"
     ("g" "Retry" chatgpt-shell-prompt-compose-retry)
     ("r" "Reply with followup" chatgpt-shell-prompt-compose-reply)
     ("m" "Request more" chatgpt-shell-prompt-compose-request-more)
     ("e" "Request entire snippet" chatgpt-shell-prompt-compose-request-entire-snippet)]
    ["Blocks"
-    ("v" "View block at point" chatgpt-shell-view-block-at-point)
-    ("i" "Insert block at point" chatgpt-shell-prompt-compose-insert-block-at-point)
+    ("'" "View block at point" chatgpt-shell-view-block-at-point)
+    ("t" "Transfer block at point" chatgpt-shell-prompt-compose-insert-block-at-point)
     ("w" "Copy block at point" chatgpt-shell-copy-block-at-point)
     ("C-c C-c" "Execute block at point" chatgpt-shell-execute-block-action-at-point)]
-   ["Quit"
+   ["Model"
+    ("v" "Swap model version" chatgpt-shell-prompt-compose-swap-model-version)
+    ("s" "Swap system prompt" chatgpt-shell-prompt-compose-swap-system-prompt)
+    ("c" "Clear history" chatgpt-shell-prompt-compose-clear-history)
     ("q" "Quit shell compose buffer" chatgpt-shell-prompt-compose-quit-and-close-frame)]])
 
 (define-minor-mode chatgpt-shell-prompt-compose-view-mode
@@ -248,6 +251,11 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (setq chatgpt-shell--ring-index nil)
       (message instructions))
     (chatgpt-shell-prompt-compose-buffer)))
+
+(defun chatgpt-shell-prompt-compose-clear-history ()
+  "Clear compose and associated shell history."
+  (interactive)
+  (chatgpt-shell-prompt-compose-show-buffer :clear-history t))
 
 (defun chatgpt-shell-prompt-compose-search-history ()
   "Search prompt history, select, and insert to current compose buffer."
