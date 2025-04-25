@@ -428,9 +428,7 @@ Or nil if none."
                             chatgpt-shell-system-prompts)))
            (if (consp prompt)
                (cdr prompt)
-             prompt)))
-        (t
-         nil)))
+             prompt)))))
 
 (defun chatgpt-shell-duplicate-map-keys (map)
   "Return duplicate keys in MAP."
