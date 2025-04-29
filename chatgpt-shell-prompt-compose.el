@@ -659,6 +659,9 @@ Useful if sending a request failed, perhaps from failed connectivity."
                          (goto-char (point-min))
                          (text-property-search-forward 'prompt t)
                          (point)))
+           (with-current-buffer (chatgpt-shell--primary-buffer)
+             (when shell-maker--busy
+               (user-error "Busy, please wait")))
            (deactivate-mark)
            (chatgpt-shell-prompt-compose-previous-interaction))
           ((eq previous-pos request)
