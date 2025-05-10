@@ -189,6 +189,8 @@ For example:
 
 (defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 
+(defalias 'chatgpt-shell-proofread-region #'chatgpt-shell-proofread-paragraph-or-region)
+
 (defvar chatgpt-shell--prompt-history nil)
 
 (defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
@@ -1468,7 +1470,7 @@ If region is active, append to prompt."
   (chatgpt-shell-send-region-with-header chatgpt-shell-prompt-header-generate-unit-test))
 
 ;;;###autoload
-(defun chatgpt-shell-proofread-region ()
+(defun chatgpt-shell-proofread-paragraph-or-region ()
   "Proofread text from region or current paragraph using ChatGPT.
 
 See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language."
