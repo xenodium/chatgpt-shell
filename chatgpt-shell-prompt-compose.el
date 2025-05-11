@@ -402,7 +402,9 @@ Optionally set its PROMPT."
                                         (lambda (_input _output _success)
                                           (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                             (let ((inhibit-read-only t))
-                                              (chatgpt-shell--put-source-block-overlays)))
+                                              (chatgpt-shell--put-source-block-overlays))
+                                            (when (chatgpt-shell-markdown-block-at-point)
+                                              (chatgpt-shell-mark-block)))
                                           (when chatgpt-shell-compose-auto-transient
                                             (chatgpt-shell-prompt-compose-transient)))
                                         'inline))
