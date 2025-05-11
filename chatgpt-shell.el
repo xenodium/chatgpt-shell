@@ -220,10 +220,9 @@ Objective-C -> (\"objective-c\" . \"objc\")"
   "Additional headers to make babel blocks work.
 
 Entries are of the form (language . headers).  Headers should
-conform to the types of `org-babel-default-header-args', which
-see.
+conform to the types of `org-babel-default-header-args'.
 
-Please submit contributions so more things work out of the box."
+Please submit contributions so more languages work out of the box."
   :type '(alist :key-type (string :tag "Language")
                 :value-type (alist :key-type (restricted-sexp :match-alternatives (keywordp) :tag "Argument Name")
                                    :value-type (string :tag "Value")))
