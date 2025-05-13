@@ -2406,7 +2406,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
   (chatgpt-shell--overlay-put-all
    (make-overlay quotes2-start quotes2-end)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   (unless (eq lang-start lang-end)
     (chatgpt-shell--overlay-put-all
      (make-overlay lang-start lang-end)
@@ -2487,7 +2487,7 @@ Use START END TITLE-START TITLE-END URL-START URL-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay start title-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   ;; Show title as link
   (chatgpt-shell--overlay-put-all
    (make-overlay title-start title-end)
@@ -2511,7 +2511,7 @@ Use START END TITLE-START TITLE-END URL-START URL-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay title-end end)
    'evaporate t
-   'invisible 'chatgpt-shell))
+   'invisible t))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-bold (start end text-start text-end)
@@ -2521,7 +2521,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay start text-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   ;; Show title as bold
   (chatgpt-shell--overlay-put-all
    (make-overlay text-start text-end)
@@ -2531,7 +2531,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay text-end end)
    'evaporate t
-   'invisible 'chatgpt-shell))
+   'invisible t))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-header (start _end level-start level-end title-start title-end)
@@ -2541,7 +2541,7 @@ Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay start title-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   ;; Show title as header
   (chatgpt-shell--overlay-put-all
    (make-overlay title-start title-end)
@@ -2574,7 +2574,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay start text-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   ;; Show title as italic
   (chatgpt-shell--overlay-put-all
    (make-overlay text-start text-end)
@@ -2584,7 +2584,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay text-end end)
    'evaporate t
-   'invisible 'chatgpt-shell))
+   'invisible t))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-strikethrough (start end text-start text-end)
@@ -2594,7 +2594,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay start text-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   ;; Show title as strikethrough
   (chatgpt-shell--overlay-put-all
    (make-overlay text-start text-end)
@@ -2604,7 +2604,7 @@ Use START END TEXT-START TEXT-END."
   (chatgpt-shell--overlay-put-all
    (make-overlay text-end end)
    'evaporate t
-   'invisible 'chatgpt-shell))
+   'invisible t))
 
 ;; TODO: Move to shell-maker.
 (defun chatgpt-shell--fontify-inline-code (body-start body-end)
@@ -2616,12 +2616,12 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
    (make-overlay (1- body-start)
                  body-start)
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   (chatgpt-shell--overlay-put-all
    (make-overlay body-end
                  (1+ body-end))
    'evaporate t
-   'invisible 'chatgpt-shell)
+   'invisible t)
   (chatgpt-shell--overlay-put-all
    (make-overlay body-start body-end
                  (if (and (boundp 'shell-maker--config)
