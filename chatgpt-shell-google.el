@@ -83,7 +83,8 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:url . chatgpt-shell-google--make-url)
     (:headers . chatgpt-shell-google--make-headers)
     (:key . chatgpt-shell-google-key)
-    (:validate-command . chatgpt-shell-google--validate-command)))
+    (:validate-command . chatgpt-shell-google--validate-command)
+    (:icon . "gemini-color.png")))
 
 (defun chatgpt-shell-google--current-generative-model-p (api-response)
   "Determine if model in API-RESPONSE is generative.

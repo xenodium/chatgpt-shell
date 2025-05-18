@@ -836,15 +836,21 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   "Generate shell info for display."
   (concat
    (chatgpt-shell--model-short-version)
-   (cond ((and (integerp chatgpt-shell-system-prompt)
-               (nth chatgpt-shell-system-prompt
-                    chatgpt-shell-system-prompts))
-          (concat "/" (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
-                                                                chatgpt-shell-system-prompts))))
-         ((stringp chatgpt-shell-system-prompt)
-          (concat "/" (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt)))
-         (t
-          ""))))
+   (if-let (system-prompt-name (chatgpt-shell--system-prompt-name))
+       (concat "/" system-prompt-name)
+     "")))
+
+(defun chatgpt-shell--system-prompt-name ()
+  "Get the current system prompt name."
+  (cond ((and (integerp chatgpt-shell-system-prompt)
+              (nth chatgpt-shell-system-prompt
+                   chatgpt-shell-system-prompts))
+         (chatgpt-shell--shrink-system-prompt (nth chatgpt-shell-system-prompt
+                                                   chatgpt-shell-system-prompts)))
+        ((stringp chatgpt-shell-system-prompt)
+         (chatgpt-shell--shrink-system-prompt chatgpt-shell-system-prompt))
+        (t
+         nil)))
 
 (defun chatgpt-shell--model-label ()
   "Return the current model label."

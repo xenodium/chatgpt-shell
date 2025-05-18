@@ -97,7 +97,8 @@ VALIDATE-COMMAND handler."
     (:headers . chatgpt-shell-anthropic--make-headers)
     (:url-base . chatgpt-shell-anthropic-api-url-base)
     (:key . chatgpt-shell-anthropic-key)
-    (:validate-command . chatgpt-shell-anthropic--validate-command)))
+    (:validate-command . chatgpt-shell-anthropic--validate-command)
+    (:icon . "anthropic.png")))
 
 (defun chatgpt-shell-anthropic-toggle-thinking ()
   "Toggle Anthropic model, as per `chatgpt-shell-anthropic-thinking'."

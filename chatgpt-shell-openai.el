@@ -36,8 +36,9 @@
 
 ;; See https://platform.openai.com/docs/guides/reasoning
 (defcustom chatgpt-shell-openai-reasoning-effort "medium"
-  "The amount of reasoning effort to use for OpenAI reasoning
-models. It can be \"low\", \"medium\" or \"high\". Lower values
+  "The amount of reasoning effort to use for OpenAI reasoning models.
+
+ It can be \"low\", \"medium\" or \"high\". Lower values
 are faster and cheaper but higher values may work better for more
 difficult problems."
   :type 'string
@@ -45,12 +46,12 @@ difficult problems."
   :options '("low" "medium" "high")
   :group 'chatgpt-shell)
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort icon other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
 VALIDATE-COMMAND, HEADERS, KEY, URL-BASE, PATH, PROVIDER, LABEL,
-HANDLER, FILTER and OTHER-PARAMS."
+HANDLER, REASONING-EFFORT, FILTER, ICON, and OTHER-PARAMS."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
@@ -77,7 +78,8 @@ HANDLER, FILTER and OTHER-PARAMS."
             (:reasoning-effort . ,reasoning-effort)
             (:url-base . ,url-base)
             (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
-            (:other-params . ,other-params))))
+            (:other-params . ,other-params)
+            (:icon . ,(or icon "openai.png")))))
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
