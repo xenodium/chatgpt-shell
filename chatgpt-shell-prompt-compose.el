@@ -112,6 +112,7 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "i") #'chatgpt-shell-prompt-compose-insert-block-at-point)
     (define-key map (kbd "m") #'chatgpt-shell-prompt-compose-request-more)
     (define-key map (kbd "o") #'chatgpt-shell-prompt-compose-other-buffer)
+    (define-key map (kbd "?") #'chatgpt-shell-prompt-compose-transient)
     (set-keymap-parent map view-mode-map)
     map)
   "Keymap for `chatgpt-shell-prompt-compose-view-mode'.")
@@ -589,7 +590,20 @@ If BACKWARDS is non-nil, go to previous interaction."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
-  (chatgpt-shell-prompt-compose-quit-and-close-frame))
+  (if (or chatgpt-shell-prompt-compose-view-mode
+          (with-current-buffer (chatgpt-shell--primary-buffer)
+            (not (shell-maker-history))))
+      (chatgpt-shell-prompt-compose-quit-and-close-frame)
+    (chatgpt-shell-prompt-compose-view-last)))
+
+(defun chatgpt-shell-prompt-compose-view-last ()
+  "Display the last request/response interaction."
+  (interactive)
+  (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
+    (user-error "Not in a shell compose buffer"))
+  (with-current-buffer (chatgpt-shell--primary-buffer)
+    (goto-char comint-last-input-start))
+  (chatgpt-shell-prompt-compose-refresh))
 
 (defun chatgpt-shell-prompt-compose-buffer-name ()
   "Generate compose buffer name."
