@@ -357,9 +357,11 @@ Optionally set its PROMPT and RESPONSE."
 
 (defun chatgpt-shell-prompt-compose--redraw ()
   "Redraw entire buffer reusing current request and response."
-  (chatgpt-shell-prompt-compose--initialize
-   (chatgpt-shell-prompt-compose--text)
-   (chatgpt-shell-prompt-compose--response))
+  (let ((point (point)))
+    (chatgpt-shell-prompt-compose--initialize
+     (chatgpt-shell-prompt-compose--text)
+     (chatgpt-shell-prompt-compose--response))
+    (goto-char point))
   (let ((inhibit-read-only t))
     (chatgpt-shell--put-source-block-overlays))
   (when (chatgpt-shell-markdown-block-at-point)
