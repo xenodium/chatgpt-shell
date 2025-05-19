@@ -456,7 +456,7 @@ If BACKWARDS is non-nil, go to previous interaction."
     next))
 
 (defun chatgpt-shell-prompt-compose-refresh ()
-  "Refresh compose buffer content with curernt item from shell."
+  "Refresh compose buffer content with current item from shell."
   (interactive)
   (unless (eq (current-buffer) (chatgpt-shell-prompt-compose-buffer))
     (error "Not in a compose buffer"))
