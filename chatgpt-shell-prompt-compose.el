@@ -119,10 +119,10 @@ t if invoked from a transient frame (quitting closes the frame).")
 (transient-define-prefix chatgpt-shell-prompt-compose-transient ()
   "ChatGPT Shell Compose Transient."
   [["Navigation"
-    ("n" "Next item" chatgpt-shell-prompt-compose-next-item :transient t)
-    ("p" "Previous item" chatgpt-shell-prompt-compose-previous-item :transient t)
-    ("f" "Next interaction" chatgpt-shell-prompt-compose-next-interaction :transient t)
-    ("b" "Previous interaction" chatgpt-shell-prompt-compose-previous-interaction :transient t)
+    ("n" "Next item" chatgpt-shell-prompt-compose-next-item)
+    ("p" "Previous item" chatgpt-shell-prompt-compose-previous-item)
+    ("f" "Next interaction" chatgpt-shell-prompt-compose-next-interaction)
+    ("b" "Previous interaction" chatgpt-shell-prompt-compose-previous-interaction)
     ("o" "View other (related) shell" chatgpt-shell-prompt-compose-other-buffer)]
    ["Prompts"
     ("g" "Retry" chatgpt-shell-prompt-compose-retry)
