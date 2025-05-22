@@ -847,15 +847,29 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
 (defun chatgpt-shell-prompt-compose--fetch-model-icon (icon)
-  "Download ICON filename from GitHub's lobehub."
+  "Download ICON filename from GitHub's lobehub, only if it exists and save as binary."
   (when icon
-    (let* ((url (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/dark/"
-                        icon))
+    (let* ((mode (if (eq (frame-parameter nil 'background-mode) 'dark) "dark" "light"))
+           (url (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
+                        mode "/" icon))
            (filename (file-name-nondirectory url))
-           (cache-path (expand-file-name filename temporary-file-directory)))
+           (cache-dir (file-name-concat (temporary-file-directory) "chatgpt-shell" mode))
+           (cache-path (expand-file-name filename cache-dir)))
       (unless (file-exists-p cache-path)
-        (url-copy-file url cache-path t))
-      cache-path)))
+        (make-directory cache-dir t)
+        (let ((buffer (url-retrieve-synchronously url t t 5.0)))
+          (when buffer
+            (with-current-buffer buffer
+              (goto-char (point-min))
+              (if (re-search-forward "^HTTP/1.1 200 OK" nil t)
+                  (progn
+                    (re-search-forward "\r?\n\r?\n")
+                    (let ((coding-system-for-write 'no-conversion))
+                      (write-region (point) (point-max) cache-path)))
+                (message "Icon fetch failed: %s" url)))
+            (kill-buffer buffer))))
+      (when (file-exists-p cache-path)
+        cache-path))))
 
 (provide 'chatgpt-shell-prompt-compose)
 
