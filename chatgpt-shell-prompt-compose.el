@@ -33,8 +33,7 @@
 (require 'flymake)
 (require 'shell-maker)
 (require 'transient)
-(when (display-graphic-p)
-  (require 'svg))
+(require 'svg nil :noerror)
 
 (declare-function chatgpt-shell-previous-source-block "chatgpt-shell")
 (declare-function chatgpt-shell-next-source-block "chatgpt-shell")
