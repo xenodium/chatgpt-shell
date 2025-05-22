@@ -114,10 +114,22 @@ VALIDATE-COMMAND handler."
   (list
    ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
    ;; A token is equivalent to _about_ 4 characters.
+   ;;
+   ;; claude-4-sonnet-latest and claude-4-sonnet-latest are not supported yet.
+   (chatgpt-shell-anthropic--make-model :version "claude-4-opus-20250514"
+                                        :short-version "4-opus"
+                                        :token-width  4
+                                        :max-tokens 32000
+                                        :context-window 200000)
+   (chatgpt-shell-anthropic--make-model :version "claude-4-sonnet-20250514"
+                                        :short-version "4-sonnet"
+                                        :token-width  4
+                                        :max-tokens 64000
+                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
                                         :short-version "3.7-sonnet"
                                         :token-width  4
-                                        :max-tokens 128000
+                                        :max-tokens 64000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
                                         :short-version "3.5-sonnet"
