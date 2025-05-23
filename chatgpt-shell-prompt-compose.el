@@ -134,7 +134,6 @@ t if invoked from a transient frame (quitting closes the frame).")
    ["Blocks"
     ("'" "View block at point" chatgpt-shell-view-block-at-point)
     ("t" "Transfer block at point" chatgpt-shell-prompt-compose-insert-block-at-point)
-    ("w" "Copy block at point" chatgpt-shell-copy-block-at-point)
     ("C-c C-c" "Execute block at point" chatgpt-shell-execute-block-action-at-point)]
    ["Model"
     ("v" "Swap model version" chatgpt-shell-prompt-compose-swap-model-version)

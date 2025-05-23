@@ -1046,7 +1046,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
 (defun chatgpt-shell-next-link ()
   "Move point to the next link."
   (interactive)
-  (let ((links (chatgpt-shell--markdown-links))
+  (let ((links (markdown-overlays--markdown-links))
         (pos (point)))
     (when-let ((next-link (seq-find (lambda (link)
                                        (> (map-elt link 'start) pos))
@@ -1128,7 +1128,7 @@ Could be a prompt or a source block."
 (defun chatgpt-shell-previous-link ()
   "Move point to the previous link."
   (interactive)
-  (let ((links (chatgpt-shell--markdown-links))
+  (let ((links (markdown-overlays--markdown-links))
         (pos (point)))
     (when-let ((previous-link (seq-find (lambda (link)
                                           (< (map-elt link 'end) pos))
