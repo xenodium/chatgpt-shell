@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 2.20.4
-;; Package-Requires: ((emacs "28.1") (shell-maker "0.76.3"))
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.77.1"))
 (defconst chatgpt-shell--version "2.20.4")
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -70,6 +70,7 @@
 (require 'find-func)
 (require 'flymake)
 (require 'ielm)
+(require 'markdown-overlays)
 (require 'shell-maker)
 (require 'smerge-mode)
 (require 'ob-core)
@@ -187,27 +188,19 @@ For example:
 
 (defvaralias 'chatgpt-shell-root-path 'shell-maker-root-path)
 
+(defvaralias 'chatgpt-shell-insert-dividers 'markdown-overlays-insert-dividers)
+
+(defvaralias 'chatgpt-shell-highlight-blocks 'markdown-overlays-highlight-blocks)
+
+(defvaralias 'chatgpt-shell-render-latex 'markdown-overlays-render-latex)
+
+(defvaralias 'chatgpt-shell-language-mapping 'markdown-overlays-language-mapping)
+
 (defalias 'chatgpt-shell-save-session-transcript #'shell-maker-save-session-transcript)
 
 (defalias 'chatgpt-shell-proofread-region #'chatgpt-shell-proofread-paragraph-or-region)
 
 (defvar chatgpt-shell--prompt-history nil)
-
-(defcustom chatgpt-shell-language-mapping '(("elisp" . "emacs-lisp")
-                                            ("objective-c" . "objc")
-                                            ("objectivec" . "objc")
-                                            ("cpp" . "c++"))
-  "Maps external language names to Emacs names.
-
-Use only lower-case names.
-
-For example:
-
-                  lowercase      Emacs mode (without -mode)
-Objective-C -> (\"objective-c\" . \"objc\")"
-  :type '(alist :key-type (string :tag "Language Name/Alias")
-                :value-type (string :tag "Mode Name (without -mode)"))
-  :group 'chatgpt-shell)
 
 (defcustom chatgpt-shell-babel-headers '(("dot" . ((:file . "<temp-file>.png")))
                                          ("plantuml" . ((:file . "<temp-file>.png")))
@@ -628,23 +621,6 @@ See `chatgpt-shell-streaming'
         (cons :temperature chatgpt-shell-model-temperature)
         (cons :system-prompt (chatgpt-shell-system-prompt))))
 
-(defcustom chatgpt-shell-highlight-blocks t
-  "Whether or not to highlight source blocks."
-  :type 'boolean
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-render-latex nil
-  "Whether or not to render LaTeX blocks (experimental).
-
-Experimental.  Please report issues."
-  :type 'boolean
-  :group 'chatgpt-shell)
-
-(defcustom chatgpt-shell-insert-dividers nil
-  "Whether or not to display a divider between requests and responses."
-  :type 'boolean
-  :group 'chatgpt-shell)
-
 (defcustom chatgpt-shell-transmitted-context-length
   #'chatgpt-shell--approximate-context-length
   "Controls the amount of context provided to chatGPT.
@@ -706,7 +682,7 @@ See `shell-maker-welcome-message' as an example."
        (error "%s not found" (chatgpt-shell-model-version))))
    :on-command-finished
    (lambda (command output success)
-     (chatgpt-shell--put-source-block-overlays)
+     (markdown-overlays-put)
      (run-hook-with-args 'chatgpt-shell-after-command-functions
                          command output success))
    :redact-log-output
@@ -1056,185 +1032,10 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                 (cons 'start start)
                 (cons 'end end)))))))
 
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-headers (&optional avoid-ranges)
-  "Extract markdown headers with AVOID-RANGES."
-  (let ((headers '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (rx bol (group (one-or-more "#"))
-                  (one-or-more space)
-                  (group (one-or-more (not (any "\n")))) eol)
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'start begin
-              'end end
-              'level (cons (match-beginning 1) (match-end 1))
-              'title (cons (match-beginning 2) (match-end 2)))
-             headers)))))
-    (nreverse headers)))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-links (&optional avoid-ranges)
-  "Extract markdown links with AVOID-RANGES."
-  (let ((links '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (rx (seq "["
-                       (group (one-or-more (not (any "]"))))
-                       "]"
-                       "("
-                       (group (one-or-more (not (any ")"))))
-                       ")"))
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'start begin
-              'end end
-              'title (cons (match-beginning 1) (match-end 1))
-              'url (cons (match-beginning 2) (match-end 2)))
-             links)))))
-    (nreverse links)))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-bolds (&optional avoid-ranges)
-  "Extract markdown bolds with AVOID-RANGES."
-  (let ((bolds '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (rx (or (group "**" (group (one-or-more (not (any "\n*")))) "**")
-                      (group "__" (group (one-or-more (not (any "\n_")))) "__")))
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'start begin
-              'end end
-              'text (cons (or (match-beginning 2)
-                              (match-beginning 4))
-                          (or (match-end 2)
-                              (match-end 4))))
-             bolds)))))
-    (nreverse bolds)))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-strikethroughs (&optional avoid-ranges)
-  "Extract markdown strikethroughs with AVOID-RANGES."
-  (let ((strikethroughs '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (rx "~~" (group (one-or-more (not (any "\n~")))) "~~")
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'start begin
-              'end end
-              'text (cons (match-beginning 1)
-                          (match-end 1)))
-             strikethroughs)))))
-    (nreverse strikethroughs)))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-italics (&optional avoid-ranges)
-  "Extract markdown italics with AVOID-RANGES."
-  (let ((italics '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              (rx (or (group (or bol (one-or-more (any "\n \t")))
-                             (group "*")
-                             (group (one-or-more (not (any "\n*")))) "*")
-                      (group (or bol (one-or-more (any "\n \t")))
-                             (group "_")
-                             (group (one-or-more (not (any "\n_")))) "_")))
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'start (or (match-beginning 2)
-                         (match-beginning 5))
-              'end end
-              'text (cons (or (match-beginning 3)
-                              (match-beginning 6))
-                          (or (match-end 3)
-                              (match-end 6))))
-             italics)))))
-    (nreverse italics)))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--markdown-inline-codes (&optional avoid-ranges)
-  "Get a list of all inline markdown code in buffer with AVOID-RANGES."
-  (let ((codes '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              "`\\([^`\n]+\\)`"
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (unless (seq-find (lambda (avoided)
-                              (and (>= begin (car avoided))
-                                   (<= end (cdr avoided))))
-                            avoid-ranges)
-            (push
-             (list
-              'body (cons (match-beginning 1) (match-end 1))) codes)))))
-    (nreverse codes)))
-
-;; TODO: Move to shell-maker.
-(defvar chatgpt-shell--source-block-regexp
-  (rx  bol (zero-or-more whitespace) (group "```") (zero-or-more whitespace) ;; ```
-       (group (zero-or-more (or alphanumeric "-" "+" "#"))) ;; languages like: emacs-lisp C++ C#
-       (zero-or-more whitespace)
-       (one-or-more "\n")
-       (group (*? anychar)) ;; body
-       (one-or-more "\n")
-       (zero-or-more whitespace)
-       (group "```") (or "\n" eol)))
-
 (defun chatgpt-shell-next-source-block ()
   "Move point to the next source block's body."
   (interactive)
-  (let ((blocks (chatgpt-shell--source-blocks))
+  (let ((blocks (markdown-overlays--source-blocks))
         (pos (point)))
     (when-let ((next-block (seq-find (lambda (block)
                                        (> (car (map-elt block 'start)) pos))
@@ -1316,7 +1117,7 @@ Could be a prompt or a source block."
 (defun chatgpt-shell-previous-source-block ()
   "Move point to the previous source block's body."
   (interactive)
-  (let ((blocks (chatgpt-shell--source-blocks))
+  (let ((blocks (markdown-overlays--source-blocks))
         (pos (point)))
     (when-let ((next-block (seq-find (lambda (block)
                                        (< (car (map-elt block 'end)) pos))
@@ -1338,36 +1139,6 @@ Could be a prompt or a source block."
       (goto-char (map-elt previous-link 'start))
       (forward-char)
       (point))))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--match-source-block ()
-  "Return a matched source block by the previous search/regexp operation."
-  (list
-   'start (cons (match-beginning 1)
-                (match-end 1))
-   'end (cons (match-beginning 4)
-              (match-end 4))
-   'language (when (and (match-beginning 2)
-                        (match-end 2))
-               (cons (match-beginning 2)
-                     (match-end 2)))
-   'body (cons (match-beginning 3) (match-end 3))))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--source-blocks ()
-  "Get a list of all source blocks in buffer."
-  (let ((markdown-blocks '())
-        (case-fold-search nil))
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-              chatgpt-shell--source-block-regexp
-              nil t)
-        (when-let ((begin (match-beginning 0))
-                   (end (match-end 0)))
-          (push (chatgpt-shell--match-source-block)
-                markdown-blocks))))
-    (nreverse markdown-blocks)))
 
 (defun chatgpt-shell--minibuffer-prompt ()
   "Construct a prompt for the minibuffer."
@@ -1447,7 +1218,7 @@ If region is active, append to prompt."
     (when overlay-blocks
       (with-current-buffer
           (chatgpt-shell--primary-buffer)
-        (chatgpt-shell--put-source-block-overlays)))))
+        (markdown-overlays-put)))))
 
 (defun chatgpt-shell-send-region-with-header (header)
   "Send text with HEADER from region using ChatGPT."
@@ -1672,7 +1443,7 @@ With prefix REVIEW prompt before sending to ChatGPT."
                   (save-restriction
                     (narrow-to-region (eshell-beginning-of-output)
                                       (eshell-end-of-output))
-                    (chatgpt-shell--put-source-block-overlays))))))
+                    (markdown-overlays-put))))))
 
   (require 'esh-cmd)
 
@@ -1896,7 +1667,7 @@ ON-FINISHED is invoked when the entire interaction is finished and of the form:
                                     (when on-finished
                                       (funcall on-finished input output success))
                                     (with-current-buffer (chatgpt-shell--primary-buffer)
-                                      (chatgpt-shell--put-source-block-overlays)))))))
+                                      (markdown-overlays-put)))))))
         (if (or (eq response-style 'inline)
                 handler)
             (with-current-buffer (chatgpt-shell--primary-buffer)
@@ -2390,254 +2161,6 @@ If optional CAPTURE is non-nil, cature a screenshot."
     (setq num-tokens (+ num-tokens 3))
     num-tokens))
 
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-source-block (quotes1-start quotes1-end lang
-lang-start lang-end body-start body-end quotes2-start quotes2-end)
-  "Fontify a source block.
-Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
- BODY-END QUOTES2-START and QUOTES2-END."
-  ;; Overlay beginning "```" with a copy block button.
-  (chatgpt-shell--overlay-put-all
-   (make-overlay quotes1-start quotes1-end)
-   'evaporate t
-   'display
-   (propertize "📋 "
-               'pointer 'hand
-               'keymap (shell-maker--make-ret-binding-map
-                        (lambda ()
-                          (interactive)
-                          (kill-ring-save body-start body-end)
-                          (message "Copied")))))
-  ;; Hide end "```" altogether.
-  (chatgpt-shell--overlay-put-all
-   (make-overlay quotes2-start quotes2-end)
-   'evaporate t
-   'invisible t)
-  (unless (eq lang-start lang-end)
-    (chatgpt-shell--overlay-put-all
-     (make-overlay lang-start lang-end)
-     'evaporate t
-     'face '(:box t))
-    (chatgpt-shell--overlay-put-all
-     (make-overlay lang-end (1+ lang-end))
-     'evaporate t
-     'display "\n\n"))
-  (let ((lang-mode (intern (concat (or
-                                    (chatgpt-shell--resolve-internal-language lang)
-                                    (downcase (string-trim lang)))
-                                   "-mode")))
-        (string (buffer-substring-no-properties body-start body-end))
-        (buf (if (and (boundp 'shell-maker--config)
-                      shell-maker--config)
-                 (shell-maker-buffer shell-maker--config)
-               (current-buffer)))
-        (pos 0)
-        (props)
-        (overlay)
-        (propertized-text))
-    (if (and (fboundp lang-mode)
-             (provided-mode-derived-p lang-mode 'prog-mode))
-        (progn
-          (setq propertized-text
-                (with-current-buffer
-                    (get-buffer-create
-                     (format " *chatgpt-shell-fontification:%s*" lang-mode))
-                  (let ((inhibit-modification-hooks nil)
-                        (inhibit-message t))
-                    (erase-buffer)
-                    ;; Additional space ensures property change.
-                    (insert string " ")
-                    (funcall lang-mode)
-                    (font-lock-ensure))
-                  (buffer-string)))
-          (while (< pos (length propertized-text))
-            (setq props (text-properties-at pos propertized-text))
-            (setq overlay (make-overlay (+ body-start pos)
-                                        (+ body-start (1+ pos))
-                                        buf))
-            (chatgpt-shell--overlay-put-all
-             overlay
-             'evaporate t
-             'face (plist-get props 'face))
-            (setq pos (1+ pos))))
-      (chatgpt-shell--overlay-put-all
-       (make-overlay body-start body-end buf)
-       'evaporate t
-       'face 'font-lock-doc-markup-face))))
-
-(defun chatgpt-shell--overlay-put-all (overlay &rest props)
-  "Set multiple properties on OVERLAY via PROPS."
-  (unless (= (mod (length props) 2) 0)
-    (error "Props missing a property or value"))
-  (while props
-    (overlay-put overlay (pop props) (pop props))))
-
-(defun chatgpt-shell--fontify-divider (start end)
-  "Display text between START and END as a divider."
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start end
-                 (if (and (boundp 'shell-maker--config)
-                          shell-maker--config)
-                     (shell-maker-buffer shell-maker--config)
-                   (current-buffer)))
-   'evaporate t
-   'display
-   (concat (propertize (concat (make-string (window-body-width) ? ) "")
-                       'face '(:underline t)) "\n")))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-link (start end title-start title-end url-start url-end)
-  "Fontify a markdown link.
-Use START END TITLE-START TITLE-END URL-START URL-END."
-  ;; Hide markup before
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start title-start)
-   'evaporate t
-   'invisible t)
-  ;; Show title as link
-  (chatgpt-shell--overlay-put-all
-   (make-overlay title-start title-end)
-   'evaporate t
-   'face 'link)
-  ;; Make RET open the URL
-  (define-key (let ((map (make-sparse-keymap)))
-                (define-key map [mouse-1]
-                            (lambda () (interactive)
-                              (browse-url (buffer-substring-no-properties url-start url-end))))
-                (define-key map (kbd "RET")
-                            (lambda () (interactive)
-                              (browse-url (buffer-substring-no-properties url-start url-end))))
-                (chatgpt-shell--overlay-put-all
-                 (make-overlay title-start title-end)
-                 'evaporate t
-                 'keymap map)
-                map)
-              [remap self-insert-command] 'ignore)
-  ;; Hide markup after
-  (chatgpt-shell--overlay-put-all
-   (make-overlay title-end end)
-   'evaporate t
-   'invisible t))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-bold (start end text-start text-end)
-  "Fontify a markdown bold.
-Use START END TEXT-START TEXT-END."
-  ;; Hide markup before
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start text-start)
-   'evaporate t
-   'invisible t)
-  ;; Show title as bold
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-start text-end)
-   'evaporate t
-   'face 'bold)
-  ;; Hide markup after
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-end end)
-   'evaporate t
-   'invisible t))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-header (start _end level-start level-end title-start title-end)
-  "Fontify a markdown header.
-Use START END LEVEL-START LEVEL-END TITLE-START TITLE-END."
-  ;; Hide markup before
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start title-start)
-   'evaporate t
-   'invisible t)
-  ;; Show title as header
-  (chatgpt-shell--overlay-put-all
-   (make-overlay title-start title-end)
-   'evaporate t
-   'face
-   (cond ((eq (- level-end level-start) 1)
-          'org-level-1)
-         ((eq (- level-end level-start) 2)
-          'org-level-2)
-         ((eq (- level-end level-start) 3)
-          'org-level-3)
-         ((eq (- level-end level-start) 4)
-          'org-level-4)
-         ((eq (- level-end level-start) 5)
-          'org-level-5)
-         ((eq (- level-end level-start) 6)
-          'org-level-6)
-         ((eq (- level-end level-start) 7)
-          'org-level-7)
-         ((eq (- level-end level-start) 8)
-          'org-level-8)
-         (t
-          'org-level-1))))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-italic (start end text-start text-end)
-  "Fontify a markdown italic.
-Use START END TEXT-START TEXT-END."
-  ;; Hide markup before
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start text-start)
-   'evaporate t
-   'invisible t)
-  ;; Show title as italic
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-start text-end)
-   'evaporate t
-   'face 'italic)
-  ;; Hide markup after
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-end end)
-   'evaporate t
-   'invisible t))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-strikethrough (start end text-start text-end)
-  "Fontify a markdown strikethrough.
-Use START END TEXT-START TEXT-END."
-  ;; Hide markup before
-  (chatgpt-shell--overlay-put-all
-   (make-overlay start text-start)
-   'evaporate t
-   'invisible t)
-  ;; Show title as strikethrough
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-start text-end)
-   'evaporate t
-   'face '(:strike-through t))
-  ;; Hide markup after
-  (chatgpt-shell--overlay-put-all
-   (make-overlay text-end end)
-   'evaporate t
-   'invisible t))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--fontify-inline-code (body-start body-end)
-  "Fontify a source block.
-Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
- BODY-END QUOTES2-START and QUOTES2-END."
-  ;; Hide ```
-  (chatgpt-shell--overlay-put-all
-   (make-overlay (1- body-start)
-                 body-start)
-   'evaporate t
-   'invisible t)
-  (chatgpt-shell--overlay-put-all
-   (make-overlay body-end
-                 (1+ body-end))
-   'evaporate t
-   'invisible t)
-  (chatgpt-shell--overlay-put-all
-   (make-overlay body-start body-end
-                 (if (and (boundp 'shell-maker--config)
-                          shell-maker--config)
-                     (shell-maker-buffer shell-maker--config)
-                   (current-buffer)))
-   'evaporate t
-
-   'face 'font-lock-doc-markup-face))
-
 (defun chatgpt-shell-rename-block-at-point ()
   "Rename block at point (perhaps a different language)."
   (interactive)
@@ -2650,7 +2173,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
           (let ((new-name (read-string "Name: " nil nil "")))
             (goto-char (map-elt block 'language-start))
             (insert new-name)
-            (chatgpt-shell--put-source-block-overlays)))
+            (markdown-overlays-put)))
       (user-error "No block at point"))))
 
 (defun chatgpt-shell-remove-block-overlays ()
@@ -2662,85 +2185,7 @@ Use QUOTES1-START QUOTES1-END LANG LANG-START LANG-END BODY-START
 (defun chatgpt-shell-refresh-rendering ()
   "Refresh markdown rendering by re-applying to entire buffer."
   (interactive)
-  (chatgpt-shell--put-source-block-overlays))
-
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--put-source-block-overlays ()
-  "Put overlays for all source blocks."
-  (let* ((source-blocks (chatgpt-shell--source-blocks))
-         (avoid-ranges (seq-map (lambda (block)
-                                  (map-elt block 'body))
-                                source-blocks)))
-    (dolist (overlay (overlays-in (point-min) (point-max)))
-      (delete-overlay overlay))
-    (when chatgpt-shell-highlight-blocks
-      (dolist (block source-blocks)
-        (chatgpt-shell--fontify-source-block
-         (car (map-elt block 'start))
-         (cdr (map-elt block 'start))
-         (buffer-substring-no-properties (car (map-elt block 'language))
-                                         (cdr (map-elt block 'language)))
-         (car (map-elt block 'language))
-         (cdr (map-elt block 'language))
-         (car (map-elt block 'body))
-         (cdr (map-elt block 'body))
-         (car (map-elt block 'end))
-         (cdr (map-elt block 'end)))))
-    (when chatgpt-shell-insert-dividers
-      (dolist (divider (shell-maker--prompt-end-markers))
-        (chatgpt-shell--fontify-divider (car divider) (cdr divider))))
-    (dolist (link (chatgpt-shell--markdown-links avoid-ranges))
-      (chatgpt-shell--fontify-link
-       (map-elt link 'start)
-       (map-elt link 'end)
-       (car (map-elt link 'title))
-       (cdr (map-elt link 'title))
-       (car (map-elt link 'url))
-       (cdr (map-elt link 'url))))
-    (dolist (header (chatgpt-shell--markdown-headers avoid-ranges))
-      (chatgpt-shell--fontify-header
-       (map-elt header 'start)
-       (map-elt header 'end)
-       (car (map-elt header 'level))
-       (cdr (map-elt header 'level))
-       (car (map-elt header 'title))
-       (cdr (map-elt header 'title))))
-    (dolist (bold (chatgpt-shell--markdown-bolds avoid-ranges))
-      (chatgpt-shell--fontify-bold
-       (map-elt bold 'start)
-       (map-elt bold 'end)
-       (car (map-elt bold 'text))
-       (cdr (map-elt bold 'text))))
-    (dolist (italic (chatgpt-shell--markdown-italics avoid-ranges))
-      (chatgpt-shell--fontify-italic
-       (map-elt italic 'start)
-       (map-elt italic 'end)
-       (car (map-elt italic 'text))
-       (cdr (map-elt italic 'text))))
-    (dolist (strikethrough (chatgpt-shell--markdown-strikethroughs avoid-ranges))
-      (chatgpt-shell--fontify-strikethrough
-       (map-elt strikethrough 'start)
-       (map-elt strikethrough 'end)
-       (car (map-elt strikethrough 'text))
-       (cdr (map-elt strikethrough 'text))))
-    (dolist (inline-code (chatgpt-shell--markdown-inline-codes avoid-ranges))
-      (chatgpt-shell--fontify-inline-code
-       (car (map-elt inline-code 'body))
-       (cdr (map-elt inline-code 'body))))
-    (when chatgpt-shell-render-latex
-      (require 'org)
-      ;; Silence org-element warnings.
-      (let ((major-mode 'org-mode))
-        (save-excursion
-          (dolist (range (chatgpt-shell--invert-ranges
-                          avoid-ranges
-                          (point-min)
-                          (point-max)))
-            (org-format-latex
-             (concat org-preview-latex-image-directory "chatgpt-shell")
-             (car range) (cdr range)
-             temporary-file-directory
-             'overlays nil 'forbuffer org-preview-latex-default-process)))))))
+  (markdown-overlays-put))
 
 (defun chatgpt-shell--invert-ranges (ranges min max)
   "Invert a list of RANGES within the interval [MIN, MAX].
@@ -2802,7 +2247,7 @@ If no LENGTH set, use 2048."
             (when (and command response)
               (insert "\n\n"))
             (insert (or response "")))
-          (chatgpt-shell--put-source-block-overlays)
+          (markdown-overlays-put)
           (view-mode +1)
           (setq view-exit-action 'kill-buffer))))
     (switch-to-buffer buf)
@@ -2832,22 +2277,10 @@ CALLBACK can be like:
                   (buffer-string))
          (kill-buffer buffer))))))
 
-;; TODO: Move to shell-maker.
-(defun chatgpt-shell--resolve-internal-language (language)
-  "Resolve external LANGUAGE to internal.
-
-For example \"elisp\" -> \"emacs-lisp\"."
-  (when language
-    (or (map-elt chatgpt-shell-language-mapping
-                 (downcase (string-trim language)))
-        (when (intern (concat (downcase (string-trim language))
-                              "-mode"))
-          (downcase (string-trim language))))))
-
 (defun chatgpt-shell-block-action-at-point ()
   "Return t if block at point has an action.  nil otherwise."
   (let* ((source-block (chatgpt-shell-markdown-block-at-point))
-         (language (chatgpt-shell--resolve-internal-language
+         (language (markdown-overlays--resolve-internal-language
                     (map-elt source-block 'language)))
          (actions (chatgpt-shell--get-block-actions language)))
     actions
@@ -2858,7 +2291,7 @@ For example \"elisp\" -> \"emacs-lisp\"."
 (defun chatgpt-shell--get-block-actions (language)
   "Get block actions for LANGUAGE."
   (map-elt chatgpt-shell-source-block-actions
-           (chatgpt-shell--resolve-internal-language
+           (markdown-overlays--resolve-internal-language
             language)))
 
 (defun chatgpt-shell--org-babel-command (language)
@@ -2889,7 +2322,7 @@ For example \"elisp\" -> \"emacs-lisp\"."
                              (map-elt block 'end))))
         (if (and (map-elt block 'language)
                  (chatgpt-shell--org-babel-command
-                  (chatgpt-shell--resolve-internal-language
+                  (markdown-overlays--resolve-internal-language
                    (map-elt block 'language))))
             (chatgpt-shell-execute-babel-block-action-at-point)
           (user-error "No primary action for %s blocks" (map-elt block 'language))))
@@ -2913,7 +2346,7 @@ For example \"elisp\" -> \"emacs-lisp\"."
                                                  (insert "\n"
                                                          (string-trim code)
                                                          "\n")
-                                                 (chatgpt-shell--put-source-block-overlays))))
+                                                 (markdown-overlays-put))))
     (user-error "No block at point")))
 
 (defun chatgpt-shell-view-block-at-point ()
@@ -2952,7 +2385,7 @@ ARGS:
                                                    (if edit "edit" "view"))))
          (buffer-name (buffer-name edit-buffer))
          (language-mode (intern (concat (or
-                                         (chatgpt-shell--resolve-internal-language language)
+                                         (markdown-overlays--resolve-internal-language language)
                                          (downcase (string-trim language)))
                                         "-mode"))))
     (switch-to-buffer edit-buffer)
@@ -3027,7 +2460,7 @@ ARGS:
   (interactive)
   (require 'ob)
   (if-let ((block (chatgpt-shell-markdown-block-at-point)))
-      (if-let* ((language (chatgpt-shell--resolve-internal-language
+      (if-let* ((language (markdown-overlays--resolve-internal-language
                            (map-elt block 'language)))
                 (babel-command (chatgpt-shell--org-babel-command language))
                 (lang-headers (intern

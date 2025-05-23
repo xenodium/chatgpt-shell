@@ -31,6 +31,7 @@
   (require 'cl-lib))
 (require 'ring)
 (require 'flymake)
+(require 'markdown-overlays)
 (require 'shell-maker)
 (require 'transient)
 (require 'svg nil :noerror)
@@ -40,7 +41,6 @@
 (declare-function chatgpt-shell-swap-model "chatgpt-shell")
 (declare-function chatgpt-shell-swap-system-prompt "chatgpt-shell")
 (declare-function chatgpt-shell--minibuffer-prompt "chatgpt-shell")
-(declare-function chatgpt-shell--put-source-block-overlays "chatgpt-shell")
 (declare-function chatgpt-shell-send-to-buffer "chatgpt-shell")
 (declare-function chatgpt-shell-execute-block-action-at-point "chatgpt-shell")
 (declare-function chatgpt-shell-block-action-at-point "chatgpt-shell")
@@ -243,7 +243,7 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
           (insert "\n\n")
           (insert input-text)
           (let ((inhibit-read-only t))
-            (chatgpt-shell--put-source-block-overlays))))
+            (markdown-overlays-put))))
       ;; TODO: Find a better alternative to prevent clash.
       ;; Disable "n"/"p" for region-bindings-mode-map, so it doesn't
       ;; clash with "n"/"p" selection binding.
@@ -365,7 +365,7 @@ Optionally set its PROMPT and RESPONSE."
      (chatgpt-shell-prompt-compose--response))
     (goto-char point))
   (let ((inhibit-read-only t))
-    (chatgpt-shell--put-source-block-overlays))
+    (markdown-overlays-put))
   (when (chatgpt-shell-markdown-block-at-point)
     (chatgpt-shell-mark-block)))
 
@@ -406,7 +406,7 @@ Optionally set its PROMPT and RESPONSE."
       (let ((prompt (string-trim
                      (chatgpt-shell-prompt-compose--text))))
         (let ((inhibit-read-only t))
-          (chatgpt-shell--put-source-block-overlays))
+          (markdown-overlays-put))
         (chatgpt-shell-prompt-compose-view-mode +1)
         (chatgpt-shell-prompt-compose--initialize prompt)
         (setq view-exit-action 'kill-buffer)
@@ -421,11 +421,11 @@ Optionally set its PROMPT and RESPONSE."
                                         (lambda (_input _output _success)
                                           (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                                             (let ((inhibit-read-only t))
-                                              (chatgpt-shell--put-source-block-overlays))
+                                              (markdown-overlays-put))
                                             (when (chatgpt-shell-markdown-block-at-point)
                                               (chatgpt-shell-mark-block)))
                                           (when chatgpt-shell-compose-auto-transient
-                                            (chatgpt-shell-prompt-compose-transient)))
+                                            (call-interactively 'chatgpt-shell-prompt-compose-transient)))
                                         'inline))
         ;; Point should go to beginning of response after submission.
         (chatgpt-shell-prompt-compose--goto-response)))))
@@ -486,7 +486,7 @@ If BACKWARDS is non-nil, go to previous interaction."
       (chatgpt-shell-prompt-compose--initialize prompt)
       (when response
         (insert response))
-      (chatgpt-shell--put-source-block-overlays))
+      (markdown-overlays-put))
     (chatgpt-shell-prompt-compose-view-mode +1)))
 
 (defun chatgpt-shell-prompt-compose--history-label ()
@@ -663,7 +663,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
     (chatgpt-shell-send-to-buffer prompt nil nil
                                   (lambda (_input _output _success)
                                     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                      (chatgpt-shell--put-source-block-overlays)))
+                                      (markdown-overlays-put)))
                                   'inline)))
 
 (defun chatgpt-shell-prompt-compose-insert-block-at-point ()
