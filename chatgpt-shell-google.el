@@ -228,6 +228,12 @@ This gets set once for each MODEL, based on a heuristic."
                                          :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.5-pro-preview-05-06"
+                                         :short-version "2.5-pro-preview"
+                                         :path "/v1beta/models/gemini-2.5-pro-preview-05-06"
+                                         :grounding-search t
+                                         :token-width 4
+                                         :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-pro-exp"
                                          :short-version "2.0-pro-exp"
                                          :path "/v1beta/models/gemini-2.0-pro-exp"
