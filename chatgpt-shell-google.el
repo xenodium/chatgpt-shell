@@ -222,24 +222,28 @@ This gets set once for each MODEL, based on a heuristic."
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-2.5-pro-preview"
-                                         :short-version "2.5-pro-preview"
-                                         :path "/v1beta/models/gemini-2.5-pro-preview-03-25"
+  (list (chatgpt-shell-google-make-model :version "gemini-2.5-flash-preview-05-20"
+                                         :short-version "2.5-flash-preview"
+                                         :path "/v1beta/models/gemini-2.5-flash-preview-05-20"
+                                         :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-2.5-pro-exp"
-                                         :short-version "2.5-pro-exp"
-                                         :path "/v1beta/models/gemini-2.5-pro-exp-03-25"
+        (chatgpt-shell-google-make-model :version "gemini-2.5-pro-preview-05-06"
+                                         :short-version "2.5-pro-preview"
+                                         :path "/v1beta/models/gemini-2.5-pro-preview-05-06"
+                                         :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-pro-exp"
                                          :short-version "2.0-pro-exp"
                                          :path "/v1beta/models/gemini-2.0-pro-exp"
+                                         :grounding-search t
                                          :token-width 4
                                          :context-window 2048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash-thinking-exp"
                                          :short-version "2.0-flash-thinking-exp"
                                          :path "/v1beta/models/gemini-2.0-flash-thinking-exp"
+                                         :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
