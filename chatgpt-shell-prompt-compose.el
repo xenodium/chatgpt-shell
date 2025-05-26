@@ -427,7 +427,9 @@ Optionally set its PROMPT and RESPONSE."
                                             (call-interactively 'chatgpt-shell-prompt-compose-transient)))
                                         'inline))
         ;; Point should go to beginning of response after submission.
-        (chatgpt-shell-prompt-compose--goto-response)))))
+        (chatgpt-shell-prompt-compose--goto-response)
+        (let ((inhibit-read-only t))
+          (markdown-overlays-put))))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
