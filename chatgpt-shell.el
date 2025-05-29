@@ -531,13 +531,16 @@ See `chatgpt-shell-allow-model-versions' and
 (defcustom chatgpt-shell-swap-model-selector nil
   "Custom function to select a model during swap.
 
-This would allow a user to sort, group, filter, present a different selection
-user experience, attach affixations, and so on.  An example:
+This would allow a user to sort, group, filter, present a different
+selection, user experience, attach affixations, and so on.
+
+An example:
 
   (setq chatgpt-shell-swap-model-selector
         (lambda (candidates)
-          (completing-read \"New model: \"
-                           (my-custom-model-completion-table candidates) nil t)))
+          (completing-read
+            \"New model: \"
+             (my-custom-model-completion-table candidates) nil t)))
 
 See also `chatgpt-shell-swap-model'."
   :type 'function
