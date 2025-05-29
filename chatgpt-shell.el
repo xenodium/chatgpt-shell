@@ -610,6 +610,13 @@ non-nil; otherwise `completing-read'."
   :type 'boolean
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-always-create-new t
+  "Non-nil creates a new shell buffer every time `chatgpt-shell' is invoked.
+
+Otherwise, reuse an existing chat."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
 (defcustom chatgpt-shell-proxy nil
   "When non-nil, use as a proxy (for example http or socks5)."
   :type 'string
@@ -735,7 +742,8 @@ Set CONTEXT, STREAMING, TEMPERATURE, and SYSTEM-PROMPT as usual."
 
 With NEW-SESSION, start a new session."
   (interactive "P")
-  (chatgpt-shell-start nil new-session))
+  (chatgpt-shell-start nil (or new-session
+                               chatgpt-shell-always-create-new)))
 
 (defvar chatgpt-shell-mode-map (make-sparse-keymap)
   "Keymap for `chatgpt-shell-mode'.")
