@@ -207,6 +207,8 @@ For example:
                                          ("plantuml" . ((:file . "<temp-file>.png")))
                                          ("ditaa" . ((:file . "<temp-file>.png")))
                                          ("objc" . ((:results . "output")))
+                                         ("lisp" . ((:results . "output")))
+                                         ("clojure" . ((:results . "output")))
                                          ("python" . ((:python . "python3")))
                                          ("swiftui" . ((:results . "file")))
                                          ("c++" . ((:results . "raw")))
