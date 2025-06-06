@@ -59,6 +59,23 @@
   :type 'boolean
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-prompt-compose-display-action
+  (cons '(major-mode . chatgpt-shell-prompt-compose-mode)
+                     `((display-buffer-reuse-mode-window
+                        (lambda (buffer alist) ;; Use left side window if one available.
+                          (when (window-combination-p (frame-root-window (selected-frame)) t)
+                            (window--display-buffer buffer
+                                                    (car (window-at-side-list nil 'left))
+                                                    'reuse alist)))
+                        display-buffer-in-direction)
+                       (window-width . 0.45)
+                       (direction . left)))
+  "Choose how to display the compose buffer.
+
+Same format as a action in a `display-buffer-alist' entry."
+  :type (plist-get (cdr (get 'display-buffer-alist 'custom-type)) :value-type)
+  :group 'ready-player)
+
 (defvar-local chatgpt-shell-prompt-compose--exit-on-submit nil
   "Whether or not compose buffer should close after submission.
 
@@ -221,10 +238,13 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
                            ;; view-mode = old query, erase for new one.
                            (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
                              chatgpt-shell-prompt-compose-view-mode))))
+    (when chatgpt-shell-prompt-compose-display-action
+      (add-to-list 'display-buffer-alist
+                   chatgpt-shell-prompt-compose-display-action))
     (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+      (chatgpt-shell-prompt-compose-mode)
       (unless transient-frame-p
         (select-window (display-buffer (chatgpt-shell-prompt-compose-buffer))))
-      (chatgpt-shell-prompt-compose-mode)
       (setq-local chatgpt-shell-prompt-compose--exit-on-submit exit-on-submit)
       (setq-local chatgpt-shell-prompt-compose--transient-frame-p transient-frame-p)
       (setq-local chatgpt-shell-prompt-compose--last-known-region region-details)
