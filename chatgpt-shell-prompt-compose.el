@@ -54,7 +54,7 @@
 (declare-function chatgpt-shell-view-block-at-point "chatgpt-shell")
 (declare-function chatgpt-shell-copy-block-at-point "chatgpt-shell")
 
-(defcustom chatgpt-shell-compose-auto-transient t
+(defcustom chatgpt-shell-compose-auto-transient nil
   "When non-nil automatically display transient menu post compose submission."
   :type 'boolean
   :group 'chatgpt-shell)
@@ -525,7 +525,12 @@ If BACKWARDS is non-nil, go to previous interaction."
           (svg-embed svg icon-filename
                      "image/png" nil
                      :x 0 :y 0 :width image-width :height image-height))
-        (svg-text svg (format "[%d/%d]\n\n" (car pos) (cdr pos))
+        (svg-text svg (format "[%d/%d] %s\n\n" (car pos) (cdr pos)
+                              (if chatgpt-shell-prompt-compose-view-mode
+                                  (if chatgpt-shell-compose-auto-transient
+                                      ""
+                                    " '?' for help")
+                                "'C-c C-c' to send prompt"))
                   :x (+ image-width 10) :y text-height
                   :fill (face-attribute 'default :foreground))
         (svg-text svg (format "%s (%s)"
