@@ -125,7 +125,7 @@ Via [[https://github.com/jwiegley/use-package][use-package]], you can install wi
 
 #+begin_src emacs-lisp :lexical no
   (use-package shell-maker
-    :straight (:type git :host github :repo "xenodium/shell-maker" :files ("shell-maker*.el")))
+    :straight (:type git :host github :repo "xenodium/shell-maker" :files ("*.el")))
 
   (use-package chatgpt-shell
     :straight (:type git :host github :repo "xenodium/chatgpt-shell" :files ("chatgpt-shell*.el"))
