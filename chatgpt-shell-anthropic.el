@@ -54,11 +54,13 @@ If you use Claude through a proxy service, change the URL base."
   :type 'boolean
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-anthropic-thinking-budget-tokens 32000
+(defcustom chatgpt-shell-anthropic-thinking-budget-tokens nil
   "The token budget allocated for Anthropic model thinking.
 
-Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to non-nil."
-  :type 'integer
+Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to
+non-nil. nil means to use the maximum number of thinking tokens
+allowed."
+  :type '(choice integer (const nil))
   :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
@@ -201,11 +203,16 @@ or
      (when (map-elt settings :system-prompt)
        `((system . ,(map-elt settings :system-prompt))))
      (when chatgpt-shell-anthropic-thinking
-       (when (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens))
+       (when (and chatgpt-shell-anthropic-thinking-budget-tokens
+                  (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens)))
          (error "chatgpt-shell-anthropic-thinking-budget-tokens must be smaller than %d"
                 (map-elt model :max-tokens)))
-       `((thinking . ((type . "enabled")
-                      (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens)))))
+       (let ((chatgpt-shell-anthropic-thinking-budget-tokens
+              (if chatgpt-shell-anthropic-thinking-budget-tokens
+                  chatgpt-shell-anthropic-thinking-budget-tokens
+                (1- (map-elt model :max-tokens)))))
+         `((thinking . ((type . "enabled")
+                        (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens))))))
      `((max_tokens . ,(or (map-elt model :max-tokens)
                           (error "Missing %s :max-tokens" (map-elt model :name))))
        (model . ,(map-elt model :version))
