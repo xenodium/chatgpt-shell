@@ -2029,9 +2029,9 @@ If in a `dired' buffer, use selection (single image only for now)."
   (if (eq system-type 'darwin)
       '("/usr/sbin/screencapture" "-i")
     ;; ImageMagick is common on Linux and many other *nix systems.
-    "/usr/bin/import")
+    '("/usr/bin/import"))
   "The program to use for capturing screenshots."
-  :type 'string)
+  :type '(repeat string))
 
 (defun chatgpt-shell--current-image-file (&optional capture)
   "Return buffer image file, Dired selected file, or image at point.
