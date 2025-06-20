@@ -2025,6 +2025,14 @@ If in a `dired' buffer, use selection (single image only for now)."
                           :prompt-url file
                           :streaming nil)))
 
+(defcustom chatgpt-shell-screenshot-command
+  (if (eq system-type 'darwin)
+      '("/usr/sbin/screencapture" "-i")
+    ;; ImageMagick is common on Linux and many other *nix systems.
+    "/usr/bin/import")
+  "The program to use for capturing screenshots."
+  :type 'string)
+
 (defun chatgpt-shell--current-image-file (&optional capture)
   "Return buffer image file, Dired selected file, or image at point.
 
@@ -2035,8 +2043,13 @@ If optional CAPTURE is non-nil, cature a screenshot."
   (cond (capture
          (redisplay) ;; Call process will block. Give redisplay a chance.
          (when-let ((file (make-temp-file "screenshot" nil ".png"))
-                    ;; TODO: Make screenshot utility configurable.
-                    (success (eq 0 (call-process "/usr/sbin/screencapture" nil nil nil "-i" file)))
+                    (success (eq 0 (apply #'call-process
+                                          (car chatgpt-shell-screenshot-command)
+                                          nil
+                                          nil
+                                          nil
+                                          (cdr chatgpt-shell-screenshot-command)
+                                          file)))
                     (found (file-exists-p file))
                     (written (not (zerop (nth 7 (file-attributes file))))))
            file))
