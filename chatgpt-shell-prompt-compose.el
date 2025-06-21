@@ -873,7 +873,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
 (defun chatgpt-shell-prompt-compose--fetch-model-icon (icon)
-  "Download ICON filename from GitHub's lobehub, only if it exists and save as binary."
+  "Download ICON filename from GitHub, only if it exists and save as binary."
   (when icon
     (let* ((mode (if (eq (frame-parameter nil 'background-mode) 'dark) "dark" "light"))
            (url (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
