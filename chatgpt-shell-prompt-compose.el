@@ -538,7 +538,7 @@ If BACKWARDS is non-nil, go to previous interaction."
                               (chatgpt-shell--model-short-version))
                   :x (+ image-width 10) :y (* 2 text-height)
                   :fill "#C3E88D")
-        (svg-text svg (or (chatgpt-shell--system-prompt-name) "")
+        (svg-text svg (or (chatgpt-shell--system-prompt-name) "No system prompt")
                   :x (+ image-width 10) :y (* 3 text-height)
                   :fill "#FF5370")
         (propertize (format "%s\n\n" (with-temp-buffer
