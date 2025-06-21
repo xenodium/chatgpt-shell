@@ -404,7 +404,8 @@ Optionally set its PROMPT and RESPONSE."
             (chatgpt-shell-prompt-compose-view-mode -1)
             (chatgpt-shell-prompt-compose--initialize)))
         (user-error "Aborted")))
-    (when (chatgpt-shell-block-action-at-point)
+    (when (and chatgpt-shell-prompt-compose-view-mode
+               (chatgpt-shell-block-action-at-point))
       (chatgpt-shell-execute-block-action-at-point)
       (throw 'exit nil))
     (when (string-empty-p
