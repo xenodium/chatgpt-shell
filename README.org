@@ -22,7 +22,7 @@ Please sponsor the project to make development + support sustainable.
 | Provider   | Model         | Supported | Setup                            |
 |------------+---------------+-----------+----------------------------------|
 | Anthropic  | Claude        | Yes       | Set =chatgpt-shell-anthropic-key=  |
-| Deepseek   | Chat/Reasoner | New 💫   | Set =chatgpt-shell-deepseek-key=   |
+| Deepseek   | Chat/Reasoner | Yes       | Set =chatgpt-shell-deepseek-key=   |
 | Google     | Gemini        | Yes       | Set =chatgpt-shell-google-key=     |
 | Kagi       | Summarizer    | Yes       | Set =chatgpt-shell-kagi-key=       |
 | Ollama     | Llama         | Yes       | Install [[https://ollama.com/][Ollama]]                   |
