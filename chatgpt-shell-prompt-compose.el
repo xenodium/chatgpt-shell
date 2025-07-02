@@ -251,6 +251,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
       (visual-line-mode +1)
       (when clear-history
         (with-current-buffer (chatgpt-shell--primary-buffer)
+          ;; Starting new session, interrupt pending ones.
+          (shell-maker-interrupt t)
           (chatgpt-shell-clear-buffer)))
       (when (or erase-buffer
                 (string-empty-p (string-trim (chatgpt-shell-prompt-compose--text))))
