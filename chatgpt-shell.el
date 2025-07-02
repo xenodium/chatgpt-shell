@@ -1009,13 +1009,37 @@ Links must be of the form:
 
 Requires `chatgpt-shell-include-local-file-link-content' set."
   (interactive)
-  (unless chatgpt-shell-include-local-file-link-content
-    (unless (yes-or-no-p "Link file and potentially send content? ")
-      (error "Aborted"))
-    (customize-save-variable 'chatgpt-shell-include-local-file-link-content t))
-  (save-excursion
-    (insert "\n\n" (markdown-overlays-make-local-file-link
-                    (read-file-name "Link file: ")))))
+  (let* ((file (read-file-name "Select file: "))
+         (link (markdown-overlays-make-local-file-link file)))
+    (unless link
+      (error "File not found"))
+    (unless chatgpt-shell-include-local-file-link-content
+      (unless (yes-or-no-p "Link file and potentially send content? ")
+        (error "Aborted"))
+      (customize-save-variable 'chatgpt-shell-include-local-file-link-content t))
+    (save-excursion
+      (insert "\n\n" link))))
+
+(defun chatgpt-shell-insert-buffer-file-link ()
+  "Select and insert a link to a buffer's local file.
+
+Requires `chatgpt-shell-include-local-file-link-content' set."
+  (interactive)
+  (let* ((buffer (get-buffer
+                  (completing-read
+                   "Select buffer: "
+                   (mapcar #'buffer-name
+                           (seq-filter #'buffer-file-name (buffer-list))) nil t)))
+         (file (buffer-file-name buffer))
+         (link (markdown-overlays-make-local-file-link file)))
+    (unless link
+      (error "File not found"))
+    (unless chatgpt-shell-include-local-file-link-content
+      (unless (yes-or-no-p "Link file and potentially send content? ")
+        (error "Aborted"))
+      (customize-save-variable 'chatgpt-shell-include-local-file-link-content t))
+    (save-excursion
+      (insert "\n\n" link))))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c (ignore-item)
   "If point in source block, execute it.  Otherwise interrupt.
