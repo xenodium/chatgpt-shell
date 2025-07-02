@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.23.1
-;; Package-Requires: ((emacs "28.1") (shell-maker "0.77.1"))
-(defconst chatgpt-shell--version "2.23.1")
+;; Version: 2.24.1
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.78.1"))
+(defconst chatgpt-shell--version "2.24.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -683,15 +683,27 @@ See `shell-maker-welcome-message' as an example."
    (lambda (command shell)
      (if-let* ((model (chatgpt-shell--resolved-model))
                (handler (map-elt model :handler)))
-         (funcall handler
-                  :model model
-                  :command command
-                  :context (chatgpt-shell-crop-context
-                            :model model
-                            :command command
-                            :context (map-elt shell :history))
-                  :shell shell
-                  :settings (chatgpt-shell--model-settings))
+         (progn
+           (unless (fboundp 'markdown-overlays-expand-local-links)
+             (error "Please update 'shell-maker' to v0.78.1 or newer"))
+           (funcall handler
+                    :model model
+                    :command (if chatgpt-shell-include-local-file-link-content
+                                 (markdown-overlays-expand-local-links command)
+                               command)
+                    :context (chatgpt-shell-crop-context
+                              :model model
+                              :command command
+                              :context
+                              (if chatgpt-shell-include-local-file-link-content
+                                  (mapcar (lambda (item)
+                                            (cons (markdown-overlays-expand-local-links
+                                                   (car item))
+                                                  (cdr item)))
+                                          (map-elt shell :history))
+                                (map-elt shell :history)))
+                    :shell shell
+                    :settings (chatgpt-shell--model-settings)))
        (error "%s not found" (chatgpt-shell-model-version))))
    :on-command-finished
    (lambda (command output success)
@@ -982,6 +994,28 @@ With prefix IGNORE-ITEM, do not mark as failed."
        (t
         (shell-maker-buffer-name chatgpt-shell--config)))
     (shell-maker-interrupt ignore-item)))
+
+(defcustom chatgpt-shell-include-local-file-link-content nil
+  "Non-nil includes linked file content in requests.
+
+Links must be of the form:
+
+  `[file.txt](file:///absolute/path/to/file.txt)'"
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defun chatgpt-shell-insert-local-file-link ()
+  "Select and insert a link to a local file.
+
+Requires `chatgpt-shell-include-local-file-link-content' set."
+  (interactive)
+  (unless chatgpt-shell-include-local-file-link-content
+    (unless (yes-or-no-p "Link file and potentially send content? ")
+      (error "Aborted"))
+    (customize-save-variable 'chatgpt-shell-include-local-file-link-content t))
+  (save-excursion
+    (insert "\n\n" (markdown-overlays-make-local-file-link
+                    (read-file-name "Link file: ")))))
 
 (defun chatgpt-shell-ctrl-c-ctrl-c (ignore-item)
   "If point in source block, execute it.  Otherwise interrupt.
