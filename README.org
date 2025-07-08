@@ -164,7 +164,7 @@ want to interact with.
 
 You can define a function that chatgpt-shell invokes to get the API Key. The
 following example is for Open AI; use a similar approach for other services.
- 
+
 #+begin_src emacs-lisp
   ;; if you are using the "pass" password manager
   (setq chatgpt-shell-openai-key
@@ -287,10 +287,10 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-deepseek-key                                       | DeepSeek key as a string or a function that loads and returns it.            |
 | chatgpt-shell-prompt-header-write-git-commit                     | Prompt header of ‘git-commit‘.                                               |
 | chatgpt-shell-highlight-blocks                                   | Whether or not to highlight source blocks.                                   |
+| chatgpt-shell-prompt-compose-display-action                      | Choose how to display the compose buffer.                                    |
 | chatgpt-shell-display-function                                   | Function to display the shell.  Set to ‘display-buffer’ or custom function.  |
 | chatgpt-shell-prompt-header-generate-unit-test                   | Prompt header of ‘generate-unit-test‘.                                       |
 | chatgpt-shell-prompt-header-refactor-code                        | Prompt header of ‘refactor-code‘.                                            |
-| chatgpt-shell-open-new-chat-by-default                           | Whether or not to stream ChatGPT responses (show chunks as they arrive).     |
 | chatgpt-shell-prompt-header-proofread-region                     | Prompt header used by ‘chatgpt-shell-proofread-region‘.                      |
 | chatgpt-shell-openai-reasoning-effort                            | The amount of reasoning effort to use for OpenAI reasoning models.           |
 | chatgpt-shell-welcome-function                                   | Function returning welcome message or nil for no message.                    |
@@ -307,11 +307,13 @@ Streaming is enabled by default. =(setq chatgpt-shell-streaming nil)= to disable
 | chatgpt-shell-openrouter-key                                     | OpenRouter key as a string or a function that loads and returns it.          |
 | chatgpt-shell-babel-headers                                      | Additional headers to make babel blocks work.                                |
 | chatgpt-shell--pretty-smerge-mode-hook                           | Hook run after entering or leaving ‘chatgpt-shell--pretty-smerge-mode’.      |
+| chatgpt-shell-include-local-file-link-content                    | Non-nil includes linked file content in requests.                            |
 | chatgpt-shell-compose-auto-transient                             | When non-nil automatically display transient menu post compose submission.   |
 | chatgpt-shell-source-block-actions                               | Block actions for known languages.                                           |
 | chatgpt-shell-default-prompts                                    | List of default prompts to choose from.                                      |
 | chatgpt-shell-anthropic-key                                      | Anthropic API key as a string or a function that loads and returns it.       |
 | chatgpt-shell-always-create-new                                  | Non-nil creates a new shell buffer every time ‘chatgpt-shell’ is invoked.    |
+| chatgpt-shell-screenshot-command                                 | The program to use for capturing screenshots.                                |
 | chatgpt-shell-prompt-header-eshell-summarize-last-command-output | Prompt header of ‘eshell-summarize-last-command-output‘.                     |
 | chatgpt-shell-system-prompt                                      | The system prompt ‘chatgpt-shell-system-prompts’ index.                      |
 | chatgpt-shell-transmitted-context-length                         | Controls the amount of context provided to chatGPT.                          |
@@ -445,6 +447,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 | C-<down> or M-n      | chatgpt-shell-next-input                                 | Cycle forwards through input history.                                           |
 |                      | chatgpt-shell-prompt-compose-view-mode                   | Like `view-mode`, but extended for ChatGPT Compose.                             |
 |                      | chatgpt-shell-clear-buffer                               | Clear the current shell buffer.                                                 |
+|                      | chatgpt-shell-insert-local-file-link                     | Select and insert a link to a local file.                                       |
 |                      | chatgpt-shell-edit-block-at-point                        | Execute block at point.                                                         |
 | <tab> or C-c C-n     | chatgpt-shell-next-item                                  | Go to next item.                                                                |
 |                      | chatgpt-shell-prompt-compose-send-buffer                 | Send compose buffer content to shell for processing.                            |
@@ -454,6 +457,7 @@ Thanks to [[https://github.com/tuhdo][tuhdo]] for the custom display function.
 |                      | chatgpt-shell-send-region                                | Send region to ChatGPT.                                                         |
 |                      | chatgpt-shell-send-and-review-region                     | Send region to ChatGPT, review before submitting.                               |
 | C-M-h                | chatgpt-shell-mark-at-point-dwim                         | Mark source block if at point.  Mark all output otherwise.                      |
+|                      | chatgpt-shell-insert-buffer-file-link                    | Select and insert a link to a buffer's local file.                              |
 |                      | chatgpt-shell--pretty-smerge-mode                        | Minor mode to display overlays for conflict markers.                            |
 |                      | chatgpt-shell-mark-block                                 | Mark current block in compose buffer.                                           |
 |                      | chatgpt-shell-prompt-compose-reply                       | Reply as a follow-up and compose another query.                                 |
