@@ -41,7 +41,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
    :key #'chatgpt-shell-deepseek-key
    :headers #'chatgpt-shell-deepseek--make-headers
    :handler #'chatgpt-shell-deepseek--handle-command
-   :filter #'chatgpt-shell-deepseek--filter-output))
+   :filter #'chatgpt-shell-deepseek--filter-output
+   :icon "deepseek-color.png"))
 
 (defun chatgpt-shell-deepseek-models ()
   "Build a list of DeepSeek LLM models."

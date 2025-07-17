@@ -68,7 +68,8 @@ VALIDATE-COMMAND handler."
     (:filter . chatgpt-shell-ollama--extract-ollama-response)
     (:payload . chatgpt-shell-ollama-make-payload)
     (:url . chatgpt-shell-ollama--make-url)
-    (:validate-command . chatgpt-shell-ollama--validate-command)))
+    (:validate-command . chatgpt-shell-ollama--validate-command)
+    (:icon . "ollama.png")))
 
 (defcustom chatgpt-shell-ollama-api-url-base "http://localhost:11434"
   "Ollama API's base URL.

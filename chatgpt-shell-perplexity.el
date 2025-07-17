@@ -65,7 +65,8 @@ VALIDATE-COMMAND handler."
     (:filter . chatgpt-shell-perplexity--extract-perplexity-response)
     (:payload . chatgpt-shell-openai--make-payload)
     (:url . chatgpt-shell-perplexity--make-url)
-    (:validate-command . chatgpt-shell-perplexity--validate-command)))
+    (:validate-command . chatgpt-shell-perplexity--validate-command)
+    (:icon . "perplexity-color.png")))
 
 (defcustom chatgpt-shell-perplexity-key nil
   "Perplexity API key as a string or a function that loads and returns it."

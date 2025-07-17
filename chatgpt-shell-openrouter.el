@@ -43,7 +43,8 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
    :key #'chatgpt-shell-openrouter-key
    :headers #'chatgpt-shell-openrouter--make-headers
    :handler #'chatgpt-shell-openrouter--handle-command
-   :filter #'chatgpt-shell-openrouter--filter-output))
+   :filter #'chatgpt-shell-openrouter--filter-output
+   :icon "openrouter.png"))
 
 (defun chatgpt-shell-openrouter-models ()
   "Build a list of OpenRouter LLM models."

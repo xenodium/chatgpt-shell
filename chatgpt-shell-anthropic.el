@@ -54,11 +54,13 @@ If you use Claude through a proxy service, change the URL base."
   :type 'boolean
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-anthropic-thinking-budget-tokens 32000
+(defcustom chatgpt-shell-anthropic-thinking-budget-tokens nil
   "The token budget allocated for Anthropic model thinking.
 
-Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to non-nil."
-  :type 'integer
+Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to
+non-nil. nil means to use the maximum number of thinking tokens
+allowed."
+  :type '(choice integer (const nil))
   :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
@@ -97,7 +99,8 @@ VALIDATE-COMMAND handler."
     (:headers . chatgpt-shell-anthropic--make-headers)
     (:url-base . chatgpt-shell-anthropic-api-url-base)
     (:key . chatgpt-shell-anthropic-key)
-    (:validate-command . chatgpt-shell-anthropic--validate-command)))
+    (:validate-command . chatgpt-shell-anthropic--validate-command)
+    (:icon . "anthropic.png")))
 
 (defun chatgpt-shell-anthropic-toggle-thinking ()
   "Toggle Anthropic model, as per `chatgpt-shell-anthropic-thinking'."
@@ -113,10 +116,22 @@ VALIDATE-COMMAND handler."
   (list
    ;; https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
    ;; A token is equivalent to _about_ 4 characters.
+   ;;
+   ;; claude-4-sonnet-latest and claude-4-sonnet-latest are not supported yet.
+   (chatgpt-shell-anthropic--make-model :version "claude-opus-4-20250514"
+                                        :short-version "opus-4"
+                                        :token-width  4
+                                        :max-tokens 32000
+                                        :context-window 200000)
+   (chatgpt-shell-anthropic--make-model :version "claude-sonnet-4-20250514"
+                                        :short-version "sonnet-4"
+                                        :token-width  4
+                                        :max-tokens 64000
+                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
                                         :short-version "3.7-sonnet"
                                         :token-width  4
-                                        :max-tokens 128000
+                                        :max-tokens 64000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
                                         :short-version "3.5-sonnet"
@@ -188,11 +203,16 @@ or
      (when (map-elt settings :system-prompt)
        `((system . ,(map-elt settings :system-prompt))))
      (when chatgpt-shell-anthropic-thinking
-       (when (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens))
+       (when (and chatgpt-shell-anthropic-thinking-budget-tokens
+                  (>= chatgpt-shell-anthropic-thinking-budget-tokens (map-elt model :max-tokens)))
          (error "chatgpt-shell-anthropic-thinking-budget-tokens must be smaller than %d"
                 (map-elt model :max-tokens)))
-       `((thinking . ((type . "enabled")
-                      (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens)))))
+       (let ((chatgpt-shell-anthropic-thinking-budget-tokens
+              (if chatgpt-shell-anthropic-thinking-budget-tokens
+                  chatgpt-shell-anthropic-thinking-budget-tokens
+                (1- (map-elt model :max-tokens)))))
+         `((thinking . ((type . "enabled")
+                        (budget_tokens . ,chatgpt-shell-anthropic-thinking-budget-tokens))))))
      `((max_tokens . ,(or (map-elt model :max-tokens)
                           (error "Missing %s :max-tokens" (map-elt model :name))))
        (model . ,(map-elt model :version))

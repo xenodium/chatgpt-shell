@@ -36,8 +36,9 @@
 
 ;; See https://platform.openai.com/docs/guides/reasoning
 (defcustom chatgpt-shell-openai-reasoning-effort "medium"
-  "The amount of reasoning effort to use for OpenAI reasoning
-models. It can be \"low\", \"medium\" or \"high\". Lower values
+  "The amount of reasoning effort to use for OpenAI reasoning models.
+
+ It can be \"low\", \"medium\" or \"high\". Lower values
 are faster and cheaper but higher values may work better for more
 difficult problems."
   :type 'string
@@ -45,12 +46,12 @@ difficult problems."
   :options '("low" "medium" "high")
   :group 'chatgpt-shell)
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort other-params)
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort icon other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
 VALIDATE-COMMAND, HEADERS, KEY, URL-BASE, PATH, PROVIDER, LABEL,
-HANDLER, FILTER and OTHER-PARAMS."
+HANDLER, REASONING-EFFORT, FILTER, ICON, and OTHER-PARAMS."
   (unless version
     (error "Missing mandatory :version param"))
   (unless token-width
@@ -77,12 +78,28 @@ HANDLER, FILTER and OTHER-PARAMS."
             (:reasoning-effort . ,reasoning-effort)
             (:url-base . ,url-base)
             (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
-            (:other-params . ,other-params))))
+            (:other-params . ,other-params)
+            (:icon . ,(or icon "openai.png")))))
 
 (defun chatgpt-shell-openai-models ()
   "Build a list of all OpenAI LLM models available."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
+         :version "gpt-4.1"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4.1-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1-mini
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-4.1-nano"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-4.1-nano
+         :context-window 1047576)
+        (chatgpt-shell-openai-make-model
          :version "chatgpt-4o-latest"
          :token-width 3
          ;; https://platform.openai.com/docs/models/chatgpt-4o-latest
@@ -108,17 +125,23 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-4o-mini-search-preview
          :context-window 128000)
         (chatgpt-shell-openai-make-model
+         :version "o4-mini"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
+         :version "o3"
+         :token-width 3
+         :context-window 200000
+         :reasoning-effort t
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
+        (chatgpt-shell-openai-make-model
          :version "o3-mini"
          :token-width 3
          :context-window 200000
          :reasoning-effort t
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1"
          :token-width 3
@@ -139,13 +162,7 @@ HANDLER, FILTER and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/gpt-01-mini
          :context-window 128000
          ;; Reasoning effort is only supported for o1 and o3-mini.
-         :validate-command
-         ;; TODO: Standardize whether or not a model supports system prompts.
-         (lambda (command model settings)
-           (or (chatgpt-shell-openai--validate-command command model settings)
-               (when (map-elt settings :system-prompt)
-                 (format "Model \"%s\" does not support system prompts. Please unset via \"M-x chatgpt-shell-swap-system-prompt\" by selecting None."
-                         (map-elt model :version))))))
+         :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "gpt-4.5-preview"
          :token-width 3
