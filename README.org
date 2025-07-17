@@ -85,34 +85,47 @@ LLM being lazy and returning partial code? Press =e= to request entire snippet.
 
    Invoke it with =C-c C-t= while inside a =chatgpt-shell= buffer.
 
+   The menu is organized into logical groups for easy navigation:
+
    #+BEGIN_SRC text :exports code
      ┌──────────────────────────────────────────────────────────────────────────────┐
-     │ ChatGPT Shell actions           Shell Context Actions                        │
-     │ Core Shell & Compose            Shell Buffer Management                      │
-     │ s: Focus/Start Shell            C: Clear Shell Buffer                        │
-     │ N: Start New Shell              I: Interrupt Request                         │
-     │ e: Compose Prompt               Shell Navigation                             │
-     │ p: Prompt (minibuffer)          h: Search History                            │
-     │ P: Prompt (append kill)         j: Next Item                                 │
-     │ q: Quick Insert                 k: Previous Item                             │
-     │ Region Actions                  J: Next Source Block                         │
-     │ r: Send Region                  K: Previous Source Block                     │
-     │ R: Send & Review Region         Block Actions                                │
-     │ d: Describe Code                x: Execute Block                             │
-     │ f: Refactor Code                E: Edit Block                                │
-     │ g: Write Git Commit             V: View Block                                │
-     │ t: Generate Unit Test           Shell Configuration                          │
-     │ w: Proofread Region             m: Swap Model                                │
-     │                                 y: Swap System Prompt                        │
-     │                                 Shell Session                                │
-     │                                 S: Save Transcript                           │
-     │                                 O: Restore Transcript                        │
-     │ Configuration & Utilities                                                    │
-     │ Model & Configuration                                                        │
-     │ L: Reload Default Models                                                     │
+     │ Shells                          Compose prompt via              Inline edit  │
+     │ b: Switch to shell buffer       e: Dedicated buffer             q: Quick     │
+     │ N: Create new shell             p: Minibuffer                      insert/   │
+     │                                 P: Minibuffer (include last        edit      │
+     │                                    kill)                        r: Send      │
+     │                                                                    region    │
+     │                                                                 R: Send &    │
+     │                                                                    review    │
+     │                                                                    region    │
+     │                                                                              │
+     │ Session                         History                         Navigation   │
+     │ m: Swap model                   h: Search                       n: Next item │
+     │ L: Reload models                                                p: Previous  │
+     │ y: Swap system prompt                                              item      │
+     │                                                                 TAB: Next    │
+     │                                                                      source  │
+     │                                                                      block   │
+     │                                                                 <backtab>:   │
+     │                                                                      Previous│
+     │                                                                      source  │
+     │                                                                      block   │
+     │                                                                              │
+     │ Source blocks                   Transcript                      Code Actions │
+     │ C-c C-c: Execute                S: Save                         d: Describe  │
+     │ E: Edit                         O: Restore                         code      │
+     │ V: View                                                         f: Refactor  │
+     │                                                                    code      │
+     │                                                                 g: Write git │
+     │                                                                    commit    │
+     │                                                                 t: Generate  │
+     │                                                                    unit test │
+     │                                                                 w: Proofread │
+     │                                                                              │
      │ Other                                                                        │
-     │ i: Describe Image                                                            │
-     │ v: Show Version                                                              │
+     │ C: Clear buffer                                                              │
+     │ I: Interrupt                                                                 │
+     │ v: Show version                                                              │
      └──────────────────────────────────────────────────────────────────────────────┘
    #+END_SRC
 
