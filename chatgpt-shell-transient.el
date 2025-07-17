@@ -15,81 +15,82 @@
 (transient-define-prefix chatgpt-shell-transient--popup ()
   "Transient menu for chatgpt-shell commands."
   :transient-suffix 'chatgpt-shell-transient--popup--suffix
-  [ ;; Group 1: Always available core actions
-   "ChatGPT Shell actions"
-   ["Core Shell & Compose"
-    ("s" "Focus/Start Shell" chatgpt-shell)
-    ("N" "Start New Shell" (lambda () (interactive) (chatgpt-shell t)))
-    ("e" "Compose Prompt" chatgpt-shell-prompt-compose)
-    ("p" "Prompt (minibuffer)"
+  :transient-non-suffix 'transient--do-stay
+  [ ;; Row 1: Always available core actions
+   ["Shells"
+    ("b" "Switch to shell buffer" chatgpt-shell)
+    ("N" "Create new shell" (lambda () (interactive) (chatgpt-shell t)))]
+
+   ["Compose prompt via"
+    ("e" "Dedicated buffer" chatgpt-shell-prompt-compose)
+    ("p" "Minibuffer"
      (lambda ()
        (interactive)
        (transient-quit-one)
        (run-with-idle-timer 0 nil #'chatgpt-shell-prompt)))
-    ("P" "Prompt (append kill)"
+    ("P" "Minibuffer (include last kill)"
      (lambda ()
        (interactive)
        (transient-quit-one)
-       (run-with-idle-timer 0 nil #'chatgpt-shell-prompt-appending-kill-ring)))
-     ("q" "Quick Insert"
-      (lambda ()
-        (interactive)
-        (transient-quit-one)
-        (run-with-idle-timer 0 nil #'chatgpt-shell-quick-insert)))]
+       (run-with-idle-timer 0 nil #'chatgpt-shell-prompt-appending-kill-ring)))]
 
-   ;; Group 2: Region-specific actions (available if region is active)
-   ["Region Actions"
-    ("r" "Send Region" (lambda () (interactive) (chatgpt-shell-send-region nil)) :if region-active-p)
-    ("R" "Send & Review Region" chatgpt-shell-send-and-review-region :if region-active-p)
-    ("d" "Describe Code" chatgpt-shell-describe-code :if region-active-p)
-    ("f" "Refactor Code" chatgpt-shell-refactor-code :if region-active-p)
-    ("g" "Write Git Commit" chatgpt-shell-write-git-commit :if region-active-p)
-    ("t" "Generate Unit Test" chatgpt-shell-generate-unit-test :if region-active-p)
-    ("w" "Proofread Region" chatgpt-shell-proofread-region :if region-active-p)]
+   ["Inline edit"
+    ("q" "Quick insert/edit"
+     (lambda ()
+       (interactive)
+       (transient-quit-one)
+       (run-with-idle-timer 0 nil #'chatgpt-shell-quick-insert)))
+    ("r" "Send region" (lambda () (interactive) (chatgpt-shell-send-region nil)) :if region-active-p)
+    ("R" "Send & review region" chatgpt-shell-send-and-review-region :if region-active-p)]
    ]
 
-  [ ;; Group 3: Shell-specific actions (available only in chatgpt-shell buffer)
-   "Shell Context Actions"
-   ["Shell Buffer Management"
-    ("C" "Clear Shell Buffer" chatgpt-shell-clear-buffer :if chatgpt-shell-transient--in-shell-p)
-    ("I" "Interrupt Request" chatgpt-shell-interrupt :if chatgpt-shell-transient--in-shell-p)]
+  [ ;; Row 2: Session management and navigation
+   ["Session"
+    ("m" "Swap model" chatgpt-shell-swap-model :if chatgpt-shell-transient--in-shell-p)
+    ("L" "Reload models" chatgpt-shell-reload-default-models)
+    ("y" "Swap system prompt" chatgpt-shell-swap-system-prompt :if chatgpt-shell-transient--in-shell-p)]
 
-   ["Shell Navigation"
-    ("h" "Search History"
+   ["History"
+    ("h" "Search"
      (lambda ()
        (interactive)
        (transient-quit-one)
-       (run-with-idle-timer 0 nil #'chatgpt-shell-search-history)) :if chatgpt-shell-transient--in-shell-p)
-    ("j" "Next Item" chatgpt-shell-next-item :if chatgpt-shell-transient--in-shell-p)
-    ("k" "Previous Item" chatgpt-shell-previous-item :if chatgpt-shell-transient--in-shell-p)
-    ("J" "Next Source Block" chatgpt-shell-next-source-block :if chatgpt-shell-transient--in-shell-p)
-    ("K" "Previous Source Block" chatgpt-shell-previous-source-block :if chatgpt-shell-transient--in-shell-p)]
+       (run-with-idle-timer 0 nil #'chatgpt-shell-search-history)) :if chatgpt-shell-transient--in-shell-p)]
 
-   ["Block Actions"
-    ("x" "Execute Block" chatgpt-shell-execute-babel-block-action-at-point :if chatgpt-shell-transient--in-shell-p)
-    ("E" "Edit Block" chatgpt-shell-edit-block-at-point :if chatgpt-shell-transient--in-shell-p)
-    ("V" "View Block" chatgpt-shell-view-block-at-point :if chatgpt-shell-transient--in-shell-p)]
+   ["Navigation"
+    ("n" "Next item" chatgpt-shell-next-item :if chatgpt-shell-transient--in-shell-p :transient t)
+    ("p" "Previous item" chatgpt-shell-previous-item :if chatgpt-shell-transient--in-shell-p :transient t)
+    ("TAB" "Next source block" chatgpt-shell-next-source-block :if chatgpt-shell-transient--in-shell-p :transient t)
+    ("<backtab>" "Previous source block" chatgpt-shell-previous-source-block :if chatgpt-shell-transient--in-shell-p :transient t)]
+   ]
 
-   ["Shell Configuration"
-    ("m" "Swap Model" chatgpt-shell-swap-model :if chatgpt-shell-transient--in-shell-p)
-    ("y" "Swap System Prompt" chatgpt-shell-swap-system-prompt :if chatgpt-shell-transient--in-shell-p)]
+  [ ;; Row 3: Source blocks, transcript, and code actions
+   ["Source blocks"
+    ("C-c C-c" "Execute" chatgpt-shell-execute-babel-block-action-at-point :if chatgpt-shell-transient--in-shell-p)
+    ("E" "Edit" chatgpt-shell-edit-block-at-point :if chatgpt-shell-transient--in-shell-p)
+    ("V" "View" chatgpt-shell-view-block-at-point :if chatgpt-shell-transient--in-shell-p)]
 
-   ["Shell Session"
-    ("S" "Save Transcript"
+   ["Transcript"
+    ("S" "Save"
      (lambda ()
        (interactive)
        (transient-quit-one)
        (run-with-idle-timer 0 nil #'chatgpt-shell-save-session-transcript)) :if chatgpt-shell-transient--in-shell-p)
-    ("O" "Restore Transcript" chatgpt-shell-restore-session-from-transcript :if chatgpt-shell-transient--in-shell-p)]
+    ("O" "Restore" chatgpt-shell-restore-session-from-transcript :if chatgpt-shell-transient--in-shell-p)]
+
+   ["Code Actions"
+    ("d" "Describe code" chatgpt-shell-describe-code :if region-active-p)
+    ("f" "Refactor code" chatgpt-shell-refactor-code :if region-active-p)
+    ("g" "Write git commit" chatgpt-shell-write-git-commit :if region-active-p)
+    ("t" "Generate unit test" chatgpt-shell-generate-unit-test :if region-active-p)
+    ("w" "Proofread" chatgpt-shell-proofread-paragraph-or-region :if region-active-p)]
    ]
 
-  [ ;; Group 4: General utilities (mostly always available)
-   "Configuration & Utilities"
-   ["Model & Configuration"
-    ("L" "Reload Default Models" chatgpt-shell-reload-default-models)]
-
+  [ ;; Row 4: Utilities and other actions
    ["Other"
-    ("v" "Show Version" chatgpt-shell-version)]
+    ("C" "Clear buffer" chatgpt-shell-clear-buffer :if chatgpt-shell-transient--in-shell-p)
+    ("I" "Interrupt" chatgpt-shell-interrupt :if chatgpt-shell-transient--in-shell-p)
+    ("v" "Show version" chatgpt-shell-version)]
    ]
   )
 
