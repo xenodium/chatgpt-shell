@@ -707,7 +707,8 @@ See `shell-maker-welcome-message' as an example."
        (error "%s not found" (chatgpt-shell-model-version))))
    :on-command-finished
    (lambda (command output success)
-     (markdown-overlays-put)
+     (with-current-buffer (chatgpt-shell--primary-buffer)
+       (markdown-overlays-put))
      (run-hook-with-args 'chatgpt-shell-after-command-functions
                          command output success))
    :redact-log-output
