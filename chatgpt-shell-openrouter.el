@@ -164,12 +164,44 @@ If you use OpenRouter through a proxy service, change the URL base."
    :filter #'chatgpt-shell-openrouter--filter-output
    :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"))
 
-(defun chatgpt-shell-openrouter--filter-output (raw-response)
-  "Filter RAW-RESPONSE when processing responses are sent.
 
-This occurs for example with OpenAI's o1 model through OpenRouter."
-  (unless (string= (string-trim raw-response) ": OPENROUTER PROCESSING")
-    (chatgpt-shell-openai--filter-output raw-response)))
+(defun chatgpt-shell-openrouter--filter-output (raw-response)
+  "Filter RAW-RESPONSE when processing responses are sent."
+  (let ((pending (if (and (listp raw-response) (plist-member raw-response :pending))
+                     (plist-get raw-response :pending)
+                   ""))
+        (input (if (stringp raw-response) raw-response ""))
+        (result ""))
+
+    (setq pending (concat pending input))
+
+    ;; Extract all content from complete data lines
+    (with-temp-buffer
+      (insert pending)
+      (goto-char (point-min))
+      (let ((new-pending ""))
+        (while (not (eobp))
+          (if (looking-at "^data: \\({.*}\\)$")
+              (let ((json-str (match-string 1)))
+                (condition-case nil
+                    (let* ((json (json-read-from-string json-str))
+                           (content (cdr (assoc-string "content"
+                                                      (cdr (assoc-string "delta"
+                                                                        (elt (cdr (assoc-string "choices" json)) 0)))))))
+                      (when content
+                        (setq result (concat result content))))
+                  (error nil))
+                (forward-line))
+            (if (looking-at "^:")
+                ;; Skip comment lines like ": OPENROUTER PROCESSING"
+                (forward-line)
+              ;; Keep incomplete lines as pending
+              (setq new-pending (concat new-pending (buffer-substring (point) (line-end-position)) "\n"))
+              (forward-line))))
+        (setq pending new-pending)))
+
+    (list (cons :filtered result)
+          (cons :pending pending))))
 
 (defun chatgpt-shell-openrouter--make-headers (&rest args)
   "Create the API headers.
