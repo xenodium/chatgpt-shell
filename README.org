@@ -76,6 +76,73 @@ I'm a big fan of quickly disposing of Emacs buffers with the =q= binding. chatgp
 
 LLM being lazy and returning partial code? Press =e= to request entire snippet.
 
+*** Quick Actions with Transient Menu
+
+   For quick access to common actions, =chatgpt-shell= provides a transient menu,
+   powered by the excellent [[https://github.com/magit/transient][transient]] package. Think of it as a temporary keymap
+   overlay that pops up, shows you available commands with their keybindings,
+   and disappears after you select one.
+
+   Invoke it with =C-c C-t= while inside a =chatgpt-shell= buffer.
+
+   The menu is organized into logical groups for easy navigation:
+
+   #+BEGIN_SRC text :exports code
+     ┌──────────────────────────────────────────────────────────────────────────────┐
+     │ Shells                          Compose prompt via              Inline edit  │
+     │ b: Switch to shell buffer       e: Dedicated buffer             q: Quick     │
+     │ N: Create new shell             p: Minibuffer                      insert/   │
+     │                                 P: Minibuffer (include last        edit      │
+     │                                    kill)                        r: Send      │
+     │                                                                    region    │
+     │                                                                 R: Send &    │
+     │                                                                    review    │
+     │                                                                    region    │
+     │                                                                              │
+     │ Session                         History                         Navigation   │
+     │ m: Swap model                   h: Search                       n: Next item │
+     │ L: Reload models                                                p: Previous  │
+     │ y: Swap system prompt                                              item      │
+     │                                                                 TAB: Next    │
+     │                                                                      source  │
+     │                                                                      block   │
+     │                                                                 <backtab>:   │
+     │                                                                      Previous│
+     │                                                                      source  │
+     │                                                                      block   │
+     │                                                                              │
+     │ Source blocks                   Transcript                      Code Actions │
+     │ C-c C-c: Execute                S: Save                         d: Describe  │
+     │ E: Edit                         O: Restore                         code      │
+     │ V: View                                                         f: Refactor  │
+     │                                                                    code      │
+     │                                                                 g: Write git │
+     │                                                                    commit    │
+     │                                                                 t: Generate  │
+     │                                                                    unit test │
+     │                                                                 w: Proofread │
+     │                                                                              │
+     │ Other                                                                        │
+     │ C: Clear buffer                                                              │
+     │ I: Interrupt                                                                 │
+     │ v: Show version                                                              │
+     └──────────────────────────────────────────────────────────────────────────────┘
+   #+END_SRC
+
+   (Note: The exact commands shown depend on context, like whether a region is active
+   or if you are inside a =chatgpt-shell= buffer.)
+
+   If you prefer a global keybinding (available everywhere in Emacs), you can add
+   something like this to your personal Emacs configuration:
+
+   #+begin_src emacs-lisp :lexical no
+     ;; In your init.el or equivalent
+     (global-set-key (kbd "C-c C-g") 'chatgpt-shell-transient)
+   #+end_src
+
+   This menu helps with discovering available commands and executing them quickly
+   without needing to remember every single keybinding or =M-x= command name.
+
 ** Confirm inline mods (via diffs)
 
 Request inline modifications, with explicit confirmation before accepting.

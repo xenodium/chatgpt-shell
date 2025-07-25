@@ -86,6 +86,7 @@
 (require 'chatgpt-shell-openrouter)
 (require 'chatgpt-shell-perplexity)
 (require 'chatgpt-shell-prompt-compose)
+(require 'chatgpt-shell-transient)
 
 (defcustom chatgpt-shell-request-timeout 600
   "How long to wait for a request to time out in seconds."
@@ -823,6 +824,8 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
       #'chatgpt-shell-next-item)
     (define-key chatgpt-shell-mode-map (kbd "C-c C-e")
       #'chatgpt-shell-prompt-compose)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-t")
+      #'chatgpt-shell-transient)
     shell-buffer))
 
 (defun chatgpt-shell--shrink-system-prompt (prompt)
