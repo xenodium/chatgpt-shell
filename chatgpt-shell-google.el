@@ -218,6 +218,30 @@ This gets set once for each MODEL, based on a heuristic."
         "google_search_retrieval"
       "google_search")))
 
+(defun chatgpt-shell-google--is-system-instruction-supported (model)
+  "Returns true if system_instruction is supported in the POST payload.
+
+This is based on a heuristic."
+  (when-let* ((current-model model)
+              (is-google (string= (map-elt current-model :provider) "Google"))
+              (version (map-elt current-model :version)))
+    (not (string-match "gemma-3-27b-it" version))))
+
+
+(defun chatgpt-shell-google--maybe-system-prompt (settings model in-sys-instruction)
+  "returns the appropriate portion of prompt depending on SETTINGS, MODEL, and whether
+in system instruction."
+  (let ((sys-prompt (map-elt settings :system-prompt))
+        (sys-instruction-supported
+         (chatgpt-shell-google--is-system-instruction-supported model)))
+    (when sys-prompt
+      (if in-sys-instruction
+          (when sys-instruction-supported
+            `((system_instruction . ((parts . ((text . ,sys-prompt)))))))
+        (when (not sys-instruction-supported)
+          `(((role . "user")
+             (parts . ,(vconcat `(((text . ,sys-prompt))))))))))))
+
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
@@ -329,9 +353,9 @@ or
 
  Compose using PROMPT, CONTEXT, SETTINGS and MODEL."
   (append
-   (when (map-elt settings :system-prompt)
-     `((system_instruction . ((parts . ((text . ,(map-elt settings :system-prompt))))))))
+   (chatgpt-shell-google--maybe-system-prompt settings model 't)
    `((contents . ,(vconcat
+                   (chatgpt-shell-google--maybe-system-prompt settings model 'nil)
                    (chatgpt-shell-google--gemini-user-model-messages
                     (append context
                             (when prompt
