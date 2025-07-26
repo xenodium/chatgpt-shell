@@ -164,7 +164,6 @@ If you use OpenRouter through a proxy service, change the URL base."
    :filter #'chatgpt-shell-openrouter--filter-output
    :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"))
 
-
 (defun chatgpt-shell-openrouter--filter-output (raw-response)
   "Filter RAW-RESPONSE when processing responses are sent."
   (let ((pending (if (and (listp raw-response) (plist-member raw-response :pending))
@@ -181,23 +180,27 @@ If you use OpenRouter through a proxy service, change the URL base."
       (goto-char (point-min))
       (let ((new-pending ""))
         (while (not (eobp))
-          (if (looking-at "^data: \\({.*}\\)$")
-              (let ((json-str (match-string 1)))
-                (condition-case nil
-                    (let* ((json (json-read-from-string json-str))
-                           (content (cdr (assoc-string "content"
-                                                      (cdr (assoc-string "delta"
-                                                                        (elt (cdr (assoc-string "choices" json)) 0)))))))
-                      (when content
-                        (setq result (concat result content))))
-                  (error nil))
-                (forward-line))
-            (if (looking-at "^:")
-                ;; Skip comment lines like ": OPENROUTER PROCESSING"
-                (forward-line)
-              ;; Keep incomplete lines as pending
-              (setq new-pending (concat new-pending (buffer-substring (point) (line-end-position)) "\n"))
-              (forward-line))))
+          (cond
+           ((looking-at "^data: \\({.*}\\)$")
+            (let ((json-str (match-string 1)))
+              (condition-case nil
+                  (let* ((json (json-read-from-string json-str))
+                         (content (let-alist json
+                                    (let-alist (elt .choices 0)
+                                      .delta.content))))
+                    (when content
+                      (setq result (concat result content))))
+                (error nil))
+              (forward-line)))
+
+           ((looking-at "^:")
+            ;; Skip comment lines like ": OPENROUTER PROCESSING"
+            (forward-line))
+
+           (t
+            ;; Keep incomplete lines as pending
+            (setq new-pending (concat new-pending (buffer-substring (point) (line-end-position)) "\n"))
+            (forward-line))))
         (setq pending new-pending)))
 
     (list (cons :filtered result)
