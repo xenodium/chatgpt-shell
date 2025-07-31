@@ -102,20 +102,20 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :validate-command #'chatgpt-shell-validate-no-system-prompt
          :other-params '((provider (require_parameters . t))))
         (chatgpt-shell-openrouter-make-model
-         :version "qwen/qwen-2.5-coder-32b-instruct"
-         :short-version "qwen-2.5-coder-32b"
+         :version "qwen/qwen3-coder"
+         :short-version "qwen3-coder"
          :label "Qwen"
          :token-width 16
-         ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
-         :context-window 33000
+         ;; See https://openrouter.ai/qwen/qwen3-coder
+         :context-window 262144
          ;; Multiple quantizations are offered for this model by different
          ;; providers so we restrict to one for consistency. Note that the sense
          ;; in which provider is used here means the providers available through
          ;; OpenRouter. This is different from the meaning of the :provider
          ;; argument.
          ;;
-         ;; See https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct
-         :other-params '((provider (quantizations . ["bf16"]))))
+         ;; See https://openrouter.ai/qwen/qwen3-coder
+         :other-params '((provider (quantizations . ["fp4"]))))
         (chatgpt-shell-openrouter-make-model
          :version "anthropic/claude-3.7-sonnet"
          :short-version "claude-3.7-sonnet"
