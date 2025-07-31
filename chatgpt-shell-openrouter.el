@@ -122,7 +122,21 @@ VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
          :label "Claude"
          :token-width 4
          ;; See https://openrouter.ai/anthropic/claude-3.7-sonnet
-         :context-window 200000)))
+         :context-window 200000)
+        (chatgpt-shell-openrouter-make-model
+         :version "google/gemini-2.5-flash"
+         :short-version "gemini-2.5-flash"
+         :label "Gemini"
+         :token-width 4
+         ;; See https://openrouter.ai/google/gemini-2.5-flash
+         :context-window 1048576)
+        (chatgpt-shell-openrouter-make-model
+         :version "google/gemini-2.5-pro"
+         :short-version "gemini-2.5-pro"
+         :label "Gemini"
+         :token-width 4
+         ;; See https://openrouter.ai/google/gemini-2.5-pro
+         :context-window 1048576)))
 
 (defcustom chatgpt-shell-openrouter-api-url-base "https://openrouter.ai/api"
   "OpenRouter API's base URL.
