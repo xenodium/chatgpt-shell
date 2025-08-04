@@ -53,7 +53,7 @@ If you use Gemini through a proxy service, change the URL base."
 
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -76,6 +76,7 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:token-width . ,token-width)
     (:context-window . ,context-window)
     (:grounding-search . ,grounding-search)
+    (:url-context . ,url-context)
     (:url-base . chatgpt-shell-google-api-url-base)
     (:handler . chatgpt-shell-google--handle-gemini-command)
     (:filter . chatgpt-shell-google--extract-gemini-response)
@@ -124,7 +125,7 @@ https://generativelanguage.googleapis.com"
            (model-urlpath (concat "/v1beta/" .name))
            ;; The api-response descriptor does not stipulate whether grounding is supported.
            ;; This logic applies a heuristic based on the model name (aka version).
-           (model-supports-grounding (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0")) model-version)))
+           (model-supports-grounding (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0" "gemini-2.5")) model-version)))
       (chatgpt-shell-google-make-model :version model-version
                                        :short-version model-shortversion
                                        :grounding-search model-supports-grounding
@@ -226,24 +227,28 @@ This gets set once for each MODEL, based on a heuristic."
                                          :short-version "gemini-2.5-flash"
                                          :path "/v1beta/models/gemini-2.5-flash"
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.5-pro"
                                          :short-version "gemini-2.5-pro"
                                          :path "/v1beta/models/gemini-2.5-pro"
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
                                          :short-version "2.0-flash"
                                          :path "/v1beta/models/gemini-2.0-flash"
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash-lite"
                                          :short-version "2.0-flash-lite"
                                          :path "/v1beta/models/gemini-2.0-flash-lite"
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
@@ -336,10 +341,17 @@ or
                     (append context
                             (when prompt
                               (list (cons prompt nil))))))))
-   (when (map-elt model :grounding-search)
-     ;; Grounding in Google Search is supported for both Gemini 1.5 and 2.0 models.
-     ;; But the API is slightly different between them. This uses the correct tool name.
-     `((tools . ((,(intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) . ())))))
+   (if (or (map-elt model :grounding-search)
+           (map-elt model :url-context))
+       (let ((tools-body '(tools . ())))
+         (when (map-elt model :grounding-search)
+           (push (cons (intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) nil)
+                 (cdr tools-body)))
+
+         (when (map-elt model :url-context)
+           (push (cons (intern "url_context") nil)
+                 (cdr tools-body)))
+         (list tools-body)))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
