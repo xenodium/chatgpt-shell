@@ -369,9 +369,21 @@ For example:
      context)
     (nreverse result)))
 
-(defun chatgpt-shell-google--extract-gemini-response (raw-response)
-  "Extract Gemini response from RAW-RESPONSE."
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+(defun chatgpt-shell-google--extract-gemini-response (output)
+  "Process pending OUTPUT to extract Gemini response.
+
+OUTPUT is always of the form:
+
+  ((:function-calls . ...)
+   (:pending . ...)
+   (:filtered . ...))
+
+and must be returned in the same form.
+
+Processing means processing :pending content into :filtered."
+  (when (stringp output)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt output :pending)))
             (response (or (let-alist whole
                             .error.message)
                           (let-alist whole
@@ -380,8 +392,8 @@ For example:
                                            (or .delta.content
                                                .message.content)))
                                        .choices "")))))
-      response
-    (if-let ((chunks (shell-maker--split-text raw-response)))
+      (list (cons :filtered response))
+    (if-let ((chunks (shell-maker--split-text (map-elt output :pending))))
         (let ((response)
               (pending)
               (result))
@@ -434,8 +446,7 @@ For example:
                                         response))
                       (cons :pending pending)))
           result)
-      (list (cons :filtered nil)
-            (cons :pending raw-response)))))
+      output)))
 
 (provide 'chatgpt-shell-google)
 

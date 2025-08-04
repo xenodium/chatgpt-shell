@@ -137,8 +137,8 @@ Uses MODEL, CONTEXT, SHELL, and SETTINGS."
   (concat chatgpt-shell-perplexity-api-url-base
           "/chat/completions"))
 
-(defun chatgpt-shell-perplexity--extract-perplexity-response (raw-response)
-  "Extract Perplexity response from RAW-RESPONSE.
+(defun chatgpt-shell-perplexity--extract-perplexity-response (output)
+  "Extract Perplexity response from OUTPUT.
 
 When Perplexity responses are streamed, they arrive in the form:
 
@@ -148,8 +148,10 @@ When Perplexity responses are streamed, they arrive in the form:
 Otherwise:
 
   {...json...}."
+  (when (stringp output)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
   ;; Non-streamed
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt output :pending)))
             (response (or (let-alist whole
                             .error.message)
                           (let-alist whole
@@ -167,7 +169,7 @@ Otherwise:
         (chatgpt-shell-perplexity--expand-citations
          response citations))
     ;; Streamed
-    (when-let ((chunks (shell-maker--split-text raw-response)))
+    (when-let ((chunks (shell-maker--split-text (map-elt output :pending))))
       (let ((response)
             (pending)
             (result))

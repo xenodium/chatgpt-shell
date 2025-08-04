@@ -58,7 +58,7 @@ If you use Claude through a proxy service, change the URL base."
   "The token budget allocated for Anthropic model thinking.
 
 Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to
-non-nil. nil means to use the maximum number of thinking tokens
+non-nil.  nil means to use the maximum number of thinking tokens
 allowed."
   :type '(choice integer (const nil))
   :group 'chatgpt-shell)
@@ -239,9 +239,19 @@ or
    :filter #'chatgpt-shell-anthropic--extract-claude-response
    :shell shell))
 
-(defun chatgpt-shell-anthropic--extract-claude-response (raw-response)
-  "Extract Claude response from RAW-RESPONSE."
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+(defun chatgpt-shell-anthropic--extract-claude-response (output)
+  "Process pending OUTPUT to extract Claude response.
+
+OUTPUT is always of the form:
+
+  ((:function-calls . ...)
+   (:pending . ...)
+   (:filtered . ...))
+
+and must be returned in the same form."
+  (when (stringp output)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt output :pending)))
             (response (or (let-alist whole
                             .error.message)
                           (let-alist whole
@@ -250,37 +260,36 @@ or
                                            .text))
                                        .content "")))))
       response
-    (if-let ((chunks (shell-maker--split-text raw-response)))
-      (let ((response)
-            (pending)
-            (result))
-        (mapc (lambda (chunk)
-                ;; Response chunks come in the form:
-                ;; event: message_start
-                ;; data: {...}
-                ;; event: content_block_start
-                ;; data: {...}
-                (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
-                          (obj (shell-maker--json-parse-string (map-elt chunk :value)))
-                          (text (let-alist obj
-                                  (or .text
-                                      .content_block.text
-                                      .delta.text
-                                      .error.message
-                                      ""))))
-                    (unless (string-empty-p text)
-                      (setq response (concat response text)))
-                  (setq pending (concat pending
-                                        (or (map-elt chunk :key) "")
-                                        (map-elt chunk :value)))))
-              chunks)
-        (setq result
-              (list (cons :filtered (unless (string-empty-p response)
-                                      response))
-                    (cons :pending pending)))
-        result)
-      (list (cons :filtered nil)
-            (cons :pending raw-response)))))
+    (if-let ((chunks (shell-maker--split-text (map-elt output :pending))))
+        (let ((response)
+              (pending)
+              (result))
+          (mapc (lambda (chunk)
+                  ;; Response chunks come in the form:
+                  ;; event: message_start
+                  ;; data: {...}
+                  ;; event: content_block_start
+                  ;; data: {...}
+                  (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
+                            (obj (shell-maker--json-parse-string (map-elt chunk :value)))
+                            (text (let-alist obj
+                                    (or .text
+                                        .content_block.text
+                                        .delta.text
+                                        .error.message
+                                        ""))))
+                      (unless (string-empty-p text)
+                        (setq response (concat response text)))
+                    (setq pending (concat pending
+                                          (or (map-elt chunk :key) "")
+                                          (map-elt chunk :value)))))
+                chunks)
+          (setq result
+                (list (cons :filtered (unless (string-empty-p response)
+                                        response))
+                      (cons :pending pending)))
+          result)
+      output)))
 
 (provide 'chatgpt-shell-anthropic)
 

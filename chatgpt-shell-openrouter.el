@@ -26,7 +26,7 @@
   "Create an OpenRouter model.
 
 Set LABEL, VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
-VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
+REASONING-EFFORT, VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-make-model'."
   (chatgpt-shell-openai-make-model
    :label label
    :version version
@@ -178,12 +178,16 @@ If you use OpenRouter through a proxy service, change the URL base."
    :filter #'chatgpt-shell-openrouter--filter-output
    :missing-key-msg "Your chatgpt-shell-openrouter-key is missing"))
 
-(defun chatgpt-shell-openrouter--filter-output (raw-response)
-  "Filter RAW-RESPONSE when processing responses are sent."
-  (let ((pending (if (and (listp raw-response) (plist-member raw-response :pending))
-                     (plist-get raw-response :pending)
+(defun chatgpt-shell-openrouter--filter-output (object)
+  "Process OBJECT to extract pending output.
+
+Filter OBJECT when processing responses are sent.
+
+This occurs for example with OpenAI's o1 model through OpenRouter."
+  (let ((pending (if (and (listp object) (plist-member object :pending))
+                     (plist-get object :pending)
                    ""))
-        (input (if (stringp raw-response) raw-response ""))
+        (input (if (stringp object) object ""))
         (result ""))
 
     (setq pending (concat pending input))

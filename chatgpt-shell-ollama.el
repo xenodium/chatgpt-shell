@@ -103,6 +103,7 @@ If you use Ollama through a proxy service, change the URL base."
          :context-window 32768)))
 
 (defun chatgpt-shell-ollama--fetch-model-versions ()
+  "Fetch available Ollama model versions (installed locally)."
   (mapcar (lambda (model)
             (string-remove-suffix ":latest" (map-elt model 'name)))
           (map-elt (shell-maker--json-parse-string
@@ -113,10 +114,12 @@ If you use Ollama through a proxy service, change the URL base."
                    'models)))
 
 (defun chatgpt-shell-ollama--parse-token-width (quantization)
+  "Parse token using QUANTIZATION."
   (when (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
     (string-to-number (match-string 1 quantization))))
 
 (defun chatgpt-shell-ollama--fetch-model (version)
+  "Fetch Ollama model details with VERSION."
   (let* ((data (shell-maker--json-parse-string
                 (map-elt (shell-maker-make-http-request
                           :async nil
@@ -137,12 +140,15 @@ If you use Ollama through a proxy service, change the URL base."
      :context-window context-window)))
 
 (cl-defun chatgpt-shell-ollama-load-models (&key override)
-  "Query ollama for the locally installed models and add them to
-`chatgpt-shell-models' unless a model with the same name is
-already present. By default, replace the ollama models in
-`chatgpt-shell-models' locally installed ollama models. When
-OVERRIDE is non-nil (interactively with a prefix argument),
-replace all models with locally installed ollama models."
+  "Query ollama for the locally installed models.
+
+Queried models are added to `chatgpt-shell-models' unless a model
+with the same name is already present.
+
+By default, replace the ollama models in `chatgpt-shell-models'
+locally installed ollama models.  When OVERRIDE is non-nil (interactively
+with a prefix argument), replace all models with
+locally installed ollama models."
   (interactive (list :override current-prefix-arg))
   (let* ((ollama-predicate (lambda (model)
                              (string= (map-elt model :provider) "Ollama")))
@@ -189,21 +195,28 @@ replace all models with locally installed ollama models."
   (concat chatgpt-shell-ollama-api-url-base
           "/api/chat"))
 
-(defun chatgpt-shell-ollama--extract-ollama-response (raw-response)
-  "Extract Claude response from RAW-RESPONSE."
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+(defun chatgpt-shell-ollama--extract-ollama-response (object)
+  "Process Ollama response from OBJECT."
+  (when (stringp object)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt object :pending)))
             (response (let-alist whole
                         .response)))
-      response
-    (if-let ((chunks (string-split raw-response "\n")))
+      (progn
+        (setf (map-elt object :filtered) response)
+        (setf (map-elt object :pending) nil)
+        object)
+    (if-let ((chunks (string-split (map-elt object :pending) "\n")))
         (let ((response))
           (mapc (lambda (chunk)
                   (let-alist (shell-maker--json-parse-string chunk)
                     (unless (string-empty-p .message.content)
                       (setq response (concat response .message.content)))))
                 chunks)
-          (or response raw-response))
-      raw-response)))
+          (setf (map-elt object :filtered) response)
+          (setf (map-elt object :pending) nil)
+          object)
+      object)))
 
 (cl-defun chatgpt-shell-ollama-make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
@@ -256,7 +269,7 @@ CONTEXT: Excludes PROMPT."
                            (image_url . ,prompt-url))))))))))))
 
 (defun chatgpt-shell-ollama--validate-command (_command model _settings)
-  "Return error string if command/setup isn't valid."
+  "Return error string if MODEL isn't valid."
   (unless (seq-contains-p (chatgpt-shell-ollama--fetch-model-versions)
                           (map-elt model :version))
     (format "  Local model \"%s\" not found.
