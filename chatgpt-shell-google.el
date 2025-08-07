@@ -51,9 +51,18 @@ If you use Gemini through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-google-thinking-budget-tokens -1
+  "The token budget allocated for Google model thinking.
+
+nil means to use the maximum number of thinking tokens allowed.
+-1 means to use dynamic thinking. See
+https://ai.google.dev/gemini-api/docs/thinking."
+  :type '(choice integer (const nil))
+  :group 'chatgpt-shell)
+
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search thinking-budget-min thinking-budget-max)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -76,6 +85,8 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:token-width . ,token-width)
     (:context-window . ,context-window)
     (:grounding-search . ,grounding-search)
+    (:thinking-budget-min . ,thinking-budget-min)
+    (:thinking-budget-max . ,thinking-budget-max)
     (:url-base . chatgpt-shell-google-api-url-base)
     (:handler . chatgpt-shell-google--handle-gemini-command)
     (:filter . chatgpt-shell-google--extract-gemini-response)
@@ -225,6 +236,8 @@ This gets set once for each MODEL, based on a heuristic."
   (list (chatgpt-shell-google-make-model :version "gemini-2.5-flash"
                                          :short-version "gemini-2.5-flash"
                                          :path "/v1beta/models/gemini-2.5-flash"
+                                         :thinking-budget-min 0
+                                         :thinking-budget-max 24576
                                          :grounding-search t
                                          :token-width 4
                                          :context-window 1048576)
@@ -232,6 +245,8 @@ This gets set once for each MODEL, based on a heuristic."
                                          :short-version "gemini-2.5-pro"
                                          :path "/v1beta/models/gemini-2.5-pro"
                                          :grounding-search t
+                                         :thinking-budget-min 128
+                                         :thinking-budget-max 32768
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
@@ -342,7 +357,23 @@ or
      `((tools . ((,(intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) . ())))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
-                           (topP . 1))))))
+                           (topP . 1)
+                           ;; Include thinking parameters if it is supported for
+                           ;; this model.
+                           ,(let ((min (map-elt model :thinking-budget-min))
+                                  (max (map-elt model :thinking-budget-max)))
+                              (when (or min max)
+                                ;; -1 is always valid and indicates dynamic
+                                ;; -thinking. See the API docs.
+                                (unless (or (not chatgpt-shell-google-thinking-budget-tokens)
+                                            (= chatgpt-shell-google-thinking-budget-tokens -1)
+                                            (<= min chatgpt-shell-google-thinking-budget-tokens max))
+                                  (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive)" min max))
+                                (let ((chatgpt-shell-google-thinking-budget-tokens
+                                       (if chatgpt-shell-google-thinking-budget-tokens
+                                           chatgpt-shell-google-thinking-budget-tokens
+                                         max)))
+                                  `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)
   "Convert CONTEXT to gemini messages.
