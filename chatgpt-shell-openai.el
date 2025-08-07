@@ -38,12 +38,12 @@
 (defcustom chatgpt-shell-openai-reasoning-effort "medium"
   "The amount of reasoning effort to use for OpenAI reasoning models.
 
- It can be \"low\", \"medium\" or \"high\". Lower values
-are faster and cheaper but higher values may work better for more
-difficult problems."
+ It can be \"minimal\", \"low\", \"medium\" or \"high\". Lower
+values are faster and cheaper but higher values may work better
+for more difficult problems."
   :type 'string
   :safe #'stringp
-  :options '("low" "medium" "high")
+  :options '("minimal" "low" "medium" "high")
   :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort icon other-params)
