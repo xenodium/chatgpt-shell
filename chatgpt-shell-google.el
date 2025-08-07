@@ -55,7 +55,8 @@ If you use Gemini through a proxy service, change the URL base."
   "The token budget allocated for Google model thinking.
 
 nil means to use the maximum number of thinking tokens allowed.
--1 means to use dynamic thinking. See
+-1 means to use dynamic thinking. Set this to 0 to disable
+thinking on models that support no thinking. See
 https://ai.google.dev/gemini-api/docs/thinking."
   :type '(choice integer (const nil))
   :group 'chatgpt-shell)
