@@ -85,6 +85,24 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, and OTHER-PARAMS."
   "Build a list of all OpenAI LLM models available."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
+         :version "gpt-5"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-5-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5-mini
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-5-nano"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5-nano
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
          :version "gpt-4.1"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-4.1
