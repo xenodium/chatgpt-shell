@@ -51,9 +51,20 @@ If you use Gemini through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-google-thinking-budget-tokens 'dynamic
+  "The token budget allocated for Google model thinking.
+
+nil means to use the maximum number of thinking tokens allowed.
+Set this to 0 to disable thinking on models that support no
+thinking. =\\'dynamic means to let the model decide how many
+thinking tokens to use based on the complexity of the query. See
+https://ai.google.dev/gemini-api/docs/thinking."
+  :type '(choice integer (const nil) (const dynamic))
+  :group 'chatgpt-shell)
+
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context thinking-budget-min thinking-budget-max)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -77,6 +88,8 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:context-window . ,context-window)
     (:grounding-search . ,grounding-search)
     (:url-context . ,url-context)
+    (:thinking-budget-min . ,thinking-budget-min)
+    (:thinking-budget-max . ,thinking-budget-max)
     (:url-base . chatgpt-shell-google-api-url-base)
     (:handler . chatgpt-shell-google--handle-gemini-command)
     (:filter . chatgpt-shell-google--extract-gemini-response)
@@ -215,6 +228,8 @@ Returns the new boolean value of `:grounding-search'."
   (list (chatgpt-shell-google-make-model :version "gemini-2.5-flash"
                                          :short-version "gemini-2.5-flash"
                                          :path "/v1beta/models/gemini-2.5-flash"
+                                         :thinking-budget-min 0
+                                         :thinking-budget-max 24576
                                          :grounding-search t
                                          :url-context t
                                          :token-width 4
@@ -224,6 +239,8 @@ Returns the new boolean value of `:grounding-search'."
                                          :path "/v1beta/models/gemini-2.5-pro"
                                          :grounding-search t
                                          :url-context t
+                                         :thinking-budget-min 128
+                                         :thinking-budget-max 32768
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
@@ -324,7 +341,26 @@ or
                        (when (map-elt model :url-context) '((url_context . nil))))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
-                           (topP . 1))))))
+                           (topP . 1)
+                           ;; Include thinking parameters if it is supported for
+                           ;; this model.
+                           ,(let ((min (map-elt model :thinking-budget-min))
+                                  (max (map-elt model :thinking-budget-max)))
+                              (when (or min max)
+                                (let ((chatgpt-shell-google-thinking-budget-tokens
+                                       (cond
+                                        ((not chatgpt-shell-google-thinking-budget-tokens)
+                                         max)
+                                        ;; -1 is always valid and indicates
+                                        ;; -dynamic thinking. See
+                                        ;; -https://ai.google.dev/gemini-api/docs/thinking.
+                                        ((eq chatgpt-shell-google-thinking-budget-tokens 'dynamic)
+                                         -1)
+                                        ((<= min chatgpt-shell-google-thinking-budget-tokens max)
+                                         chatgpt-shell-google-thinking-budget-tokens)
+                                        (t
+                                         (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
+                                  `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)
   "Convert CONTEXT to gemini messages.
@@ -351,9 +387,21 @@ For example:
      context)
     (nreverse result)))
 
-(defun chatgpt-shell-google--extract-gemini-response (raw-response)
-  "Extract Gemini response from RAW-RESPONSE."
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
+(defun chatgpt-shell-google--extract-gemini-response (output)
+  "Process pending OUTPUT to extract Gemini response.
+
+OUTPUT is always of the form:
+
+  ((:function-calls . ...)
+   (:pending . ...)
+   (:filtered . ...))
+
+and must be returned in the same form.
+
+Processing means processing :pending content into :filtered."
+  (when (stringp output)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt output :pending)))
             (response (or (let-alist whole
                             .error.message)
                           (let-alist whole
@@ -362,8 +410,8 @@ For example:
                                            (or .delta.content
                                                .message.content)))
                                        .choices "")))))
-      response
-    (if-let ((chunks (shell-maker--split-text raw-response)))
+      (list (cons :filtered response))
+    (if-let ((chunks (shell-maker--split-text (map-elt output :pending))))
         (let ((response)
               (pending)
               (result))
@@ -416,8 +464,7 @@ For example:
                                         response))
                       (cons :pending pending)))
           result)
-      (list (cons :filtered nil)
-            (cons :pending raw-response)))))
+      output)))
 
 (provide 'chatgpt-shell-google)
 

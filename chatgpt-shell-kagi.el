@@ -107,18 +107,25 @@ If you use Kagi through a proxy service, change the URL base."
           "&url="
           (url-hexify-string (string-trim command))))
 
-(defun chatgpt-shell-kagi--extract-summarizer-response (raw-response)
-  "Extract Kagi summarizer response from RAW-RESPONSE.
+(defun chatgpt-shell-kagi--extract-summarizer-response (object)
+  "Extract Kagi summarizer response from OBJECT.
 
 Responses are never streamed."
+  (when (stringp output)
+    (error "Please upgrade shell-maker to 0.79.1 or newer"))
   ;; Non-streamed
-  (if-let* ((whole (shell-maker--json-parse-string raw-response))
-            (response (let-alist whole
-                        (or (let-alist (seq-first .error)
-                              .msg)
-                            .data.output))))
-      response
-    (list (cons :pending raw-response))))
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt object :pending)))
+            (response (cond ((and (map-elt whole 'error)
+                                  (seq-first (map-elt whole 'error)))
+                             (map-elt (seq-first (map-elt whole 'error)) 'msg))
+                            ((and (map-elt whole 'data)
+                                  (not (eq (map-elt whole 'data) :null)))
+                             (map-elt (map-elt whole 'data) 'output)))))
+      (progn
+        (setf (map-elt object :filtered) response)
+        (setf (map-elt object :pending) nil)
+        object)
+    object))
 
 (cl-defun chatgpt-shell-kagi--extract-url (&key text fail)
   "Trim TEXT URL found.
