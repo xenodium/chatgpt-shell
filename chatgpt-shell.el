@@ -5,7 +5,7 @@
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
 ;; Version: 2.24.2
-;; Package-Requires: ((emacs "28.1") (shell-maker "0.78.2") (transient "0.9.3"))
+;; Package-Requires: ((emacs "28.1") (shell-maker "0.79.1") (transient "0.9.3"))
 (defconst chatgpt-shell--version "2.24.1")
 
 ;; This package is free software; you can redistribute it and/or modify
@@ -687,6 +687,9 @@ See `shell-maker-welcome-message' as an example."
          (progn
            (unless (fboundp 'markdown-overlays-expand-local-links)
              (error "Please update 'shell-maker' to v0.78.1 or newer"))
+           (unless (and (boundp 'shell-maker-version)
+                        (version<= "0.79.1" shell-maker-version))
+             (error "Please update 'shell-maker' to v0.79.1 or newer"))
            (funcall handler
                     :model model
                     :command (if chatgpt-shell-include-local-file-link-content
