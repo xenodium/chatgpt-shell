@@ -349,7 +349,7 @@ or
                  (cdr tools-body)))
 
          (when (map-elt model :url-context)
-           (push (cons (intern "url_context") nil)
+           (push '(url_context . nil)
                  (cdr tools-body)))
          (list tools-body)))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
