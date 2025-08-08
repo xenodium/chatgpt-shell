@@ -208,17 +208,6 @@ Returns the new boolean value of `:grounding-search'."
       (message "Grounding in Google search: %s" (if toggled "ON" "OFF"))
       toggled)))
 
-(defun chatgpt-shell-google--get-grounding-in-search-tool-keyword (model)
-  "Retrieves the keyword for the grounding tool.
-
-This gets set once for each MODEL, based on a heuristic."
-  (when-let* ((current-model model)
-              (is-google (string= (map-elt current-model :provider) "Google"))
-              (version (map-elt current-model :version)))
-    (if (string-match "1\\.5" version)
-        "google_search_retrieval"
-      "google_search")))
-
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
@@ -249,16 +238,6 @@ This gets set once for each MODEL, based on a heuristic."
                                          :path "/v1beta/models/gemini-2.0-flash-lite"
                                          :grounding-search t
                                          :url-context t
-                                         :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
-                                         :short-version "1.5-pro-latest"
-                                         :path "/v1beta/models/gemini-1.5-pro-latest"
-                                         :token-width 4
-                                         :context-window 2097152)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
-                                         :short-version "1.5-flash-latest"
-                                         :path "/v1beta/models/gemini-1.5-flash-latest"
                                          :token-width 4
                                          :context-window 1048576)))
 
@@ -341,17 +320,8 @@ or
                     (append context
                             (when prompt
                               (list (cons prompt nil))))))))
-   (if (or (map-elt model :grounding-search)
-           (map-elt model :url-context))
-       (let ((tools-body '(tools . ())))
-         (when (map-elt model :grounding-search)
-           (push (cons (intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) nil)
-                 (cdr tools-body)))
-
-         (when (map-elt model :url-context)
-           (push '(url_context . nil)
-                 (cdr tools-body)))
-         (list tools-body)))
+   `((tools . ,(append (when (map-elt model :grounding-search) '((google_search . nil)))
+                       (when (map-elt model :url-context) '((url_context . nil))))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1))))))
