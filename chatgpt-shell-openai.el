@@ -38,12 +38,12 @@
 (defcustom chatgpt-shell-openai-reasoning-effort "medium"
   "The amount of reasoning effort to use for OpenAI reasoning models.
 
- It can be \"low\", \"medium\" or \"high\". Lower values
-are faster and cheaper but higher values may work better for more
-difficult problems."
+ It can be \"minimal\", \"low\", \"medium\" or \"high\". Lower
+values are faster and cheaper but higher values may work better
+for more difficult problems."
   :type 'string
   :safe #'stringp
-  :options '("low" "medium" "high")
+  :options '("minimal" "low" "medium" "high")
   :group 'chatgpt-shell)
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort icon function-calling other-params)
@@ -86,6 +86,24 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
   "Build a list of all OpenAI LLM models available."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
+         :version "gpt-5"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-5-mini"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5-mini
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
+         :version "gpt-5-nano"
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5-nano
+         :reasoning-effort t
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
          :version "gpt-4.1"
          :token-width 3
          :function-calling t
