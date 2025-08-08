@@ -51,14 +51,15 @@ If you use Gemini through a proxy service, change the URL base."
   :safe #'stringp
   :group 'chatgpt-shell)
 
-(defcustom chatgpt-shell-google-thinking-budget-tokens -1
+(defcustom chatgpt-shell-google-thinking-budget-tokens 'dynamic
   "The token budget allocated for Google model thinking.
 
 nil means to use the maximum number of thinking tokens allowed.
--1 means to use dynamic thinking. Set this to 0 to disable
-thinking on models that support no thinking. See
+Set this to 0 to disable thinking on models that support no
+thinking. =\\'dynamic means to let the model decide how many
+thinking tokens to use based on the complexity of the query. See
 https://ai.google.dev/gemini-api/docs/thinking."
-  :type '(choice integer (const nil))
+  :type '(choice integer (const nil) (const dynamic))
   :group 'chatgpt-shell)
 
 ;; https://ai.google.dev/gemini-api/docs/tokens
@@ -364,16 +365,19 @@ or
                            ,(let ((min (map-elt model :thinking-budget-min))
                                   (max (map-elt model :thinking-budget-max)))
                               (when (or min max)
-                                ;; -1 is always valid and indicates dynamic
-                                ;; -thinking. See the API docs.
-                                (unless (or (not chatgpt-shell-google-thinking-budget-tokens)
-                                            (= chatgpt-shell-google-thinking-budget-tokens -1)
-                                            (<= min chatgpt-shell-google-thinking-budget-tokens max))
-                                  (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive)" min max))
                                 (let ((chatgpt-shell-google-thinking-budget-tokens
-                                       (if chatgpt-shell-google-thinking-budget-tokens
-                                           chatgpt-shell-google-thinking-budget-tokens
-                                         max)))
+                                       (cond
+                                        ((not chatgpt-shell-google-thinking-budget-tokens)
+                                         max)
+                                        ;; -1 is always valid and indicates
+                                        ;; -dynamic thinking. See
+                                        ;; -https://ai.google.dev/gemini-api/docs/thinking.
+                                        ((eq chatgpt-shell-google-thinking-budget-tokens 'dynamic)
+                                         -1)
+                                        ((<= min chatgpt-shell-google-thinking-budget-tokens max)
+                                         chatgpt-shell-google-thinking-budget-tokens)
+                                        (t
+                                         (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
                                   `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)
