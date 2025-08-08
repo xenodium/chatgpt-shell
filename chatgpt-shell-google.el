@@ -64,7 +64,7 @@ https://ai.google.dev/gemini-api/docs/thinking."
 
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search thinking-budget-min thinking-budget-max)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context thinking-budget-min thinking-budget-max)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -87,6 +87,7 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:token-width . ,token-width)
     (:context-window . ,context-window)
     (:grounding-search . ,grounding-search)
+    (:url-context . ,url-context)
     (:thinking-budget-min . ,thinking-budget-min)
     (:thinking-budget-max . ,thinking-budget-max)
     (:url-base . chatgpt-shell-google-api-url-base)
@@ -137,7 +138,7 @@ https://generativelanguage.googleapis.com"
            (model-urlpath (concat "/v1beta/" .name))
            ;; The api-response descriptor does not stipulate whether grounding is supported.
            ;; This logic applies a heuristic based on the model name (aka version).
-           (model-supports-grounding (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0")) model-version)))
+           (model-supports-grounding (string-match-p (rx bol (or "gemini-1.5" "gemini-2.0" "gemini-2.5")) model-version)))
       (chatgpt-shell-google-make-model :version model-version
                                        :short-version model-shortversion
                                        :grounding-search model-supports-grounding
@@ -220,17 +221,6 @@ Returns the new boolean value of `:grounding-search'."
       (message "Grounding in Google search: %s" (if toggled "ON" "OFF"))
       toggled)))
 
-(defun chatgpt-shell-google--get-grounding-in-search-tool-keyword (model)
-  "Retrieves the keyword for the grounding tool.
-
-This gets set once for each MODEL, based on a heuristic."
-  (when-let* ((current-model model)
-              (is-google (string= (map-elt current-model :provider) "Google"))
-              (version (map-elt current-model :version)))
-    (if (string-match "1\\.5" version)
-        "google_search_retrieval"
-      "google_search")))
-
 (defun chatgpt-shell-google-models ()
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
@@ -241,12 +231,14 @@ This gets set once for each MODEL, based on a heuristic."
                                          :thinking-budget-min 0
                                          :thinking-budget-max 24576
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.5-pro"
                                          :short-version "gemini-2.5-pro"
                                          :path "/v1beta/models/gemini-2.5-pro"
                                          :grounding-search t
+                                         :url-context t
                                          :thinking-budget-min 128
                                          :thinking-budget-max 32768
                                          :token-width 4
@@ -255,22 +247,14 @@ This gets set once for each MODEL, based on a heuristic."
                                          :short-version "2.0-flash"
                                          :path "/v1beta/models/gemini-2.0-flash"
                                          :grounding-search t
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash-lite"
                                          :short-version "2.0-flash-lite"
                                          :path "/v1beta/models/gemini-2.0-flash-lite"
                                          :grounding-search t
-                                         :token-width 4
-                                         :context-window 1048576)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-pro-latest"
-                                         :short-version "1.5-pro-latest"
-                                         :path "/v1beta/models/gemini-1.5-pro-latest"
-                                         :token-width 4
-                                         :context-window 2097152)
-        (chatgpt-shell-google-make-model :version "gemini-1.5-flash-latest"
-                                         :short-version "1.5-flash-latest"
-                                         :path "/v1beta/models/gemini-1.5-flash-latest"
+                                         :url-context t
                                          :token-width 4
                                          :context-window 1048576)))
 
@@ -353,10 +337,8 @@ or
                     (append context
                             (when prompt
                               (list (cons prompt nil))))))))
-   (when (map-elt model :grounding-search)
-     ;; Grounding in Google Search is supported for both Gemini 1.5 and 2.0 models.
-     ;; But the API is slightly different between them. This uses the correct tool name.
-     `((tools . ((,(intern (chatgpt-shell-google--get-grounding-in-search-tool-keyword model)) . ())))))
+   `((tools . ,(append (when (map-elt model :grounding-search) '((google_search . nil)))
+                       (when (map-elt model :url-context) '((url_context . nil))))))
    `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
                            ;; 1 is most diverse output.
                            (topP . 1)
