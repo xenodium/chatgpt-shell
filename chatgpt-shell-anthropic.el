@@ -57,9 +57,7 @@ If you use Claude through a proxy service, change the URL base."
 (defcustom chatgpt-shell-anthropic-thinking-budget-tokens nil
   "The token budget allocated for Anthropic model thinking.
 
-Needs `chatgpt-shell-anthropic-thinking-budget-tokens' set to
-non-nil.  nil means to use the maximum number of thinking tokens
-allowed."
+nil means to use the maximum number of thinking tokens allowed."
   :type '(choice integer (const nil))
   :group 'chatgpt-shell)
 
