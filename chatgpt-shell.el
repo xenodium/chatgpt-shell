@@ -608,6 +608,47 @@ non-nil; otherwise `completing-read'."
         (setq-default chatgpt-shell-model-version selection))
     (error "No other providers found")))
 
+(defun chatgpt-shell-unsorted-collection (collection)
+  (lambda (string predicate action)
+    (if (eq action 'metadata)
+        (let ((current-metadata (cdr (completion-metadata (minibuffer-contents)
+                                                          collection
+                                                          minibuffer-completion-predicate))))
+          `(metadata
+            ,@(map-merge 'alist
+                         current-metadata
+                         '((display-sort-function . identity)
+                           (cycle-sort-function . identity)))))
+      (complete-with-action action collection string predicate))))
+
+(defun chatgpt-shell-select-reasoning-effort (&optional global)
+  "Interactively set the reasoning effort for the current model.
+
+By default, this is done buffer-locally when in a
+`chatgpt-shell-mode' buffer `chatgpt-shell-prompt-compose-mode'
+buffer. With a prefix argument, it is set globally."
+  (interactive "P")
+  (let* ((model (chatgpt-shell--resolved-model))
+         (selector (map-elt model :reasoning-effort-selector)))
+    (unless selector
+      (user-error "The reasoning effort selector is undefined for %s" (chatgpt-shell-model-version)))
+    (let* ((buf (cond
+                 (global
+                  nil)
+                 ((eq major-mode 'chatgpt-shell-mode)
+                  (current-buffer))
+                 ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
+                  (chatgpt-shell--primary-buffer))))
+           (result (funcall selector model))
+           (sym (car result))
+           (var (if buf
+                    (with-current-buffer buf
+                      (make-local-variable sym))
+                  sym))
+           (val (cadr result)))
+      (set var val)
+      (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally")))))
+
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
   :type 'boolean

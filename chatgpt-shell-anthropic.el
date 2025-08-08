@@ -61,11 +61,27 @@ nil means to use the maximum number of thinking tokens allowed."
   :type '(choice integer (const nil))
   :group 'chatgpt-shell)
 
+(defun chatgpt-shell-anthropic-reasoning-effort-selector (model)
+  (let* ((max (1- (map-elt model :max-tokens)))
+         (response (completing-read (format "Thinking budget tokens (0-%d): " max)
+                                    (chatgpt-shell-unsorted-collection '("disable" "max"))))
+         (budget (cond
+                  ((equal response "disable")
+                   0)
+                  ((equal response "max")
+                   nil)
+                  (t
+                   (string-to-number response)))))
+    (unless (or (not budget) (and (integerp budget) (<= 0 budget max)))
+      (user-error "Thinking budget tokens must be in the range 0-%d" max))
+    (list 'chatgpt-shell-anthropic-thinking-budget-tokens budget)))
+
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
                                                     token-width
                                                     max-tokens
-                                                    context-window)
+                                                    context-window
+                                                    reasoning-effort-selector)
   "Create an Anthropic model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, MAX-TOKENS, CONTEXT-WINDOW and
@@ -97,6 +113,7 @@ VALIDATE-COMMAND handler."
     (:headers . chatgpt-shell-anthropic--make-headers)
     (:url-base . chatgpt-shell-anthropic-api-url-base)
     (:key . chatgpt-shell-anthropic-key)
+    (:reasoning-effort-selector . ,reasoning-effort-selector)
     (:validate-command . chatgpt-shell-anthropic--validate-command)
     (:icon . "anthropic.png")))
 
@@ -119,11 +136,13 @@ VALIDATE-COMMAND handler."
    (chatgpt-shell-anthropic--make-model :version "claude-opus-4-20250514"
                                         :short-version "opus-4"
                                         :token-width  4
+                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
                                         :max-tokens 32000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-sonnet-4-20250514"
                                         :short-version "sonnet-4"
                                         :token-width  4
+                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
                                         :max-tokens 64000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
