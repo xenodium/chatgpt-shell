@@ -81,7 +81,7 @@ https://ai.google.dev/gemini-api/docs/thinking."
     (unless (or (memq budget '(dynamic nil))
                 (and (integerp budget) (<= min budget max)))
       (user-error "Thinking budget tokens must be in the range %d-%d" min max))
-    (list 'chatgpt-shell-google-thinking-budget-tokens budget)))
+    `((chatgpt-shell-google-thinking-budget-tokens . ,budget))))
 
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.

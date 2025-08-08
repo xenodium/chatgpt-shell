@@ -632,22 +632,26 @@ buffer. With a prefix argument, it is set globally."
          (selector (map-elt model :reasoning-effort-selector)))
     (unless selector
       (user-error "The reasoning effort selector is undefined for %s" (chatgpt-shell-model-version)))
-    (let* ((buf (cond
+    (let* ((first t)
+           (buf (cond
                  (global
                   nil)
                  ((eq major-mode 'chatgpt-shell-mode)
                   (current-buffer))
                  ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
                   (chatgpt-shell--primary-buffer))))
-           (result (funcall selector model))
-           (sym (car result))
-           (var (if buf
-                    (with-current-buffer buf
-                      (make-local-variable sym))
-                  sym))
-           (val (cadr result)))
-      (set var val)
-      (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally")))))
+           (result (funcall selector model)))
+      (dolist (cell result)
+        (let* ((sym (car cell))
+               (var (if buf
+                        (with-current-buffer buf
+                          (make-local-variable sym))
+                      sym))
+               (val (cdr cell)))
+          (set var val)
+          (when first
+            (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally"))
+            (setq first nil)))))))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."

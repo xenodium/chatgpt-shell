@@ -48,8 +48,8 @@ for more difficult problems."
 
 (defun chatgpt-shell-openai-make-reasoning-effort-selector (choices)
   (lambda (_model)
-    (list 'chatgpt-shell-openai-reasoning-effort
-          (completing-read "Reasoning effort: " (chatgpt-shell-unsorted-collection choices) nil t))))
+    (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell-unsorted-collection choices) nil t)))
+      `((chatgpt-shell-openai-reasoning-effort . ,effort)))))
 
 (defalias 'chatgpt-shell-openai-old-reasoning-effort-selector
   (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high")))
