@@ -66,8 +66,7 @@ nil means to use the maximum number of thinking tokens allowed."
          (max (1- (map-elt model :max-tokens)))
          (response (completing-read (format "Thinking budget tokens (%d-%d): " min max)
                                     (chatgpt-shell-unsorted-collection
-                                     (append (and (= min 0) (list "disable"))
-                                             (list "max")))))
+                                     '("disable" "max"))))
          (budget (cond
                   ((equal response "disable")
                    0)
@@ -75,10 +74,14 @@ nil means to use the maximum number of thinking tokens allowed."
                    nil)
                   (t
                    (string-to-number response)))))
-    (unless (or (not budget) (and (integerp budget) (<= min budget max)))
+    (unless (or (not budget)
+                (eql budget 0)
+                (and (integerp budget) (<= min budget max)))
       (user-error "Thinking budget tokens must be in the range %d-%d" min max))
-    `((chatgpt-shell-anthropic-thinking-budget-tokens . ,budget)
-      (chatgpt-shell-anthropic-thinking . ,(not (eql budget 0))))))
+    (if (eql budget 0)
+        `((chatgpt-shell-anthropic-thinking . nil))
+      `((chatgpt-shell-anthropic-thinking . t)
+        (chatgpt-shell-anthropic-thinking-budget-tokens . ,budget)))))
 
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
