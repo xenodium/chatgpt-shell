@@ -221,23 +221,27 @@ Note that `chatgpt-shell-openai--use-function-calling' and
 Only models with :function-calling t wil attempt to use
 this feature.")
 
-;; TODO: Move to a separate file.
-;; TODO: Migrate to schema used by gptel.el and mcp.el
-;; https://github.com/ahyatt/llm/discussions/124#discussioncomment-11877109
 (defvar chatgpt-shell-openai--tools
-  '(((:name . "get_current_weather")
-     (:handler . chatgpt-shell-apply-fetch-weather)
-     (:openai-tool . ((type . "function")
-                      (function . ((name . "get_current_weather")
-                                   (description . "Get the current weather for given coordinate. Requires cities or other locations as coordinate.")
-                                   (parameters . ((type . "object")
-                                                  (properties . ((lat . ((type . "string")
-                                                                         (description . "Location latitude")))
-                                                                 (lon . ((type . "string")
-                                                                         (description . "Location longitude")))
-                                                                 (unit . ((type . "string")
-                                                                          (enum . [ "celsius" "fahrenheit" ])))))
-                                                  (required . ["lat" "lon"]))))))))))
+  '((:name "get_current_weather"
+     :function chatgpt-shell-apply-fetch-weather
+     :description "Get the current weather for given coordinate. Requires cities or other locations as coordinate."
+     :async t
+     :args ((:name "lat"
+             :type string
+             :description "Location latitude")
+            (:name "lon"
+             :type string
+             :description "Location longitude")
+            (:name "unit"
+             :type string
+             :enum ["celsius" "fahrenheit"]
+             :optional t))))
+  "Known tools for function calling.
+
+Note: Tools are created using plists unlike the rest of the codebase to be
+compatible with gptel.el and llm.el tools as per agreed spec:
+
+https://github.com/ahyatt/llm/discussions/124#discussioncomment-11877109")
 
 (cl-defun chatgpt-shell-openai--make-chatgpt-messages (&key model system-prompt prompt prompt-url context)
   "Create ChatGPT messages using MODEL.
@@ -311,7 +315,8 @@ and OTHER-PARAMS (list)."
    (when tools
      `((tools . ,(vconcat
                   (mapcar (lambda (tool)
-                            (map-elt tool :openai-tool))
+                            ;; TODO: This is ChatGPT-specific. Generalize.
+                            (chatgpt-shell-openai--tool-to-openai-format tool))
                           tools)))))
    (when tools
      '((tool_choice . "auto")))
@@ -320,6 +325,39 @@ and OTHER-PARAMS (list)."
    (when streaming
      `((stream . t)))
    other-params))
+
+(defun chatgpt-shell-openai--tool-to-openai-format (tool)
+  "Convert TOOL from generic schema to OpenAI format."
+  `((type . "function")
+    (function . ((name . ,(plist-get tool :name))
+                 (description . ,(plist-get tool :description))
+                 (parameters . ,(chatgpt-shell-openai--args-to-openai-params
+                                 (plist-get tool :args)))))))
+
+(defun chatgpt-shell-openai--args-to-openai-params (args)
+  "Convert ARGS list to OpenAI parameters format."
+  (if (null args)
+      ;; No arguments case
+      `((type . "object")
+        (properties . ()))
+    ;; Has arguments
+    (let ((properties '())
+          (required '()))
+      (dolist (arg args)
+        (let ((name (plist-get arg :name))
+              (type (symbol-name (plist-get arg :type)))
+              (desc (plist-get arg :description))
+              (enum (plist-get arg :enum))
+              (optional (plist-get arg :optional)))
+          (push `(,(intern name) . ((type . ,type)
+                                    ,@(when desc `((description . ,desc)))  ; Only add if desc exists
+                                    ,@(when enum `((enum . ,enum)))))
+                properties)
+          (unless optional
+            (push name required))))
+      `((type . "object")
+        (properties . ,(nreverse properties))
+        ,@(when required `((required . ,(vconcat (nreverse required)))))))))
 
 (defun chatgpt-shell-apply-fetch-weather (args on-finished)
   "Fetch weather data from MET Norway API using ARGS and invoking ON-FINISHED.
@@ -598,11 +636,11 @@ and SHELL are all the same."
     (mapc (lambda (incoming-request)
             (if-let* ((tool (seq-find (lambda (tool)
                                         (equal (format "%s" (map-elt incoming-request :name))
-                                               (map-elt tool :name)))
+                                               (plist-get tool :name)))
                                       tools))
-                      (request-hander (map-elt tool :handler))
+                      (request-handler (plist-get tool :function))
                       (request-id (map-elt incoming-request :id)))
-                (funcall request-hander
+                (funcall request-handler
                          (map-elt incoming-request :arguments)
                          (lambda (result)
                            (setq serviced-requests
