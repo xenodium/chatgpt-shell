@@ -30,6 +30,7 @@
 (require 'map)
 (require 'shell-maker)
 
+(declare-function chatgpt-shell-unsorted-collection "chatgpt-shell")
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
@@ -47,6 +48,7 @@ for more difficult problems."
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-openai-make-reasoning-effort-selector (choices)
+  "Create a function for the :reasoning-effort-selector parameter using CHOICES."
   (lambda (_model)
     (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell-unsorted-collection choices) nil t)))
       `((chatgpt-shell-openai-reasoning-effort . ,effort)))))

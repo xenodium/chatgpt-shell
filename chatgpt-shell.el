@@ -609,6 +609,7 @@ non-nil; otherwise `completing-read'."
     (error "No other providers found")))
 
 (defun chatgpt-shell-unsorted-collection (collection)
+  "Return a completion table based on COLLECTION that inhibits sorting."
   (lambda (string predicate action)
     (if (eq action 'metadata)
         (let ((current-metadata (cdr (completion-metadata (minibuffer-contents)
@@ -626,7 +627,8 @@ non-nil; otherwise `completing-read'."
 
 By default, this is done buffer-locally when in a
 `chatgpt-shell-mode' buffer `chatgpt-shell-prompt-compose-mode'
-buffer. With a prefix argument, it is set globally."
+buffer. When GLOBAL is non-nil (interactively with a prefix
+argument), it is set globally."
   (interactive "P")
   (let* ((model (chatgpt-shell--resolved-model))
          (selector (map-elt model :reasoning-effort-selector)))

@@ -34,6 +34,7 @@
 (require 'json)
 
 (defvar chatgpt-shell-proxy)
+(declare-function chatgpt-shell-unsorted-collection "chatgpt-shell")
 
 (defcustom chatgpt-shell-google-key nil
   "Google API key as a string or a function that loads and returns it."
@@ -63,6 +64,7 @@ https://ai.google.dev/gemini-api/docs/thinking."
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-google-reasoning-effort-selector (model)
+  "Select the reasoning effort for the Google MODEL."
   (let* ((min (map-elt model :thinking-budget-min))
          (max (map-elt model :thinking-budget-max))
          (response (completing-read (format "Thinking budget tokens (%d-%d): " min max)
@@ -89,7 +91,8 @@ https://ai.google.dev/gemini-api/docs/thinking."
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
-VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
+GROUNDING-SEARCH handler, URL-CONTEXT, THINKING-BUDGET-MIN,
+THINKING-BUDGET-MAX and REASONING-EFFORT-SELECTOR."
   (unless version
     (error "Missing mandatory :version param"))
   (unless short-version
@@ -383,7 +386,7 @@ or
                                         ((<= min chatgpt-shell-google-thinking-budget-tokens max)
                                          chatgpt-shell-google-thinking-budget-tokens)
                                         (t
-                                         (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
+                                         (error "Error: chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
                                   `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)
