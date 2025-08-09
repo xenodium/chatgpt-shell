@@ -170,6 +170,8 @@ REASONING-EFFORT-SELECTOR."
    (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
                                         :short-version "3.7-sonnet"
                                         :token-width  4
+                                        :thinking-budget-min 1024
+                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
                                         :max-tokens 64000
                                         :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
