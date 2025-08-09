@@ -640,7 +640,7 @@ buffer. With a prefix argument, it is set globally."
                   (current-buffer))
                  ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
                   (chatgpt-shell--primary-buffer))))
-           (result (funcall selector model)))
+           (result (with-current-buffer buf (funcall selector model))))
       (dolist (cell result)
         (let* ((sym (car cell))
                (var (if buf

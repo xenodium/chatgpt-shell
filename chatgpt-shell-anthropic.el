@@ -78,10 +78,11 @@ nil means to use the maximum number of thinking tokens allowed."
                 (eql budget 0)
                 (and (integerp budget) (<= min budget max)))
       (user-error "Thinking budget tokens must be in the range %d-%d" min max))
-    (if (eql budget 0)
-        `((chatgpt-shell-anthropic-thinking . nil))
-      `((chatgpt-shell-anthropic-thinking . t)
-        (chatgpt-shell-anthropic-thinking-budget-tokens . ,budget)))))
+    `((chatgpt-shell-anthropic-thinking-budget-tokens
+       . ,(if (eql budget 0)
+              chatgpt-shell-anthropic-thinking-budget-tokens
+            budget))
+      (chatgpt-shell-anthropic-thinking . ,(not (eql budget 0))))))
 
 (cl-defun chatgpt-shell-anthropic--make-model (&key version
                                                     short-version
