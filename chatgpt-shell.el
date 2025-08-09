@@ -608,6 +608,53 @@ non-nil; otherwise `completing-read'."
         (setq-default chatgpt-shell-model-version selection))
     (error "No other providers found")))
 
+(defun chatgpt-shell-unsorted-collection (collection)
+  "Return a completion table based on COLLECTION that inhibits sorting."
+  (lambda (string predicate action)
+    (if (eq action 'metadata)
+        (let ((current-metadata (cdr (completion-metadata (minibuffer-contents)
+                                                          collection
+                                                          minibuffer-completion-predicate))))
+          `(metadata
+            ,@(map-merge 'alist
+                         current-metadata
+                         '((display-sort-function . identity)
+                           (cycle-sort-function . identity)))))
+      (complete-with-action action collection string predicate))))
+
+(defun chatgpt-shell-select-reasoning-effort (&optional global)
+  "Interactively set the reasoning effort for the current model.
+
+By default, this is done buffer-locally when in a
+`chatgpt-shell-mode' buffer `chatgpt-shell-prompt-compose-mode'
+buffer. When GLOBAL is non-nil (interactively with a prefix
+argument), it is set globally."
+  (interactive "P")
+  (let* ((model (chatgpt-shell--resolved-model))
+         (selector (map-elt model :reasoning-effort-selector)))
+    (unless selector
+      (user-error "The reasoning effort selector is undefined for %s" (chatgpt-shell-model-version)))
+    (let* ((first t)
+           (buf (cond
+                 (global
+                  nil)
+                 ((eq major-mode 'chatgpt-shell-mode)
+                  (current-buffer))
+                 ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
+                  (chatgpt-shell--primary-buffer))))
+           (result (with-current-buffer buf (funcall selector model))))
+      (dolist (cell result)
+        (let* ((sym (car cell))
+               (var (if buf
+                        (with-current-buffer buf
+                          (make-local-variable sym))
+                      sym))
+               (val (cdr cell)))
+          (set var val)
+          (when first
+            (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally"))
+            (setq first nil)))))))
+
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
   :type 'boolean
