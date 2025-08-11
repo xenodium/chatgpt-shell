@@ -739,7 +739,7 @@ See `shell-maker-welcome-message' as an example."
   "C-c C-e" #'chatgpt-shell-prompt-compose
   "C-c C-t" #'chatgpt-shell-transient)
 
-(define-derived-mode chatgpt-shell-mode minibuffer-mode "ChatGPT Shell Input"
+(define-derived-mode chatgpt-shell-mode comint-mode "ChatGPT Shell Input"
   "Major mode for the ChatGPT shell input buffer."
   (use-local-map chatgpt-shell-mode-map))
 
