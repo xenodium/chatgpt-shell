@@ -763,18 +763,8 @@ With NEW-SESSION, start a new session."
   (chatgpt-shell-start nil (or new-session
                                chatgpt-shell-always-create-new)))
 
-(defvar-keymap chatgpt-shell-mode-map
-  :doc "Keymap for `chatgpt-shell-mode'."
-  "C-M-h" #'chatgpt-shell-mark-at-point-dwim
-  "C-c C-c" #'chatgpt-shell-ctrl-c-ctrl-c
-  "C-c C-v" #'chatgpt-shell-swap-model
-  "C-c C-s" #'chatgpt-shell-swap-system-prompt
-  "C-c C-p" #'chatgpt-shell-previous-item
-  "<backtab>" #'chatgpt-shell-previous-item
-  "C-c C-n" #'chatgpt-shell-next-item
-  "<tab>" #'chatgpt-shell-next-item
-  "C-c C-e" #'chatgpt-shell-prompt-compose
-  "C-c C-t" #'chatgpt-shell-transient)
+(defvar chatgpt-shell-mode-map (make-sparse-keymap)
+  "Keymap for `chatgpt-shell-mode'.")
 
 (defun chatgpt-shell-start (&optional no-focus new-session ignore-as-primary model-version system-prompt)
   "Start a ChatGPT shell programmatically.
@@ -819,6 +809,26 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
       (setq-local chatgpt-shell-system-prompt system-prompt)
       (chatgpt-shell--update-prompt t)
       (chatgpt-shell--add-menus))
+    (define-key chatgpt-shell-mode-map (kbd "C-M-h")
+                #'chatgpt-shell-mark-at-point-dwim)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-c")
+                #'chatgpt-shell-ctrl-c-ctrl-c)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-v")
+                #'chatgpt-shell-swap-model)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-s")
+                #'chatgpt-shell-swap-system-prompt)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-p")
+                #'chatgpt-shell-previous-item)
+    (define-key chatgpt-shell-mode-map (kbd "<backtab>")
+                #'chatgpt-shell-previous-item)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-n")
+                #'chatgpt-shell-next-item)
+    (define-key chatgpt-shell-mode-map (kbd "<tab>")
+                #'chatgpt-shell-next-item)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-e")
+                #'chatgpt-shell-prompt-compose)
+    (define-key chatgpt-shell-mode-map (kbd "C-c C-t")
+                #'chatgpt-shell-transient)
     shell-buffer))
 
 (defun chatgpt-shell--shrink-system-prompt (prompt)
