@@ -633,7 +633,7 @@ argument), it is set globally."
   (let* ((model (chatgpt-shell--resolved-model))
          (selector (map-elt model :reasoning-effort-selector)))
     (unless selector
-      (user-error "The reasoning effort selector is undefined for %s" (chatgpt-shell-model-version)))
+      (user-error "No reasoning effort selector is defined for %s" (chatgpt-shell-model-version)))
     (let* ((first t)
            (buf (cond
                  (global
