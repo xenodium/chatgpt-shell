@@ -803,9 +803,9 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
                              no-focus
                              chatgpt-shell-welcome-function
                              new-session
-                             (if (and (chatgpt-shell--primary-buffer)
+                             (if (and (chatgpt-shell--primary-buffer :create nil)
                                       (not ignore-as-primary))
-                                 (buffer-name (chatgpt-shell--primary-buffer))
+                                 (buffer-name (chatgpt-shell--primary-buffer :create nil))
                                (chatgpt-shell--make-buffer-name))
                              "LLM")))
     (when (and (not ignore-as-primary)
@@ -906,8 +906,10 @@ Set SYSTEM-PROMPT to override variable `chatgpt-shell-system-prompt'"
   (with-current-buffer primary-shell-buffer
     (setq chatgpt-shell--is-primary-p t)))
 
-(defun chatgpt-shell--primary-buffer ()
+(cl-defun chatgpt-shell--primary-buffer (&key (create t))
   "Return the primary shell buffer.
+
+:CREATE nil to avoid automatic buffer creation.
 
 This is used for sending a prompt to in the background."
   (let* ((shell-buffers (chatgpt-shell--shell-buffers))
@@ -916,7 +918,7 @@ This is used for sending a prompt to in the background."
                                   (with-current-buffer shell-buffer
                                     chatgpt-shell--is-primary-p))
                                 shell-buffers)))
-    (unless primary-shell-buffer
+    (when (and create (not primary-shell-buffer))
       (setq primary-shell-buffer
             (or (seq-first shell-buffers)
                 (shell-maker-start chatgpt-shell--config
