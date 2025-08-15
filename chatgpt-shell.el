@@ -609,7 +609,9 @@ non-nil; otherwise `completing-read'."
     (error "No other providers found")))
 
 (defun chatgpt-shell-unsorted-collection (collection)
-  "Return a completion table based on COLLECTION that inhibits sorting."
+  "Return a completion table based on COLLECTION that inhibits
+sorting. See `completing-read' for the types that are supported
+for COLLECTION."
   (lambda (string predicate action)
     (if (eq action 'metadata)
         (let ((current-metadata (cdr (completion-metadata (minibuffer-contents)
