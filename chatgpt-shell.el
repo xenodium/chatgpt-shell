@@ -644,8 +644,9 @@ argument), it is set globally."
                   (current-buffer))
                  ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
                   (chatgpt-shell--primary-buffer))))
-           (result (with-current-buffer buf (funcall selector model))))
-      (dolist (cell result)
+           (bindings (with-current-buffer buf
+                       (funcall selector model))))
+      (dolist (cell bindings)
         (let* ((sym (car cell))
                (var (if buf
                         (with-current-buffer buf
