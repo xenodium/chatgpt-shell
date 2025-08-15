@@ -645,6 +645,11 @@ argument), it is set globally."
                  ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
                   (chatgpt-shell--primary-buffer))))
            (bindings (with-current-buffer buf
+                       ;; This call returns an alist that maps variables to the
+                       ;; values that they should be bound to. Some models (e.g.
+                       ;; those by Anthropic) have multiple variables that
+                       ;; control reasoning so in some cases it is necessary to
+                       ;; set more than one.
                        (funcall selector model))))
       (dolist (cell bindings)
         (let* ((sym (car cell))
