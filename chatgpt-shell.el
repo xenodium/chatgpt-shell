@@ -651,13 +651,13 @@ argument), it is set globally."
                        ;; control reasoning so in some cases it is necessary to
                        ;; set more than one.
                        (funcall selector model))))
-      (dolist (cell bindings)
-        (let* ((sym (car cell))
+      (dolist (binding bindings)
+        (let* ((sym (car binding))
                (var (if buf
                         (with-current-buffer buf
                           (make-local-variable sym))
                       sym))
-               (val (cdr cell)))
+               (val (cdr binding)))
           (set var val)
           (when first
             (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally"))
