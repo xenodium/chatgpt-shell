@@ -184,13 +184,8 @@ If you use OpenRouter through a proxy service, change the URL base."
 Filter OBJECT when processing responses are sent.
 
 This occurs for example with OpenAI's o1 model through OpenRouter."
-  (let ((pending (if (and (listp object) (plist-member object :pending))
-                     (plist-get object :pending)
-                   ""))
-        (input (if (stringp object) object ""))
+  (let ((pending (map-elt object :pending))
         (result ""))
-
-    (setq pending (concat pending input))
 
     ;; Extract all content from complete data lines
     (with-temp-buffer
