@@ -650,7 +650,10 @@ argument), it is set globally."
                        ;; values that they should be bound to. Some models (e.g.
                        ;; those by Anthropic) have multiple variables that
                        ;; control reasoning so in some cases it is necessary to
-                       ;; set more than one.
+                       ;; set more than one. An example return value is
+                       ;;
+                       ;; ((chatgpt-shell-anthropic-thinking-budget-tokens . 3000)
+                       ;;  (chatgpt-shell-anthropic-thinking . t))
                        (funcall selector model))))
       (dolist (binding bindings)
         (let* ((sym (car binding))
@@ -663,7 +666,13 @@ argument), it is set globally."
           (set var val)
           ;; The convention here is that the first binding is the thinking
           ;; budget. We print a message just for this binding to inform the user
-          ;; of the value it was set to.
+          ;; of the value it was set to. For example, in
+          ;;
+          ;; ((chatgpt-shell-anthropic-thinking-budget-tokens . 3000)
+          ;;  (chatgpt-shell-anthropic-thinking . t))
+          ;;
+          ;; `chatgpt-shell-anthropic-thinking-budget-tokens' comes first since
+          ;; it is the main variable of interest to the user.
           (when first
             ;; When there is a thinking budget, nil means the maximum number of
             ;; tokens so we print max in this case to make the output more
