@@ -30,7 +30,7 @@
 (require 'map)
 (require 'shell-maker)
 
-(declare-function chatgpt-shell-unsorted-collection "chatgpt-shell")
+(declare-function chatgpt-shell--unsorted-collection "chatgpt-shell")
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
@@ -50,7 +50,7 @@ for more difficult problems."
 (defun chatgpt-shell-openai-make-reasoning-effort-selector (choices)
   "Create a function for the :reasoning-effort-selector parameter using CHOICES."
   (lambda (_model)
-    (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell-unsorted-collection choices) nil t)))
+    (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell--unsorted-collection choices) nil t)))
       `((chatgpt-shell-openai-reasoning-effort . ,effort)))))
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort reasoning-effort-selector icon function-calling other-params)

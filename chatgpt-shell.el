@@ -608,7 +608,7 @@ non-nil; otherwise `completing-read'."
         (setq-default chatgpt-shell-model-version selection))
     (error "No other providers found")))
 
-(defun chatgpt-shell-unsorted-collection (collection)
+(defun chatgpt-shell--unsorted-collection (collection)
   "Return a completion table based on COLLECTION that inhibits
 sorting. See `completing-read' for the types that are supported
 for COLLECTION."
@@ -654,6 +654,7 @@ argument), it is set globally."
       (dolist (binding bindings)
         (let* ((sym (car binding))
                (var (if buf
+                        ;; Ensure that the variable is set buffer-locally.
                         (with-current-buffer buf
                           (make-local-variable sym))
                       sym))
