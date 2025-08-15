@@ -659,7 +659,15 @@ argument), it is set globally."
                       sym))
                (val (cdr binding)))
           (set var val)
+          ;; The convention here is that the first binding is the thinking
+          ;; budget. We print a message just for this binding to inform the user
+          ;; of the value it was set to.
           (when first
+            ;; When there is a thinking budget, nil means the maximum number of
+            ;; tokens so we print max in this case to make the output more
+            ;; intuitive to the user. See
+            ;; `chatgpt-shell-google-thinking-budget-tokens' and
+            ;; `chatgpt-shell-anthropic-thinking-budget-tokens'.
             (message "Set %s to %s%s" var (if val val "max") (if buf " locally" " globally"))
             (setq first nil)))))))
 
