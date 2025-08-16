@@ -637,45 +637,43 @@ argument), it is set globally."
          (selector (map-elt model :reasoning-effort-selector)))
     (unless selector
       (user-error "No reasoning effort selector is defined for %s" (chatgpt-shell-model-version)))
-    (let* ((first t)
-           (buf (cond
+    (let* ((buf (cond
                  (global
                   nil)
                  ((eq major-mode 'chatgpt-shell-mode)
                   (current-buffer))
                  ((memq major-mode '(chatgpt-shell-prompt-compose-mode chatgpt-shell-prompt-compose-view-mode))
                   (chatgpt-shell--primary-buffer))))
-           (bindings (with-current-buffer buf
-                       ;; This call returns an alist that maps variables to the
-                       ;; values that they should be bound to. Some models (e.g.
-                       ;; those by Anthropic) have multiple variables that
-                       ;; control reasoning so in some cases it is necessary to
-                       ;; set more than one. An example return value is
-                       ;;
-                       ;; ((chatgpt-shell-anthropic-thinking-budget-tokens . 3000)
-                       ;;  (chatgpt-shell-anthropic-thinking . t))
+           ;; The call to the selector returns a list of bindings. Some models
+           ;; (e.g. those by Anthropic) have multiple variables that control
+           ;; reasoning so in some cases it is necessary to set more than one.
+           ;; An example return value is
+           ;;
+           ;; ((chatgpt-shell-anthropic-thinking-budget-tokens 3000 :kind thinking-budget)
+           ;;  (chatgpt-shell-anthropic-thinking t :kind thinking-toggle))
+           (bindings (if buf
+                         (with-current-buffer buf
+                           (funcall selector model))
                        (funcall selector model))))
       (dolist (binding bindings)
-        (let* ((sym (car binding))
-               (var (if buf
-                        ;; Ensure that the variable is set buffer-locally.
-                        (with-current-buffer buf
-                          (make-local-variable sym))
-                      sym))
-               (val (cdr binding)))
-          (set var val)
-          ;; The convention here is that the first binding is the thinking
-          ;; budget. We print a message just for this binding to inform the user
-          ;; of the value it was set to. For example, in
-          ;;
-          ;; ((chatgpt-shell-anthropic-thinking-budget-tokens . 3000)
-          ;;  (chatgpt-shell-anthropic-thinking . t))
-          ;;
-          ;; `chatgpt-shell-anthropic-thinking-budget-tokens' comes first since
-          ;; it is the main variable of interest to the user.
-          (when first
-            (message "Set %s to %s%s" var val (if buf " locally" " globally"))
-            (setq first nil)))))))
+        (cl-destructuring-bind (var val &key kind max)
+            binding
+          (unless (memq kind '(thinking-budget thinking-toggle))
+            (error "Unknown kind %S returned by reasoning effort selector" kind))
+          (if buf
+            ;; Ensure that the variable is set buffer-locally.
+            (with-current-buffer buf
+              (set (make-local-variable var) val))
+            ;; Set the global value even if it has already been bound
+            ;; buffer-locally. Note that using `set' on var will set the
+            ;; buffer-local value if one already exists.
+            (set-default var val))
+          ;; Let the user know what the thinking budget was set to.
+          (when (eq kind 'thinking-budget)
+            (message "Set %s to %s%s"
+                     var
+                     (if max "max" val)
+                     (if buf " locally" " globally"))))))))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
