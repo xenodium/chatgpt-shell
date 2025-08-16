@@ -51,7 +51,9 @@ for more difficult problems."
   "Create a function for the :reasoning-effort-selector parameter using CHOICES."
   (lambda (_model)
     (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell--unsorted-collection choices) nil t)))
-      `((chatgpt-shell-openai-reasoning-effort ,effort :kind thinking-budget)))))
+      `(((:symbol . chatgpt-shell-openai-reasoning-effort)
+         (:value . ,effort)
+         (:kind . thinking-budget))))))
 
 (cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort reasoning-effort-selector icon function-calling other-params)
   "Create an OpenAI model.

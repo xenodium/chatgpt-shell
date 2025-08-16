@@ -624,7 +624,6 @@ COLLECTION."
                          '((display-sort-function . identity)
                            (cycle-sort-function . identity)))))
       (complete-with-action action collection string predicate))))
-
 (defun chatgpt-shell-select-reasoning-effort (&optional global)
   "Interactively set the reasoning effort for the current model.
 
@@ -649,31 +648,38 @@ argument), it is set globally."
            ;; reasoning so in some cases it is necessary to set more than one.
            ;; An example return value is
            ;;
-           ;; ((chatgpt-shell-anthropic-thinking-budget-tokens 3000 :kind thinking-budget)
-           ;;  (chatgpt-shell-anthropic-thinking t :kind thinking-toggle))
+           ;; '(((:symbol chatgpt-shell-anthropic-thinking-budget-tokens)
+           ;;    (:value 3000)
+           ;;    (:kind thinking-budget)
+           ;;    ;; This indicates if the budget will be set to the max by this
+           ;;    ;; binding. It is only needed when it is non-nil.
+           ;;    (:max nil))
+           ;;   ((:symbol chatgpt-shell-anthropic-thinking)
+           ;;    (:value t)
+           ;;    (:kind thinking-toggle)))
            (bindings (if buf
                          (with-current-buffer buf
                            (funcall selector model))
                        (funcall selector model))))
       (dolist (binding bindings)
-        (cl-destructuring-bind (var val &key kind max)
-            binding
-          (unless (memq kind '(thinking-budget thinking-toggle))
-            (error "Unknown kind %S returned by reasoning effort selector" kind))
-          (if buf
+        (unless (memq (map-elt binding :kind)
+                      '(thinking-budget thinking-toggle))
+          (error "Unknown kind %S returned by reasoning effort selector" (map-elt binding :kind)))
+        (if buf
             ;; Ensure that the variable is set buffer-locally.
             (with-current-buffer buf
-              (set (make-local-variable var) val))
-            ;; Set the global value even if it has already been bound
-            ;; buffer-locally. Note that using `set' on var will set the
-            ;; buffer-local value if one already exists.
-            (set-default var val))
-          ;; Let the user know what the thinking budget was set to.
-          (when (eq kind 'thinking-budget)
-            (message "Set %s to %s%s"
-                     var
-                     (if max "max" val)
-                     (if buf " locally" " globally"))))))))
+              (set (make-local-variable (map-elt binding :symbol))
+                   (map-elt binding :value)))
+          ;; Set the global value even if it has already been bound
+          ;; buffer-locally. Note that using `set' on var will set the
+          ;; buffer-local value if one already exists.
+          (set-default (map-elt binding :symbol) (map-elt binding :value)))
+        ;; Let the user know what the thinking budget was set to.
+        (when (eq (map-elt binding :kind) 'thinking-budget)
+          (message "Set %s to %s%s"
+                   (map-elt binding :symbol)
+                   (if (map-elt binding :max) "max" (map-elt binding :value))
+                   (if buf " locally" " globally")))))))
 
 (defcustom chatgpt-shell-streaming t
   "Whether or not to stream ChatGPT responses (show chunks as they arrive)."
