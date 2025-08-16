@@ -34,6 +34,7 @@
 (require 'json)
 
 (defvar chatgpt-shell-proxy)
+(declare-function chatgpt-shell--unsorted-collection "chatgpt-shell")
 
 (defcustom chatgpt-shell-google-key nil
   "Google API key as a string or a function that loads and returns it."
@@ -62,13 +63,39 @@ https://ai.google.dev/gemini-api/docs/thinking."
   :type '(choice integer (const nil) (const dynamic))
   :group 'chatgpt-shell)
 
+(defun chatgpt-shell-google-reasoning-effort-selector (model)
+  "Select the reasoning effort for the Google MODEL."
+  (let* ((min (map-elt model :thinking-budget-min))
+         (max (map-elt model :thinking-budget-max))
+         (response (completing-read (format "Thinking budget tokens (%d-%d): " min max)
+                                    (chatgpt-shell--unsorted-collection
+                                     (append (and (= min 0) (list "disable"))
+                                             (list "dynamic" "max")))))
+         (budget (cond
+                  ((equal response "disable")
+                   0)
+                  ((equal response "dynamic")
+                   'dynamic)
+                  ((equal response "max")
+                   nil)
+                  (t
+                   (string-to-number response)))))
+    (unless (or (memq budget '(dynamic nil))
+                (and (integerp budget) (<= min budget max)))
+      (user-error "Thinking budget tokens must be in the range %d-%d" min max))
+    `(((:symbol . chatgpt-shell-google-thinking-budget-tokens)
+       (:value . ,budget)
+       (:kind . thinking-budget)
+       (:max . ,(null budget))))))
+
 ;; https://ai.google.dev/gemini-api/docs/tokens
 ;; A token is equivalent to _about_ 4 characters.
-(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context thinking-budget-min thinking-budget-max)
+(cl-defun chatgpt-shell-google-make-model (&key version short-version path token-width context-window grounding-search url-context thinking-budget-min thinking-budget-max reasoning-effort-selector)
   "Create a Google model.
 
 Set VERSION, SHORT-VERSION, PATH, TOKEN-WIDTH, CONTEXT-WINDOW,
-VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
+GROUNDING-SEARCH handler, URL-CONTEXT, THINKING-BUDGET-MIN,
+THINKING-BUDGET-MAX and REASONING-EFFORT-SELECTOR."
   (unless version
     (error "Missing mandatory :version param"))
   (unless short-version
@@ -90,6 +117,7 @@ VALIDATE-COMMAND, and GROUNDING-SEARCH handler."
     (:url-context . ,url-context)
     (:thinking-budget-min . ,thinking-budget-min)
     (:thinking-budget-max . ,thinking-budget-max)
+    (:reasoning-effort-selector . ,reasoning-effort-selector)
     (:url-base . chatgpt-shell-google-api-url-base)
     (:handler . chatgpt-shell-google--handle-gemini-command)
     (:filter . chatgpt-shell-google--extract-gemini-response)
@@ -230,6 +258,7 @@ Returns the new boolean value of `:grounding-search'."
                                          :path "/v1beta/models/gemini-2.5-flash"
                                          :thinking-budget-min 0
                                          :thinking-budget-max 24576
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
                                          :grounding-search t
                                          :url-context t
                                          :token-width 4
@@ -241,6 +270,7 @@ Returns the new boolean value of `:grounding-search'."
                                          :url-context t
                                          :thinking-budget-min 128
                                          :thinking-budget-max 32768
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
                                          :token-width 4
                                          :context-window 1048576)
         (chatgpt-shell-google-make-model :version "gemini-2.0-flash"
@@ -359,7 +389,7 @@ or
                                         ((<= min chatgpt-shell-google-thinking-budget-tokens max)
                                          chatgpt-shell-google-thinking-budget-tokens)
                                         (t
-                                         (error "chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
+                                         (error "Error: chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
                                   `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)

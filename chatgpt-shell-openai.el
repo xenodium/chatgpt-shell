@@ -30,6 +30,7 @@
 (require 'map)
 (require 'shell-maker)
 
+(declare-function chatgpt-shell--unsorted-collection "chatgpt-shell")
 (declare-function chatgpt-shell-crop-context "chatgpt-shell")
 (declare-function chatgpt-shell--make-chatgpt-url "chatgpt-shell")
 (declare-function chatgpt-shell-validate-no-system-prompt "chatgpt-shell")
@@ -46,7 +47,15 @@ for more difficult problems."
   :options '("minimal" "low" "medium" "high")
   :group 'chatgpt-shell)
 
-(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort icon function-calling other-params)
+(defun chatgpt-shell-openai-make-reasoning-effort-selector (choices)
+  "Create a function for the :reasoning-effort-selector parameter using CHOICES."
+  (lambda (_model)
+    (let ((effort (completing-read "Reasoning effort: " (chatgpt-shell--unsorted-collection choices) nil t)))
+      `(((:symbol . chatgpt-shell-openai-reasoning-effort)
+         (:value . ,effort)
+         (:kind . thinking-budget))))))
+
+(cl-defun chatgpt-shell-openai-make-model (&key version short-version token-width context-window validate-command (headers #'chatgpt-shell-openai--make-headers) (key chatgpt-shell-openai-key) (url-base 'chatgpt-shell-api-url-base) (path "/v1/chat/completions") (provider "OpenAI") (label "ChatGPT") (handler #'chatgpt-shell-openai--handle-chatgpt-command) (filter #'chatgpt-shell-openai--filter-output) reasoning-effort reasoning-effort-selector icon function-calling other-params)
   "Create an OpenAI model.
 
 Set VERSION, SHORT-VERSION, TOKEN-WIDTH, CONTEXT-WINDOW,
@@ -76,6 +85,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
             (:url . chatgpt-shell-openai--make-url)
             (:key . ,key)
             (:reasoning-effort . ,reasoning-effort)
+            (:reasoning-effort-selector . ,reasoning-effort-selector)
             (:url-base . ,url-base)
             (:validate-command . ,(or validate-command 'chatgpt-shell-openai--validate-command))
             (:other-params . ,other-params)
@@ -90,18 +100,21 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("minimal" "low" "medium" "high"))
          :context-window 400000)
         (chatgpt-shell-openai-make-model
          :version "gpt-5-mini"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5-mini
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("minimal" "low" "medium" "high"))
          :context-window 400000)
         (chatgpt-shell-openai-make-model
          :version "gpt-5-nano"
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5-nano
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("minimal" "low" "medium" "high"))
          :context-window 400000)
         (chatgpt-shell-openai-make-model
          :version "gpt-4.1"
@@ -149,12 +162,14 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
          :token-width 3
          :context-window 200000
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high"))
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o3"
          :token-width 3
          :context-window 200000
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high"))
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o3-mini"
@@ -168,6 +183,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
          ;; https://platform.openai.com/docs/models/o1
          :context-window 200000
          :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high"))
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1-preview"
