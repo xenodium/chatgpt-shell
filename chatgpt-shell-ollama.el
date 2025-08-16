@@ -115,7 +115,8 @@ If you use Ollama through a proxy service, change the URL base."
 
 (defun chatgpt-shell-ollama--parse-token-width (quantization)
   "Parse token using QUANTIZATION."
-  (when (string-match "^[FQ]\\([1-9][0-9]*\\)" quantization)
+  ;; e.g. "F16", "Q4_0", "MXFP4"
+  (when (string-match "^[A-Z]+\\([1-9][0-9]*\\)" quantization)
     (string-to-number (match-string 1 quantization))))
 
 (defun chatgpt-shell-ollama--fetch-model (version)
