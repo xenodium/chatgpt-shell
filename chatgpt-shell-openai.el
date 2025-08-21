@@ -556,11 +556,11 @@ or
 
 (setq chatgpt-shell-openai-key \"my-key\")"))
 
-(cl-defun chatgpt-shell-openai--make-payload (&key model context settings)
-  "Create the API payload using MODEL CONTEXT and SETTINGS."
-  (funcall
-   #'chatgpt-shell-openai-make-chatgpt-request-data
+(cl-defun chatgpt-shell-openai--make-payload (&key model prompt-url context settings)
+  "Create the API payload using MODEL PROMPT-URL CONTEXT and SETTINGS."
+  (chatgpt-shell-openai-make-chatgpt-request-data
    :system-prompt (map-elt settings :system-prompt)
+   :prompt-url prompt-url
    :context context
    :version (map-elt model :version)
    :temperature (map-elt settings :temperature)

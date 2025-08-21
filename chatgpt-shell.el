@@ -1944,7 +1944,6 @@ Display result in org table of the form:
 7. Do NOT wrap anything in Markdown source blocks.
 8. Do NOT add any text or explanations outside the org table.")))
 
-;; TODO: Make service agnostic.
 (cl-defun chatgpt-shell-lookup (&key buffer model-version system-prompt prompt prompt-url streaming
                                      temperature on-success on-failure)
   "Look something up as a one-off (no shell history) and output to BUFFER.
@@ -1986,23 +1985,26 @@ ON-FAILURE: (lambda (output)) for completion event."
                              :settings settings))))
     (when streaming
       (display-buffer buffer))
-    (unless (equal (map-elt model :provider) "OpenAI")
+    (unless (map-elt model :payload)
       (error "%s's %s not yet supported (please sponsor development)"
+             (map-elt model :provider) (map-elt model :version)))
+    ;; TODO: Make file access service agnostic.
+    (when (and prompt-url
+               (not (equal (map-elt model :provider) "OpenAI")))
+      (error "%s's %s file upload is not yet supported (please sponsor development)"
              (map-elt model :provider) (map-elt model :version)))
     (shell-maker-make-http-request
      :async t
      :url url
      :proxy chatgpt-shell-proxy
-     :data (chatgpt-shell-openai-make-chatgpt-request-data
-            :prompt prompt
-            :prompt-url prompt-url
-            :system-prompt system-prompt
-            :version (map-elt model :version)
-            :temperature (or temperature 1)
-            :streaming streaming
-            :other-params (map-elt model :other-params))
+     :data (apply (map-elt model :payload)
+                  (append (list :model model
+                                :context (list (cons prompt nil))
+                                :settings settings)
+                          (when (equal (map-elt model :provider) "OpenAI")
+                            (list :prompt-url prompt-url))))
      :headers headers
-     :filter #'chatgpt-shell-openai--filter-output
+     :filter (map-elt model :filter)
      :on-output
      (lambda (output)
        (with-current-buffer buffer
