@@ -174,27 +174,6 @@ https://generativelanguage.googleapis.com"
                                        :token-width 4
                                        :context-window .inputTokenLimit))))
 
-(defun chatgpt-shell-google-use-default-models ()
-  "Modifies the `chatgpt-shell-models' list, to revert the list of
-Gemini LLM models to those statically defined in
-`chatgpt-shell-google-models'. Use this if you have previously run
-`chatgpt-shell-google-load-models' and want to revert back to the
-default list."
-  (interactive)
-  (let* ((goog-predicate (lambda (model)
-                           (string= (map-elt model :provider) "Google")))
-         (existing-gemini-models
-          (cl-remove-if-not goog-predicate chatgpt-shell-models))
-         (original-google-models (chatgpt-shell-google-models)))
-    (setq chatgpt-shell-models
-          (append
-           (cl-remove-if goog-predicate chatgpt-shell-models)
-           original-google-models))
-    (message "Removed %d Gemini model(s); added %d default Gemini model(s)"
-             (length original-google-models)
-             (length existing-gemini-models))))
-
-
 (cl-defun chatgpt-shell-google-load-models (&key override)
   "Query Google for the list of Gemini LLM models available.
 
