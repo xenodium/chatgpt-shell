@@ -1931,11 +1931,11 @@ Display result in org table of the form:
                           :system-prompt "
 1. Fill out an org mode table using this format as an example:
 
-|---------------+----------+-------+-------------------+---------+-------------------|
-| Hiragana      | Katakana | Kanji | Romaji            | English | Tags              |
-|---------------+----------+-------+-------------------+---------+-------------------|
-| おなかすきました |          | 空腹   | onaka sukimashita | hungry  | #describe #myself |
-|---------------+----------+-------+-------------------+---------+-------------------|
+|-------------------+----------+-------+-------------------+---------+-------------------|
+| Hiragana          | Katakana | Kanji | Romaji            | English | Tags              |
+|-------------------+----------+-------+-------------------+---------+-------------------|
+| おなかすきました  |          | 空腹  | onaka sukimashita | hungry  | #describe #myself |
+|-------------------+----------+-------+-------------------+---------+-------------------|
 2. ALWAYS Fill out Hiragana when appropriate.
 3. ALWAYS Fill out Katakana when appropriate.
 4. ALWAYS Fill out Kanji when appropriate.
