@@ -323,14 +323,14 @@ or
           (if (map-elt settings :streaming)
               ":streamGenerateContent"
             ":generateContent")
-          "?key="
-          (or (chatgpt-shell-google-key)
-              (error "Your chatgpt-shell-google-key is missing"))
-          "&alt=sse")) ;; Needed or streaming doesn't work.
+          "?alt=sse")) ;; Needed or streaming doesn't work.
 
 (cl-defun chatgpt-shell-google--make-headers (&key _model _settings)
   "Create the API headers."
-  (list "Content-Type: application/json; charset=utf-8"))
+  (list "Content-Type: application/json; charset=utf-8"
+        (concat "x-goog-api-key: "
+                (or (chatgpt-shell-google-key)
+                    (error "Your chatgpt-shell-google-key is missing")))))
 
 (cl-defun chatgpt-shell-google--make-payload (&key model context settings)
   "Create the API payload using MODEL CONTEXT and SETTINGS."
@@ -351,7 +351,8 @@ or
           :context context
           :model model
           :settings settings)
-   :headers (list "Content-Type: application/json; charset=utf-8")
+   :headers (chatgpt-shell-google--make-headers :model model
+                                                :settings settings)
    :filter #'chatgpt-shell-google--extract-gemini-response
    :shell shell))
 
