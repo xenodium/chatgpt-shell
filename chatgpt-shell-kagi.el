@@ -111,7 +111,7 @@ If you use Kagi through a proxy service, change the URL base."
   "Extract Kagi summarizer response from OBJECT.
 
 Responses are never streamed."
-  (when (stringp output)
+  (when (stringp object)
     (error "Please upgrade shell-maker to 0.79.1 or newer"))
   ;; Non-streamed
   (if-let* ((whole (shell-maker--json-parse-string (map-elt object :pending)))
@@ -120,7 +120,7 @@ Responses are never streamed."
                              (map-elt (seq-first (map-elt whole 'error)) 'msg))
                             ((and (map-elt whole 'data)
                                   (not (eq (map-elt whole 'data) :null)))
-                             (map-elt (map-elt whole 'data) 'output)))))
+                             (map-elt (map-elt whole 'data) 'object)))))
       (progn
         (setf (map-elt object :filtered) response)
         (setf (map-elt object :pending) nil)
