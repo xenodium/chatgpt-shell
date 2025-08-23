@@ -43,6 +43,7 @@ VALIDATE-COMMAND handler."
   `((:provider . "Kagi")
     (:label . "Kagi")
     (:version . "muriel-summarizer")
+    (:icon . "https://upload.wikimedia.org/wikipedia/commons/1/1b/Kagi_Search_Engine_Icon.png")
     (:headers . chatgpt-shell-kagi--make-summarizer-headers)
     (:handler . chatgpt-shell-kagi--handle-summarizer-command)
     (:ignore-context . t)

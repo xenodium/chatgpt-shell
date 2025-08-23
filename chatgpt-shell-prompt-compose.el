@@ -881,11 +881,17 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
 
 (defun chatgpt-shell-prompt-compose--fetch-model-icon (icon)
-  "Download ICON filename from GitHub, only if it exists and save as binary."
+  "Download ICON filename from GitHub, only if it exists and save as binary.
+
+ICON names can be found at https://github.com/lobehub/lobe-icons/tree/master/packages/static-png
+
+ICONs starting with https:// are downloaded directly from that location."
   (when icon
     (let* ((mode (if (eq (frame-parameter nil 'background-mode) 'dark) "dark" "light"))
-           (url (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
-                        mode "/" icon))
+           (url (if (string-prefix-p "https://" (downcase icon))
+                    icon
+                  (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
+                          mode "/" icon)))
            (filename (file-name-nondirectory url))
            (cache-dir (file-name-concat (temporary-file-directory) "chatgpt-shell" mode))
            (cache-path (expand-file-name filename cache-dir)))
