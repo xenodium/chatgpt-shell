@@ -177,19 +177,22 @@ https://generativelanguage.googleapis.com"
 (cl-defun chatgpt-shell-google-load-models (&key override)
   "Query Google for the list of Gemini LLM models available.
 
-By default, this package uses a static list of models as returned from
-`chatgpt-shell-google-models'.  But some users may want to choose from
-a fresher set of available models.
+By default, this package adds a list of statically-defined models, as
+returned from `chatgpt-shell-google-models', into `chatgpt-shell-models'.
+But some users may want to choose from a fresher set of available models.
 
 This function retrieves data from
-https://ai.google.dev/gemini-api/docs/models/gemini.  This fn then
+https://ai.google.dev/gemini-api/docs/models/gemini, and
 appends the models retrieved to the `chatgpt-shell-models' list, unless
 a model with the same name is already present.
 
 By default, replace the existing Google models in `chatgpt-shell-models'
 with the newly retrieved models.  When OVERRIDE is non-nil, which
 happens when the function is invoked interactively with a prefix
-argument, replace all the Google models with those retrieved."
+argument, replace all the Google models with those retrieved.
+
+One note: models loaded this way do not get a
+`thinking-budget-min' or `thinking-budget-max'."
 
   (interactive (list :override current-prefix-arg))
   (let* ((goog-predicate (lambda (model)
@@ -210,6 +213,7 @@ argument, replace all the Google models with those retrieved."
       (message "Added %d Gemini model(s); kept %d existing Gemini model(s)"
                (length new-gemini-models)
                (length existing-gemini-models)))))
+
 
 (defun chatgpt-shell-google-toggle-grounding-with-google-search ()
   "Toggle the `:grounding-search' boolean for the currently-selected model.
@@ -370,28 +374,28 @@ or
                               (list (cons prompt nil))))))))
    `((tools . ,(append (when (map-elt model :grounding-search) '((google_search . nil)))
                        (when (map-elt model :url-context) '((url_context . nil))))))
-   `((generation_config . ((temperature . ,(or (map-elt settings :temperature) 1))
-                           ;; 1 is most diverse output.
-                           (topP . 1)
-                           ;; Include thinking parameters if it is supported for
-                           ;; this model.
-                           ,(let ((min (map-elt model :thinking-budget-min))
+   `((generation_config . ,(append
+                            `((temperature . ,(or (map-elt settings :temperature) 1)))
+                            ;; 1 is most diverse output.
+                            '((topP . 1))
+                            ;; Include thinking parameters if it is supported for
+                            ;; this model.
+                            (let ((min (map-elt model :thinking-budget-min))
                                   (max (map-elt model :thinking-budget-max)))
                               (when (or min max)
                                 (let ((chatgpt-shell-google-thinking-budget-tokens
                                        (cond
                                         ((not chatgpt-shell-google-thinking-budget-tokens)
                                          max)
-                                        ;; -1 is always valid and indicates
-                                        ;; -dynamic thinking. See
-                                        ;; -https://ai.google.dev/gemini-api/docs/thinking.
+                                        ;; -1 is always valid and indicates dynamic thinking. See
+                                        ;; https://ai.google.dev/gemini-api/docs/thinking.
                                         ((eq chatgpt-shell-google-thinking-budget-tokens 'dynamic)
                                          -1)
                                         ((<= min chatgpt-shell-google-thinking-budget-tokens max)
                                          chatgpt-shell-google-thinking-budget-tokens)
                                         (t
                                          (error "Error: chatgpt-shell-google-thinking-budget-tokens must be between %d and %d (inclusive) or 'dynamic" min max)))))
-                                  `(thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens)))))))))))
+                                  `((thinkingConfig . ((thinkingBudget . ,chatgpt-shell-google-thinking-budget-tokens))))))))))))
 
 (defun chatgpt-shell-google--gemini-user-model-messages (context)
   "Convert CONTEXT to gemini messages.
