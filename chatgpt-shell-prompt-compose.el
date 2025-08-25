@@ -37,6 +37,7 @@
 (require 'svg nil :noerror)
 
 (declare-function chatgpt-shell--eshell-last-last-command "chatgpt-shell")
+(declare-function chatgpt-shell--fetch-model-icon "chatgpt-shell")
 (declare-function chatgpt-shell--minibuffer-prompt "chatgpt-shell")
 (declare-function chatgpt-shell--model-label "chatgpt-shell")
 (declare-function chatgpt-shell--model-short-version "chatgpt-shell")
@@ -528,7 +529,7 @@ If BACKWARDS is non-nil, go to previous interaction."
              (image-height 90)
              (text-height 25)
              (svg (svg-create (frame-pixel-width) image-height))
-             (icon-filename (chatgpt-shell-prompt-compose--fetch-model-icon
+             (icon-filename (chatgpt-shell--fetch-model-icon
                              (map-elt (chatgpt-shell--resolved-model) :icon))))
         (when icon-filename
           (svg-embed svg icon-filename
@@ -879,37 +880,6 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
   (switch-to-buffer (chatgpt-shell--primary-buffer)))
-
-(defun chatgpt-shell-prompt-compose--fetch-model-icon (icon)
-  "Download ICON filename from GitHub, only if it exists and save as binary.
-
-ICON names can be found at https://github.com/lobehub/lobe-icons/tree/master/packages/static-png
-
-ICONs starting with https:// are downloaded directly from that location."
-  (when icon
-    (let* ((mode (if (eq (frame-parameter nil 'background-mode) 'dark) "dark" "light"))
-           (url (if (string-prefix-p "https://" (downcase icon))
-                    icon
-                  (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
-                          mode "/" icon)))
-           (filename (file-name-nondirectory url))
-           (cache-dir (file-name-concat (temporary-file-directory) "chatgpt-shell" mode))
-           (cache-path (expand-file-name filename cache-dir)))
-      (unless (file-exists-p cache-path)
-        (make-directory cache-dir t)
-        (let ((buffer (url-retrieve-synchronously url t t 5.0)))
-          (when buffer
-            (with-current-buffer buffer
-              (goto-char (point-min))
-              (if (re-search-forward "^HTTP/1.1 200 OK" nil t)
-                  (progn
-                    (re-search-forward "\r?\n\r?\n")
-                    (let ((coding-system-for-write 'no-conversion))
-                      (write-region (point) (point-max) cache-path)))
-                (message "Icon fetch failed: %s" url)))
-            (kill-buffer buffer))))
-      (when (file-exists-p cache-path)
-        cache-path))))
 
 (provide 'chatgpt-shell-prompt-compose)
 

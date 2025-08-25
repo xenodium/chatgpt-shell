@@ -4,9 +4,9 @@
 
 ;; Author: Alvaro Ramirez https://xenodium.com
 ;; URL: https://github.com/xenodium/chatgpt-shell
-;; Version: 2.29.1
+;; Version: 2.30.1
 ;; Package-Requires: ((emacs "28.1") (shell-maker "0.81.1") (transient "0.9.3"))
-(defconst chatgpt-shell--version "2.29.1")
+(defconst chatgpt-shell--version "2.30.1")
 
 ;; This package is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -179,6 +179,13 @@ For example:
      (message \"Output: %s\" output)))"
   :type 'hook
   :group 'shell-maker)
+
+(defcustom chatgpt-shell-show-model-icons t
+  "When non-nil display model image icons.
+
+For example, when swapping models."
+  :type 'boolean
+  :group 'chatgpt-shell)
 
 (defvaralias 'chatgpt-shell-swap-model-version 'chatgpt-shell-swap-model)
 
@@ -588,7 +595,17 @@ non-nil; otherwise `completing-read'."
                            chatgpt-shell-models)
                      width))
             (models (seq-map (lambda (model)
-                               (format (format "%%-%ds   %%s" width)
+                               (format (format "%%s%%-%ds   %%s" width)
+                                       (if-let* ((show-icon chatgpt-shell-show-model-icons)
+                                                 (icon (map-elt model :icon))
+                                                 (icon-filename (chatgpt-shell--fetch-model-icon icon)))
+                                           (with-temp-buffer
+                                             (insert-image (create-image icon-filename nil nil
+                                                                         :ascent 'center
+                                                                         :height (frame-char-height)))
+                                             (insert "  ")
+                                             (buffer-string))
+                                         "")
                                        (map-elt model :provider)
                                        (map-elt model :version)))
                              (if chatgpt-shell-swap-model-filter
@@ -2990,6 +3007,37 @@ Write solutions in their entirety.")
   (when-let ((block (chatgpt-shell-markdown-block-at-point)))
     (set-mark (map-elt block 'end))
     (goto-char (map-elt block 'start))))
+
+(defun chatgpt-shell--fetch-model-icon (icon)
+  "Download ICON filename from GitHub, only if it exists and save as binary.
+
+ICON names can be found at https://github.com/lobehub/lobe-icons/tree/master/packages/static-png
+
+ICONs starting with https:// are downloaded directly from that location."
+  (when icon
+    (let* ((mode (if (eq (frame-parameter nil 'background-mode) 'dark) "dark" "light"))
+           (url (if (string-prefix-p "https://" (downcase icon))
+                    icon
+                  (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
+                          mode "/" icon)))
+           (filename (file-name-nondirectory url))
+           (cache-dir (file-name-concat (temporary-file-directory) "chatgpt-shell" mode))
+           (cache-path (expand-file-name filename cache-dir)))
+      (unless (file-exists-p cache-path)
+        (make-directory cache-dir t)
+        (let ((buffer (url-retrieve-synchronously url t t 5.0)))
+          (when buffer
+            (with-current-buffer buffer
+              (goto-char (point-min))
+              (if (re-search-forward "^HTTP/1.1 200 OK" nil t)
+                  (progn
+                    (re-search-forward "\r?\n\r?\n")
+                    (let ((coding-system-for-write 'no-conversion))
+                      (write-region (point) (point-max) cache-path)))
+                (message "Icon fetch failed: %s" url)))
+            (kill-buffer buffer))))
+      (when (file-exists-p cache-path)
+        cache-path))))
 
 ;; pretty smerge start
 
