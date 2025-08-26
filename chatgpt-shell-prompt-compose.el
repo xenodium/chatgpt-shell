@@ -116,8 +116,8 @@ t if invoked from a transient frame (quitting closes the frame).")
     (define-key map (kbd "M-n") #'chatgpt-shell-prompt-compose-next-history)
     map))
 
-(define-derived-mode chatgpt-shell-prompt-compose-mode fundamental-mode "ChatGPT Compose"
-  "Major mode for composing ChatGPT prompts from a dedicated buffer."
+(define-derived-mode chatgpt-shell-prompt-compose-mode fundamental-mode "LLM Prompt Compose"
+  "Major mode for composing chatgpt-shell LLM prompts from a dedicated buffer."
   :keymap chatgpt-shell-prompt-compose-mode-map)
 
 (defvar chatgpt-shell-prompt-compose-view-mode-map
