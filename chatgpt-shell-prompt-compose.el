@@ -292,6 +292,8 @@ Set TRANSIENT-FRAME-P to also close frame on exit."
   (interactive)
   (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
     (user-error "Not in a shell compose buffer"))
+  (when chatgpt-shell-prompt-compose-view-mode
+    (chatgpt-shell-prompt-compose-reply))
   (let ((candidate (with-current-buffer (chatgpt-shell--primary-buffer)
                      (completing-read
                       "History: "
