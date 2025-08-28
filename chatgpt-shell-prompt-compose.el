@@ -403,63 +403,65 @@ Optionally set its PROMPT and RESPONSE."
   (catch 'exit
     (unless (derived-mode-p 'chatgpt-shell-prompt-compose-mode)
       (user-error "Not in a shell compose buffer"))
-    (with-current-buffer (chatgpt-shell--primary-buffer)
-      (when shell-maker--busy
-        (unless (y-or-n-p "Abort?")
-          (throw 'exit nil))
-        (shell-maker-interrupt t)
-        (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
+    (let ((shell-buffer (chatgpt-shell--primary-buffer))
+          (compose-buffer (chatgpt-shell-prompt-compose-buffer)))
+      (with-current-buffer shell-buffer
+        (when shell-maker--busy
+          (unless (y-or-n-p "Abort?")
+            (throw 'exit nil))
+          (shell-maker-interrupt t)
+          (with-current-buffer compose-buffer
+            (progn
+              (chatgpt-shell-prompt-compose-view-mode -1)
+              (chatgpt-shell-prompt-compose--initialize)))
+          (user-error "Aborted")))
+      (when (and chatgpt-shell-prompt-compose-view-mode
+                 (chatgpt-shell-block-action-at-point))
+        (chatgpt-shell-execute-block-action-at-point)
+        (throw 'exit nil))
+      (when (string-empty-p
+             (string-trim (chatgpt-shell-prompt-compose--text)))
+        (chatgpt-shell-prompt-compose--initialize)
+        (user-error "Nothing to send"))
+      (if chatgpt-shell-prompt-compose-view-mode
           (progn
             (chatgpt-shell-prompt-compose-view-mode -1)
-            (chatgpt-shell-prompt-compose--initialize)))
-        (user-error "Aborted")))
-    (when (and chatgpt-shell-prompt-compose-view-mode
-               (chatgpt-shell-block-action-at-point))
-      (chatgpt-shell-execute-block-action-at-point)
-      (throw 'exit nil))
-    (when (string-empty-p
-           (string-trim (chatgpt-shell-prompt-compose--text)))
-      (chatgpt-shell-prompt-compose--initialize)
-      (user-error "Nothing to send"))
-    (if chatgpt-shell-prompt-compose-view-mode
-        (progn
-          (chatgpt-shell-prompt-compose-view-mode -1)
-          (chatgpt-shell-prompt-compose--initialize)
-          ;; TODO: Consolidate, but until then keep in sync with
-          ;; instructions from `chatgpt-shell-prompt-compose-show-buffer'.
-          (message (concat "Type "
-                           (propertize "C-c C-c" 'face 'help-key-binding)
-                           " to send prompt. "
-                           (propertize "C-c C-k" 'face 'help-key-binding)
-                           " to cancel and exit. ")))
-      (let ((prompt (string-trim
-                     (chatgpt-shell-prompt-compose--text))))
-        (let ((inhibit-read-only t))
-          (markdown-overlays-put))
-        (chatgpt-shell-prompt-compose-view-mode +1)
-        (chatgpt-shell-prompt-compose--initialize prompt)
-        (setq view-exit-action 'kill-buffer)
-        (when (string-equal prompt "clear")
-          (view-mode -1)
-          (chatgpt-shell-prompt-compose--initialize))
-        (if chatgpt-shell-prompt-compose--exit-on-submit
-            (let ((view-exit-action nil))
-              (quit-window t (get-buffer-window (chatgpt-shell-prompt-compose-buffer)))
-              (chatgpt-shell-send-to-buffer prompt nil nil nil 'shell))
-          (chatgpt-shell-send-to-buffer prompt nil nil
-                                        (lambda (_input _output _success)
-                                          (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                            (let ((inhibit-read-only t))
-                                              (markdown-overlays-put))
-                                            (when (chatgpt-shell-markdown-block-at-point)
-                                              (chatgpt-shell-mark-block)))
-                                          (when chatgpt-shell-compose-auto-transient
-                                            (call-interactively 'chatgpt-shell-prompt-compose-transient)))
-                                        'inline))
-        ;; Point should go to beginning of response after submission.
-        (chatgpt-shell-prompt-compose--goto-response)
-        (let ((inhibit-read-only t))
-          (markdown-overlays-put))))))
+            (chatgpt-shell-prompt-compose--initialize)
+            ;; TODO: Consolidate, but until then keep in sync with
+            ;; instructions from `chatgpt-shell-prompt-compose-show-buffer'.
+            (message (concat "Type "
+                             (propertize "C-c C-c" 'face 'help-key-binding)
+                             " to send prompt. "
+                             (propertize "C-c C-k" 'face 'help-key-binding)
+                             " to cancel and exit. ")))
+        (let ((prompt (string-trim
+                       (chatgpt-shell-prompt-compose--text))))
+          (let ((inhibit-read-only t))
+            (markdown-overlays-put))
+          (chatgpt-shell-prompt-compose-view-mode +1)
+          (chatgpt-shell-prompt-compose--initialize prompt)
+          (setq view-exit-action 'kill-buffer)
+          (when (string-equal prompt "clear")
+            (view-mode -1)
+            (chatgpt-shell-prompt-compose--initialize))
+          (if chatgpt-shell-prompt-compose--exit-on-submit
+              (let ((view-exit-action nil))
+                (quit-window t (get-buffer-window compose-buffer))
+                (chatgpt-shell-send-to-buffer prompt nil nil nil 'shell))
+            (chatgpt-shell-send-to-buffer prompt nil nil
+                                          (lambda (_input _output _success)
+                                            (with-current-buffer compose-buffer
+                                              (let ((inhibit-read-only t))
+                                                (markdown-overlays-put))
+                                              (when (chatgpt-shell-markdown-block-at-point)
+                                                (chatgpt-shell-mark-block)))
+                                            (when chatgpt-shell-compose-auto-transient
+                                              (call-interactively 'chatgpt-shell-prompt-compose-transient)))
+                                          'inline))
+          ;; Point should go to beginning of response after submission.
+          (chatgpt-shell-prompt-compose--goto-response)
+          (let ((inhibit-read-only t))
+            (markdown-overlays-put)))))))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
