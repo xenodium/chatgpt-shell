@@ -1184,7 +1184,7 @@ With prefix IGNORE-ITEM, do not use interrupted item in context."
                     (when (re-search-forward "^[ \t]*```" nil t)
                       (forward-line 0)
                       (point)))))
-        (when (and start end
+        (when (and start end language
                    (>= (point) start)
                    (< (point) end))
           (list (cons 'language language)
