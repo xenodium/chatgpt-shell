@@ -450,20 +450,30 @@ Optionally set its PROMPT and RESPONSE."
               (let ((view-exit-action nil))
                 (quit-window t (get-buffer-window compose-buffer))
                 (chatgpt-shell-send-to-buffer prompt nil nil nil 'shell))
-            (chatgpt-shell-send-to-buffer prompt nil nil
-                                          (lambda (_input _output _success)
-                                            (with-current-buffer compose-buffer
-                                              (let ((inhibit-read-only t))
-                                                (markdown-overlays-put))
-                                              (when (chatgpt-shell-markdown-block-at-point)
-                                                (chatgpt-shell-mark-block)))
-                                            (when chatgpt-shell-compose-auto-transient
-                                              (call-interactively 'chatgpt-shell-prompt-compose-transient)))
-                                          'inline))
+            (chatgpt-shell-prompt-compose--send-prompt
+             :prompt prompt
+             :compose-buffer compose-buffer))
           ;; Point should go to beginning of response after submission.
           (chatgpt-shell-prompt-compose--goto-response)
           (let ((inhibit-read-only t))
             (markdown-overlays-put)))))))
+
+(cl-defun chatgpt-shell-prompt-compose--send-prompt (&key prompt compose-buffer)
+  "Send PROMPT from COMPOSE-BUFFER."
+  (unless prompt
+    (error "Must have a prompt"))
+  (unless compose-buffer
+    (error "Must have a compose-buffer"))
+  (chatgpt-shell-send-to-buffer prompt nil nil
+                                (lambda (_input _output _success)
+                                  (with-current-buffer compose-buffer
+                                    (let ((inhibit-read-only t))
+                                      (markdown-overlays-put))
+                                    (when (chatgpt-shell-markdown-block-at-point)
+                                      (chatgpt-shell-mark-block)))
+                                  (when chatgpt-shell-compose-auto-transient
+                                    (call-interactively 'chatgpt-shell-prompt-compose-transient)))
+                                'inline))
 
 (defun chatgpt-shell-prompt-compose-next-interaction (&optional backwards)
   "Show next interaction (request / response).
@@ -700,11 +710,9 @@ Useful if sending a request failed, perhaps from failed connectivity."
                                     (ring-elements comint-input-ring))))))
              (inhibit-read-only t))
     (chatgpt-shell-prompt-compose--initialize prompt)
-    (chatgpt-shell-send-to-buffer prompt nil nil
-                                  (lambda (_input _output _success)
-                                    (with-current-buffer (chatgpt-shell-prompt-compose-buffer)
-                                      (markdown-overlays-put)))
-                                  'inline)))
+    (chatgpt-shell-prompt-compose--send-prompt
+     :prompt prompt
+     :compose-buffer (chatgpt-shell-prompt-compose-buffer))))
 
 (defun chatgpt-shell-prompt-compose-insert-block-at-point ()
   "Insert block at point at last known location."
@@ -860,10 +868,12 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
       (user-error "Busy, please wait")))
-  (let ((prompt "show entire snippet")
+  (let ((prompt "show me what you mean in the smallest snippet as either class, struct, method, or function but never smaller than any of these, based on what we already know. Show the full snippet. No diffs.")
         (inhibit-read-only t))
     (chatgpt-shell-prompt-compose--initialize prompt)
-    (chatgpt-shell-send-to-buffer prompt nil nil nil 'inline)))
+    (chatgpt-shell-prompt-compose--send-prompt
+     :prompt prompt
+     :compose-buffer (chatgpt-shell-prompt-compose-buffer))))
 
 (defun chatgpt-shell-prompt-compose-request-more ()
   "Request more data.  This is useful if you already requested examples."
@@ -876,7 +886,9 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (let ((prompt "give me more")
         (inhibit-read-only t))
     (chatgpt-shell-prompt-compose--initialize prompt)
-    (chatgpt-shell-send-to-buffer prompt nil nil nil 'inline)))
+    (chatgpt-shell-prompt-compose--send-prompt
+     :prompt prompt
+     :compose-buffer (chatgpt-shell-prompt-compose-buffer))))
 
 (defun chatgpt-shell-prompt-compose-other-buffer ()
   "Jump to the shell buffer (compose's other buffer)."
