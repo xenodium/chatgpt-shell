@@ -464,6 +464,7 @@ Optionally set its PROMPT and RESPONSE."
     (error "Must have a prompt"))
   (unless compose-buffer
     (error "Must have a compose-buffer"))
+  (deactivate-mark)
   (chatgpt-shell-send-to-buffer prompt nil nil
                                 (lambda (_input _output _success)
                                   (with-current-buffer compose-buffer
