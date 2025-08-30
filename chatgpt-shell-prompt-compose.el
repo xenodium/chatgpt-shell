@@ -868,7 +868,7 @@ Useful if sending a request failed, perhaps from failed connectivity."
   (with-current-buffer (chatgpt-shell--primary-buffer)
     (when shell-maker--busy
       (user-error "Busy, please wait")))
-  (let ((prompt "show me what you mean in the smallest snippet as either class, struct, method, or function but never smaller than any of these, based on what we already know. Show the full snippet. No diffs.")
+  (let ((prompt "show me the entire snippet for relevant class, struct, method, or function")
         (inhibit-read-only t))
     (chatgpt-shell-prompt-compose--initialize prompt)
     (chatgpt-shell-prompt-compose--send-prompt
