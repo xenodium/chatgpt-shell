@@ -117,6 +117,20 @@ REASONING-EFFORT, VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-ma
          ;; See https://openrouter.ai/qwen/qwen3-coder
          :other-params '((provider (quantizations . ["fp4"]))))
         (chatgpt-shell-openrouter-make-model
+         :version "openai/gpt-oss-120b"
+         :label "ChatGPT"
+         :token-width 3
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
+         ;; https://platform.openai.com/docs/models/gpt-oss-120b
+         :context-window 131072)
+        (chatgpt-shell-openrouter-make-model
+         :version "openai/gpt-oss-20b"
+         :label "ChatGPT"
+         :token-width 3
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
+         ;; https://platform.openai.com/docs/models/gpt-oss-20b
+         :context-window 131072)
+        (chatgpt-shell-openrouter-make-model
          :version "anthropic/claude-3.7-sonnet"
          :short-version "claude-3.7-sonnet"
          :label "Claude"
