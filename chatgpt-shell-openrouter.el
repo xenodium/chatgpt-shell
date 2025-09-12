@@ -120,14 +120,14 @@ REASONING-EFFORT, VALIDATE-COMMAND and OTHER-PARAMS for `chatgpt-shell-openai-ma
          :version "openai/gpt-oss-120b"
          :label "ChatGPT"
          :token-width 3
-         :reasoning-effort "minimal"
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
          ;; https://platform.openai.com/docs/models/gpt-oss-120b
          :context-window 131072)
         (chatgpt-shell-openrouter-make-model
          :version "openai/gpt-oss-20b"
          :label "ChatGPT"
          :token-width 3
-         :reasoning-effort "minimal"
+         :reasoning-effort chatgpt-shell-openai-reasoning-effort
          ;; https://platform.openai.com/docs/models/gpt-oss-20b
          :context-window 131072)
         (chatgpt-shell-openrouter-make-model
