@@ -97,6 +97,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
          :version "gpt-5"
+         :function-calling t
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5
          :reasoning-effort t
@@ -104,6 +105,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
          :context-window 400000)
         (chatgpt-shell-openai-make-model
          :version "gpt-5-mini"
+         :function-calling t
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5-mini
          :reasoning-effort t
@@ -111,6 +113,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
          :context-window 400000)
         (chatgpt-shell-openai-make-model
          :version "gpt-5-nano"
+         :function-calling t
          :token-width 3
          ;; https://platform.openai.com/docs/models/gpt-5-nano
          :reasoning-effort t
@@ -125,11 +128,13 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "gpt-4.1-mini"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/gpt-4.1-mini
          :context-window 1047576)
         (chatgpt-shell-openai-make-model
          :version "gpt-4.1-nano"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/gpt-4.1-nano
          :context-window 1047576)
         (chatgpt-shell-openai-make-model
@@ -140,6 +145,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "gpt-4o"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/gpt-4o
          :context-window 128000)
         (chatgpt-shell-openai-make-model
@@ -150,6 +156,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "gpt-4o-mini"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/gpt-4o-mini
          :context-window 128000)
         (chatgpt-shell-openai-make-model
@@ -160,6 +167,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "o4-mini"
          :token-width 3
+         :function-calling t
          :context-window 200000
          :reasoning-effort t
          :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high"))
@@ -167,6 +175,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "o3"
          :token-width 3
+         :function-calling t
          :context-window 200000
          :reasoning-effort t
          :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("low" "medium" "high"))
@@ -174,12 +183,14 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "o3-mini"
          :token-width 3
+         :function-calling t
          :context-window 200000
          :reasoning-effort t
          :validate-command #'chatgpt-shell-validate-no-system-prompt)
         (chatgpt-shell-openai-make-model
          :version "o1"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/o1
          :context-window 200000
          :reasoning-effort t
@@ -188,6 +199,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "o1-preview"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models/gpt-01
          :context-window 128000
          ;; Reasoning effort is only supported for o1-pro, o1 and o3-mini.
@@ -202,6 +214,7 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
         (chatgpt-shell-openai-make-model
          :version "gpt-4.5-preview"
          :token-width 3
+         :function-calling t
          ;; https://platform.openai.com/docs/models#gpt-4-5
          :context-window 128000)
         (chatgpt-shell-openai-make-model
