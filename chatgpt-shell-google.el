@@ -257,7 +257,37 @@ Returns the new boolean value of `:grounding-search'."
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-2.5-flash"
+  (list (chatgpt-shell-google-make-model :version "gemini-flash-latest"
+                                         :short-version "flash-latest"
+                                         :path "/v1beta/models/gemini-flash-latest"
+                                         :thinking-budget-min 0
+                                         :thinking-budget-max 24576
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                         :grounding-search t
+                                         :url-context t
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-flash-lite-latest"
+                                         :short-version "flash-lite-latest"
+                                         :path "/v1beta/models/gemini-flash-lite-latest"
+                                         :thinking-budget-min 0
+                                         :thinking-budget-max 24576
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                         :grounding-search t
+                                         :url-context t
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-pro-latest"
+                                         :short-version "pro-latest"
+                                         :path "/v1beta/models/gemini-pro-latest"
+                                         :grounding-search t
+                                         :url-context t
+                                         :thinking-budget-min 128
+                                         :thinking-budget-max 32768
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-2.5-flash"
                                          :short-version "gemini-2.5-flash"
                                          :path "/v1beta/models/gemini-2.5-flash"
                                          :thinking-budget-min 0
