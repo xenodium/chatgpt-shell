@@ -1010,13 +1010,7 @@ This is used for sending a prompt to in the background."
                                 shell-buffers)))
     (when (and create (not primary-shell-buffer))
       (setq primary-shell-buffer
-            (or (seq-first shell-buffers)
-                (shell-maker-start chatgpt-shell--config
-                                   t
-                                   chatgpt-shell-welcome-function
-                                   t
-                                   (chatgpt-shell--make-buffer-name)
-                                   "LLM")))
+            (or (seq-first shell-buffers) (chatgpt-shell-start t t)))
       (chatgpt-shell--set-primary-buffer primary-shell-buffer))
     primary-shell-buffer))
 
