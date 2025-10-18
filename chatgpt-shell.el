@@ -1415,9 +1415,15 @@ See `chatgpt-shell-prompt-header-proofread-region' to change prompt or language.
   (let* ((region (if (use-region-p)
                      (chatgpt-shell--region)
                    (save-excursion
-                     (mark-paragraph)
-                     ;; Adjust end to avoid including the newline character after the paragraph
-                     (let ((start (region-beginning))
+		     ;; Mark the current paragraph or org element, because org
+		     ;; defines paragraphs differently from other text modes
+                     (if (derived-mode-p 'org-mode)
+			 (org-mark-element)
+		       (mark-paragraph))
+                     ;; Adjust start and end to avoid including newline characters
+                     (let ((start (progn (goto-char (region-beginning))
+					 (skip-chars-forward "\n")
+					 (point)))
                            (end (progn (goto-char (region-end))
                                        (skip-chars-backward "\n")
                                        (point))))
