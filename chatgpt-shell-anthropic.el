@@ -190,6 +190,11 @@ REASONING-EFFORT-SELECTOR."
                                         :token-width  4
                                         :max-tokens 8192
                                         :context-window 200000)
+   (chatgpt-shell-anthropic--make-model :version "claude-haiku-4-5-20251001"
+                                        :short-version "haiku-4.5"
+                                        :token-width  4
+                                        :max-tokens 64000
+                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-3-5-haiku-latest"
                                         :short-version "3.5-haiku"
                                         :token-width  4
