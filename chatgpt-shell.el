@@ -165,6 +165,20 @@ Note: in all cases responses are written to the shell to keep context."
                  (const :tag "Shell" shell))
   :group 'chatgpt)
 
+(defcustom chatgpt-shell-before-command-functions nil
+  "Abnormal hook (i.e. with parameters) invoked before each command.
+
+This is useful if you'd like to automatically handle or suggest things
+prior to execution.
+
+For example:
+
+\(add-hook `chatgpt-shell-before-command-functions'
+   (lambda (command)
+     (message \"Command: %s\" command)))"
+  :type 'hook
+  :group 'shell-maker)
+
 (defcustom chatgpt-shell-after-command-functions nil
   "Abnormal hook (i.e. with parameters) invoked after each command.
 
@@ -780,6 +794,7 @@ See `shell-maker-welcome-message' as an example."
            (unless (and (boundp 'shell-maker-version)
                         (version<= "0.79.1" shell-maker-version))
              (error "Please update 'shell-maker' to v0.79.1 or newer"))
+           (run-hook-with-args 'chatgpt-shell-before-command-functions command)
            (funcall handler
                     :model model
                     :command (if chatgpt-shell-include-local-file-link-content
