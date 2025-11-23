@@ -169,14 +169,13 @@ Note: in all cases responses are written to the shell to keep context."
   "Abnormal hook (i.e. with parameters) invoked before each command.
 
 This is useful if you'd like to automatically handle or suggest things
-post execution.
+prior to execution.
 
 For example:
 
 \(add-hook `chatgpt-shell-before-command-functions'
-   (lambda (command output success)
-     (message \"Command: %s\" command)
-     (message \"Output: %s\" output)))"
+   (lambda (command)
+     (message \"Command: %s\" command)))"
   :type 'hook
   :group 'shell-maker)
 
