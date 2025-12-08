@@ -29,12 +29,13 @@
 
 (eval-when-compile
   (require 'cl-lib))
-(require 'ring)
+(require 'cursor-sensor)
 (require 'flymake)
 (require 'markdown-overlays)
+(require 'ring)
 (require 'shell-maker)
-(require 'transient)
 (require 'svg nil :noerror)
+(require 'transient)
 
 (declare-function chatgpt-shell--eshell-last-last-command "chatgpt-shell")
 (declare-function chatgpt-shell--fetch-model-icon "chatgpt-shell")
@@ -118,7 +119,8 @@ t if invoked from a transient frame (quitting closes the frame).")
 
 (define-derived-mode chatgpt-shell-prompt-compose-mode fundamental-mode "LLM Prompt Compose"
   "Major mode for composing chatgpt-shell LLM prompts from a dedicated buffer."
-  :keymap chatgpt-shell-prompt-compose-mode-map)
+  :keymap chatgpt-shell-prompt-compose-mode-map
+  (cursor-intangible-mode +1))
 
 (defvar chatgpt-shell-prompt-compose-view-mode-map
   (let ((map (make-sparse-keymap)))
@@ -375,6 +377,7 @@ Optionally set its PROMPT and RESPONSE."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (insert (chatgpt-shell-prompt-compose--history-label))
+    (goto-char (point-max))
     (when prompt
       (insert
        (if chatgpt-shell-prompt-compose-view-mode
@@ -571,15 +574,19 @@ If BACKWARDS is non-nil, go to previous interaction."
                                        (buffer-string)))
                     'ignore t
                     'read-only t
+                    'cursor-intangible t
                     'face font-lock-comment-face
-                    'rear-nonsticky t))
+                    'rear-nonsticky '(cursor-intangible read-only ignore)
+                    'front-sticky '(cursor-intangible read-only ignore)))
     (let ((pos (or (chatgpt-shell-prompt-compose--position)
                    (cons 1 1))))
       (propertize (format "[%d/%d]\n\n" (car pos) (cdr pos))
                   'ignore t
                   'read-only t
+                  'cursor-intangible t
                   'face font-lock-comment-face
-                  'rear-nonsticky t))))
+                  'rear-nonsticky '(cursor-intangible read-only ignore)
+                  'front-sticky '(cursor-intangible read-only ignore)))))
 
 (defun chatgpt-shell-prompt-compose--position ()
   "Return the position in history of the primary shell buffer."
