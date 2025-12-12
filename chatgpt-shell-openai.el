@@ -96,10 +96,18 @@ HANDLER, REASONING-EFFORT, FILTER, ICON, FUNCTION-CALLING, and OTHER-PARAMS."
   "Build a list of all OpenAI LLM models available."
   ;; Context windows have been verified as of 11/26/2024.
   (list (chatgpt-shell-openai-make-model
+         :version "gpt-5.2"
+         :function-calling t
+         :token-width 3
+         ;; https://platform.openai.com/docs/models/gpt-5.2
+         :reasoning-effort t
+         :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("none" "low" "medium" "high"))
+         :context-window 400000)
+        (chatgpt-shell-openai-make-model
          :version "gpt-5.1"
          :function-calling t
          :token-width 3
-         ;; https://platform.openai.com/docs/models/gpt-5
+         ;; https://platform.openai.com/docs/models/gpt-5.1
          :reasoning-effort t
          :reasoning-effort-selector (chatgpt-shell-openai-make-reasoning-effort-selector '("none" "low" "medium" "high"))
          :context-window 400000)
