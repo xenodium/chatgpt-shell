@@ -262,8 +262,14 @@ Returns the new boolean value of `:grounding-search'."
                                          :path "/v1beta/models/gemini-3-pro-preview"
                                          :grounding-search t
                                          :url-context t
-                                         :thinking-budget-min 1
-                                         :thinking-budget-max 65535
+                                         :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                         :token-width 4
+                                         :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-3-flash-preview"
+                                         :short-version "gemini-3-flash-preview"
+                                         :path "/v1beta/models/gemini-3-flash-preview"
+                                         :grounding-search t
+                                         :url-context t
                                          :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
                                          :token-width 4
                                          :context-window 1048576)
