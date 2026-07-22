@@ -2,6 +2,12 @@
 
 [[https://stable.melpa.org/#/chatgpt-shell][file:https://stable.melpa.org/packages/chatgpt-shell-badge.svg]] [[https://melpa.org/#/chatgpt-shell][file:https://melpa.org/packages/chatgpt-shell-badge.svg]]
 
+* ⚠️ Deprecated ⚠️
+
+This project is now largely superseded by [[https://github.com/xenodium/agent-shell][agent-shell]], which is far more capable and actively developed. =chatgpt-shell= may continue to work, but new development happens in =agent-shell=.
+
+To create throw-away shells (as you did with =M-x chatgpt-shell=), use =M-x agent-shell-new-temp-shell=.
+
 * chatgpt-shell
 
 A multi-llm Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Shell-Prompts.html][comint]] shell, by [[https://lmno.lol/alvaro][me]].
