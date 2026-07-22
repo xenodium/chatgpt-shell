@@ -51,7 +51,8 @@
                     :model model)))
       (should (equal (map-elt payload 'model) "gemini-3.6-flash"))
       (should (equal (map-elt payload 'input) "Hello world"))
-      (should (equal (map-elt payload 'stream) t)))))
+      (should (equal (map-elt payload 'stream) t))
+      (should (equal (map-elt payload 'tools) [((type . "google_search")) ((type . "url_context"))])))))
 
 (ert-deftest test-chatgpt-shell-google-parse-interactions-json ()
   (let ((json '((id . "v1_123")

@@ -550,6 +550,10 @@ Composes using PROMPT, CONTEXT, SETTINGS and MODEL."
          (system-prompt (map-elt settings :system-prompt))
          (is-streaming (map-elt settings :streaming))
          (prev-id chatgpt-shell-google--last-interaction-id)
+         (grounding-search (map-elt model :grounding-search))
+         (url-context (map-elt model :url-context))
+         (tools-list (append (when grounding-search '(((type . "google_search"))))
+                             (when url-context '(((type . "url_context"))))))
          (formatted-input
           (cond
            ((or (listp prompt) (vectorp prompt))
@@ -571,6 +575,8 @@ Composes using PROMPT, CONTEXT, SETTINGS and MODEL."
                     (input . ,formatted-input))))
     (when prev-id
       (push (cons 'previous_interaction_id prev-id) payload))
+    (when tools-list
+      (push (cons 'tools (vconcat tools-list)) payload))
     (when system-prompt
       (push (cons 'system_instruction system-prompt) payload))
     (when is-streaming
