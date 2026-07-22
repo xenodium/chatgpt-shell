@@ -25,8 +25,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl-lib))
+(require 'cl-lib)
 (require 'let-alist)
 (require 'shell-maker)
 (require 'map)
@@ -34,6 +33,9 @@
 (require 'json)
 
 (defvar chatgpt-shell-proxy)
+(defvar chatgpt-shell-models)
+(defvar-local chatgpt-shell-google--last-interaction-id nil
+  "The interaction ID returned by the previous Gemini Interactions API call.")
 (declare-function chatgpt-shell--unsorted-collection "chatgpt-shell")
 
 (defcustom chatgpt-shell-google-key nil
@@ -61,6 +63,20 @@ thinking. =\\'dynamic means to let the model decide how many
 thinking tokens to use based on the complexity of the query. See
 https://ai.google.dev/gemini-api/docs/thinking."
   :type '(choice integer (const nil) (const dynamic))
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-google-fallback-enabled nil
+  "Whether to fallback to secondary Google models if an API call fails or returns non-200.
+When non-nil and the active model request fails (e.g. non-200 HTTP code or error),
+chatgpt-shell will attempt each fallback model in `chatgpt-shell-google-fallback-models'
+one by one."
+  :type 'boolean
+  :group 'chatgpt-shell)
+
+(defcustom chatgpt-shell-google-fallback-models '("gemini-3.5-flash" "gemini-2.5-flash" "gemini-2.0-flash")
+  "List of Google model version strings to try sequentially as fallbacks when an API call fails.
+Models are tried in order. If all fallback models fail, the request fails."
+  :type '(repeat string)
   :group 'chatgpt-shell)
 
 (defun chatgpt-shell-google-reasoning-effort-selector (model)
@@ -123,6 +139,39 @@ THINKING-BUDGET-MAX and REASONING-EFFORT-SELECTOR."
     (:filter . chatgpt-shell-google--extract-gemini-response)
     (:payload . chatgpt-shell-google--make-payload)
     (:url . chatgpt-shell-google--make-url)
+    (:headers . chatgpt-shell-google--make-headers)
+    (:key . chatgpt-shell-google-key)
+    (:validate-command . chatgpt-shell-google--validate-command)
+    (:icon . "gemini-color.png")))
+
+;; https://ai.google.dev/gemini-api/docs/text-generation
+(cl-defun chatgpt-shell-google-make-interactions-model (&key version short-version token-width context-window grounding-search url-context thinking-budget-min thinking-budget-max reasoning-effort-selector)
+  "Create a Google Gemini model using the Interactions API (/v1beta/interactions)."
+  (unless version
+    (error "Missing mandatory :version param"))
+  (unless short-version
+    (error "Missing mandatory :short-version param"))
+  (unless token-width
+    (error "Missing mandatory :token-width param for %s" version))
+  (unless context-window
+    (error "Missing mandatory :context-window param for %s" version))
+  `((:version . ,version)
+    (:short-version . ,short-version)
+    (:label . "Gemini")
+    (:provider . "Google")
+    (:path . "/v1beta/interactions")
+    (:token-width . ,token-width)
+    (:context-window . ,context-window)
+    (:grounding-search . ,grounding-search)
+    (:url-context . ,url-context)
+    (:thinking-budget-min . ,thinking-budget-min)
+    (:thinking-budget-max . ,thinking-budget-max)
+    (:reasoning-effort-selector . ,reasoning-effort-selector)
+    (:url-base . chatgpt-shell-google-api-url-base)
+    (:handler . chatgpt-shell-google--handle-interactions-command)
+    (:filter . chatgpt-shell-google--extract-interactions-response)
+    (:payload . chatgpt-shell-google--make-interactions-payload)
+    (:url . chatgpt-shell-google--make-interactions-url)
     (:headers . chatgpt-shell-google--make-headers)
     (:key . chatgpt-shell-google-key)
     (:validate-command . chatgpt-shell-google--validate-command)
@@ -257,7 +306,28 @@ Returns the new boolean value of `:grounding-search'."
   "Build a list of Google LLM models available."
   ;; Context windows have been verified as of 11/26/2024. See
   ;; https://ai.google.dev/gemini-api/docs/models/gemini.
-  (list (chatgpt-shell-google-make-model :version "gemini-3.1-pro-preview"
+  (list (chatgpt-shell-google-make-interactions-model :version "gemini-3.6-flash"
+                                                       :short-version "gemini-3.6-flash"
+                                                       :grounding-search t
+                                                       :url-context t
+                                                       :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                                       :token-width 4
+                                                       :context-window 1048576)
+        (chatgpt-shell-google-make-interactions-model :version "gemini-3.5-flash"
+                                                       :short-version "gemini-3.5-flash"
+                                                       :grounding-search t
+                                                       :url-context t
+                                                       :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                                       :token-width 4
+                                                       :context-window 1048576)
+        (chatgpt-shell-google-make-interactions-model :version "gemini-3.5-flash-lite"
+                                                       :short-version "gemini-3.5-flash-lite"
+                                                       :grounding-search t
+                                                       :url-context t
+                                                       :reasoning-effort-selector #'chatgpt-shell-google-reasoning-effort-selector
+                                                       :token-width 4
+                                                       :context-window 1048576)
+        (chatgpt-shell-google-make-model :version "gemini-3.1-pro-preview"
                                          :short-version "gemini-3.1-pro-preview"
                                          :path "/v1beta/models/gemini-3.1-pro-preview"
                                          :grounding-search t
@@ -397,22 +467,190 @@ or
    :model model
    :settings settings))
 
-(cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings)
+(defun chatgpt-shell-google--effective-fallback-models (current-model)
+  "Return a list of model version strings to try as fallbacks for CURRENT-MODEL."
+  (let ((models chatgpt-shell-google-fallback-models))
+    (cl-remove (map-elt current-model :version) models :test #'string=)))
+
+(cl-defun chatgpt-shell-google--execute-request (&key model command context shell settings url payload headers filter remaining-fallbacks)
+  "Execute an HTTP request for Google MODEL with sequential fallback list."
+  (let ((fallbacks (or remaining-fallbacks
+                       (when chatgpt-shell-google-fallback-enabled
+                         (chatgpt-shell-google--effective-fallback-models model)))))
+    (shell-maker-make-http-request
+     :async t
+     :url url
+     :proxy chatgpt-shell-proxy
+     :data payload
+     :headers headers
+     :filter filter
+     :shell shell
+     :on-finished
+     (lambda (result)
+       (let ((exit-code (map-elt result :exit-status))
+             (http-status (map-elt result :http-status)))
+         (when (and fallbacks
+                    (or (and exit-code (not (zerop exit-code)))
+                        (and http-status (integerp http-status) (not (= http-status 200)))))
+           (let* ((next-version (car fallbacks))
+                  (rest-fallbacks (cdr fallbacks))
+                  (fallback-model (cl-find-if (lambda (m)
+                                                (and (string= (map-elt m :provider) "Google")
+                                                     (string= (map-elt m :version) next-version)))
+                                              chatgpt-shell-models)))
+             (if fallback-model
+                 (progn
+                   (message "Google API call failed for %s (HTTP %s / exit %s). Trying fallback (%d remaining): %s..."
+                            (map-elt model :version)
+                            (or http-status "N/A")
+                            (or exit-code "N/A")
+                            (length fallbacks)
+                            next-version)
+                   (when-let* ((handler (map-elt fallback-model :handler)))
+                     (funcall handler
+                              :model fallback-model
+                              :command command
+                              :context context
+                              :shell shell
+                              :settings settings
+                              :remaining-fallbacks rest-fallbacks)))
+               (message "Fallback model %s not found in `chatgpt-shell-models'." next-version)))))))))
+
+(cl-defun chatgpt-shell-google--handle-gemini-command (&key model command context shell settings remaining-fallbacks)
   "Handle Gemini COMMAND (prompt) using MODEL, CONTEXT, SHELL, and SETTINGS."
-  (shell-maker-make-http-request
-   :async t
-   :url (chatgpt-shell-google--make-url :model model
-                                        :settings settings)
-   :proxy chatgpt-shell-proxy
-   :data (chatgpt-shell-google--make-gemini-payload
-          :prompt command
-          :context context
-          :model model
-          :settings settings)
-   :headers (chatgpt-shell-google--make-headers :model model
-                                                :settings settings)
+  (chatgpt-shell-google--execute-request
+   :model model
+   :command command
+   :context context
+   :shell shell
+   :settings settings
+   :url (chatgpt-shell-google--make-url :model model :settings settings)
+   :payload (chatgpt-shell-google--make-gemini-payload
+             :prompt command :context context :model model :settings settings)
+   :headers (chatgpt-shell-google--make-headers :model model :settings settings)
    :filter #'chatgpt-shell-google--extract-gemini-response
-   :shell shell))
+   :remaining-fallbacks remaining-fallbacks))
+
+(cl-defun chatgpt-shell-google--make-interactions-url (&key _command model settings)
+  "Create the Interactions API URL using MODEL and SETTINGS."
+  (unless model
+    (error "Missing mandatory :model param"))
+  (concat chatgpt-shell-google-api-url-base
+          "/v1beta/interactions"
+          (when (map-elt settings :streaming)
+            "?alt=sse")))
+
+(cl-defun chatgpt-shell-google--make-interactions-payload (&key prompt context settings model)
+  "Create the request payload for Gemini Interactions API.
+
+Composes using PROMPT, CONTEXT, SETTINGS and MODEL."
+  (unless context
+    (setq chatgpt-shell-google--last-interaction-id nil))
+  (let* ((version (map-elt model :version))
+         (system-prompt (map-elt settings :system-prompt))
+         (is-streaming (map-elt settings :streaming))
+         (prev-id chatgpt-shell-google--last-interaction-id)
+         (grounding-search (map-elt model :grounding-search))
+         (url-context (map-elt model :url-context))
+         (tools-list (append (when grounding-search '(((type . "google_search"))))
+                             (when url-context '(((type . "url_context"))))))
+         (formatted-input
+          (cond
+           ((or (listp prompt) (vectorp prompt))
+            prompt)
+           ((and (not prev-id) context prompt)
+            (let ((history-str
+                   (mapconcat
+                    (lambda (item)
+                      (concat (when (car item) (format "User: %s\n" (car item)))
+                              (when (cdr item) (format "Model: %s\n" (cdr item)))))
+                    context
+                    "")))
+              (if (string-empty-p history-str)
+                  prompt
+                (format "%sUser: %s" history-str prompt))))
+           (prompt prompt)
+           (t "")))
+         (payload `((model . ,version)
+                    (input . ,formatted-input))))
+    (when prev-id
+      (push (cons 'previous_interaction_id prev-id) payload))
+    (when tools-list
+      (push (cons 'tools (vconcat tools-list)) payload))
+    (when system-prompt
+      (push (cons 'system_instruction system-prompt) payload))
+    (when is-streaming
+      (push (cons 'stream t) payload))
+    payload))
+
+(defun chatgpt-shell-google--parse-interactions-json (obj)
+  "Extract response text from an Interactions API JSON object OBJ."
+  (let-alist obj
+    (when .id
+      (setq chatgpt-shell-google--last-interaction-id .id))
+    (or .error.message
+        .output_text
+        (when .steps
+          (let ((texts nil))
+            (mapc
+             (lambda (step)
+               (let-alist step
+                 (when (or (equal .type "model_output") (equal .type "text"))
+                   (mapc
+                    (lambda (item)
+                      (let-alist item
+                        (when .text (push .text texts))))
+                    .content))))
+             .steps)
+            (when texts
+              (mapconcat #'identity (nreverse texts) ""))))
+        (when .content
+          (if (stringp .content)
+              .content
+            (mapconcat (lambda (item) (let-alist item .text)) .content "")))
+        .text
+        .delta.text)))
+
+(defun chatgpt-shell-google--extract-interactions-response (output)
+  "Process pending OUTPUT to extract Gemini Interactions response."
+  (if-let* ((whole (shell-maker--json-parse-string (map-elt output :pending)))
+            (response (chatgpt-shell-google--parse-interactions-json whole)))
+      (list (cons :filtered response))
+    (if-let ((chunks (shell-maker--split-text (map-elt output :pending))))
+        (let ((response)
+              (pending)
+              (result))
+          (mapc (lambda (chunk)
+                  (if-let* ((is-data (equal (map-elt chunk :key) "data:"))
+                            (obj (shell-maker--json-parse-string (map-elt chunk :value)))
+                            (text (chatgpt-shell-google--parse-interactions-json obj)))
+                      (unless (string-empty-p text)
+                        (setq response (concat response text)))
+                    (setq pending (concat pending
+                                          (or (map-elt chunk :key) "")
+                                          (map-elt chunk :value)))))
+                chunks)
+          (setq result
+                (list (cons :filtered (unless (string-empty-p response)
+                                        response))
+                      (cons :pending pending)))
+          result)
+      output)))
+
+(cl-defun chatgpt-shell-google--handle-interactions-command (&key model command context shell settings remaining-fallbacks)
+  "Handle Gemini COMMAND using MODEL via the Interactions API."
+  (chatgpt-shell-google--execute-request
+   :model model
+   :command command
+   :context context
+   :shell shell
+   :settings settings
+   :url (chatgpt-shell-google--make-interactions-url :model model :settings settings)
+   :payload (chatgpt-shell-google--make-interactions-payload
+             :prompt command :context context :model model :settings settings)
+   :headers (chatgpt-shell-google--make-headers :model model :settings settings)
+   :filter #'chatgpt-shell-google--extract-interactions-response
+   :remaining-fallbacks remaining-fallbacks))
 
 (cl-defun chatgpt-shell-google--make-gemini-payload (&key prompt context settings model)
   "Create the request payload.
