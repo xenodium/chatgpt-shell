@@ -150,6 +150,13 @@ REASONING-EFFORT-SELECTOR."
    ;; A token is equivalent to _about_ 4 characters.
    ;;
    ;; claude-4-sonnet-latest and claude-4-sonnet-latest are not supported yet.
+   (chatgpt-shell-anthropic--make-model :version "claude-opus-4-6"
+                                        :short-version "opus-4.6"
+                                        :token-width  4
+                                        :thinking-budget-min 1024
+                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
+                                        :max-tokens 32000
+                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-opus-4-5"
                                         :short-version "opus-4.5"
                                         :token-width  4
@@ -171,6 +178,13 @@ REASONING-EFFORT-SELECTOR."
                                         :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
                                         :max-tokens 32000
                                         :context-window 200000)
+   (chatgpt-shell-anthropic--make-model :version "claude-sonnet-4-6"
+                                        :short-version "sonnet-4.6"
+                                        :token-width  4
+                                        :thinking-budget-min 1024
+                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
+                                        :max-tokens 64000
+                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-sonnet-4-5"
                                         :short-version "sonnet-4.5"
                                         :token-width  4
@@ -185,32 +199,10 @@ REASONING-EFFORT-SELECTOR."
                                         :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
                                         :max-tokens 64000
                                         :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-7-sonnet-latest"
-                                        :short-version "3.7-sonnet"
-                                        :token-width  4
-                                        :thinking-budget-min 1024
-                                        :reasoning-effort-selector #'chatgpt-shell-anthropic-reasoning-effort-selector
-                                        :max-tokens 64000
-                                        :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-5-sonnet-latest"
-                                        :short-version "3.5-sonnet"
-                                        :token-width  4
-                                        :max-tokens 8192
-                                        :context-window 200000)
    (chatgpt-shell-anthropic--make-model :version "claude-haiku-4-5-20251001"
                                         :short-version "haiku-4.5"
                                         :token-width  4
                                         :max-tokens 64000
-                                        :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-5-haiku-latest"
-                                        :short-version "3.5-haiku"
-                                        :token-width  4
-                                        :max-tokens 8192
-                                        :context-window 200000)
-   (chatgpt-shell-anthropic--make-model :version "claude-3-opus-latest"
-                                        :short-version "3-opus"
-                                        :token-width  4
-                                        :max-tokens 4096
                                         :context-window 200000)))
 
 (cl-defun chatgpt-shell-anthropic--make-url (&key _command model _settings)
