@@ -189,6 +189,12 @@ For example, when swapping models."
   :type 'boolean
   :group 'chatgpt-shell)
 
+(defcustom chatgpt-shell-model-icons-dir (temporary-file-directory)
+  "Specify the directory for downloaded model icons."
+  :type 'string
+  :safe #'stringp
+  :group 'chatgpt-shell)
+
 (defvaralias 'chatgpt-shell-swap-model-version 'chatgpt-shell-swap-model)
 
 (defvaralias 'chatgpt-shell-display-function 'shell-maker-display-function)
@@ -3027,7 +3033,7 @@ ICONs starting with https:// are downloaded directly from that location."
                   (concat "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/"
                           mode "/" icon)))
            (filename (file-name-nondirectory url))
-           (cache-dir (file-name-concat (temporary-file-directory) "chatgpt-shell" mode))
+           (cache-dir (file-name-concat chatgpt-shell-model-icons-dir "chatgpt-shell" mode))
            (cache-path (expand-file-name filename cache-dir)))
       (unless (file-exists-p cache-path)
         (make-directory cache-dir t)
