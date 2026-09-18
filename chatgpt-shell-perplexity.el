@@ -111,6 +111,7 @@ If you use Perplexity through a proxy service, change the URL base."
   (unless (chatgpt-shell-perplexity-key)
     (error "Your chatgpt-shell-perplexity-key is missing"))
   (list "Content-Type: application/json; charset=utf-8"
+        "X-Pplx-Integration: chatgpt-shell"
         (format "Authorization: Bearer %s" (chatgpt-shell-perplexity-key))))
 
 (cl-defun chatgpt-shell-perplexity--handle-perplexity-command (&key model command context shell settings)
